@@ -1,7 +1,6 @@
 extern crate futures;
 extern crate web3;
 
-mod blocks;
 mod noop;
 mod standard;
 
