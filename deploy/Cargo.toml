@@ -1,8 +1,0 @@
-[package]
-name = "deploy"
-version = "0.1.0"
-authors = ["debris <marek.kotewicz@gmail.com>"]
-
-[dependencies]
-futures = "0.1.13"
-web3 = "0.0.3"

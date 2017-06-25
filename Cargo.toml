@@ -1,10 +1,17 @@
 [package]
-name = "polkadot"
+name = "bridge"
 version = "0.1.0"
 authors = ["debris <marek.kotewicz@gmail.com>"]
 
 [dependencies]
-deploy = { version = "0.1", path = "deploy" }
+futures = "0.1"
+futures-after = "0.1"
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4.2"
+docopt = "0.8.1"
+web3 = "0.0.3"
 
-[workspace]
-members = ["cli"]
+[[bin]]
+name = "bridge"
+path = "src/main.rs"
