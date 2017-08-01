@@ -6,20 +6,20 @@ use error::DatabaseError;
 
 /// Application "database".
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct Data {
+pub struct Database {
 	pub mainnet: BlockchainState,
 	pub testnet: BlockchainState,
 }
 
-impl Data {
-	pub fn load<P: AsRef<Path>>(path: P) -> Result<Data, DatabaseError> {
+impl Database {
+	pub fn load<P: AsRef<Path>>(path: P) -> Result<Database, DatabaseError> {
 		let mut file = fs::File::open(path)?;
 		let mut buffer = String::new();
 		file.read_to_string(&mut buffer);
 		Self::load_from_str(&buffer)
 	}
 
-	fn load_from_str(s: &str) -> Result<Data, DatabaseError> {
+	fn load_from_str(s: &str) -> Result<Database, DatabaseError> {
 		let data = toml::from_str(s)?;
 		Ok(data)
 	}
@@ -57,7 +57,7 @@ impl BlockchainState {
 
 #[cfg(test)]
 mod tests {
-	use super::{Data, BlockchainState};
+	use super::{Database, BlockchainState};
 
 	#[test]
 	fn laod_databse_from_str() {
@@ -72,7 +72,7 @@ bridge_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
 last_block_number = 121
 "#;
 
-		let expected = Data {
+		let expected = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
 				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".to_owned(),
@@ -84,13 +84,13 @@ last_block_number = 121
 				last_block_number: 121,
 			},
 		};
-		let database = Data::load_from_str(toml).unwrap();
+		let database = Database::load_from_str(toml).unwrap();
 		assert_eq!(expected, database);
 	}
 
 	#[test]
 	fn save_database_to_string() {
-		let database = Data {
+		let database = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
 				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".to_owned(),

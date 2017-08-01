@@ -8,9 +8,10 @@ futures = "0.1"
 futures-after = "0.1"
 serde = "1.0"
 serde_derive = "1.0"
+tokio-core = "0.1.8"
 toml = "0.4.2"
 docopt = "0.8.1"
-web3 = "0.0.3"
+web3 = { git = "https://github.com/tomusdrw/rust-web3", branch = "removed_lifetimes" }
 
 [[bin]]
 name = "bridge"

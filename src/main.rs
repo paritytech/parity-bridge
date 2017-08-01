@@ -6,14 +6,20 @@ extern crate serde_derive;
 extern crate toml;
 extern crate web3;
 extern crate docopt;
+extern crate tokio_core;
 
+mod api;
+mod app;
 mod config;
-mod data;
+mod database;
 mod error;
+//mod l;
+pub mod actions;
 
 use std::env;
 use std::path::PathBuf;
 use docopt::Docopt;
+use app::App;
 use config::Config;
 use error::Error;
 
@@ -52,6 +58,8 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 		Some(path) => Config::load(path)?,
 		None => Config::default(),
 	};
+
+	let app = App::new_ipc(config, args.arg_database)?;
 
 	Ok("Done".into())
 }
