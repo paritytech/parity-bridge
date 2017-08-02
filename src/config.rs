@@ -2,7 +2,7 @@ use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::Read;
 use std::time::Duration;
-use error::SetupError;
+use error::{ResultExt, Error};
 use toml;
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
@@ -47,15 +47,15 @@ impl From<load::Config> for Config {
 }
 
 impl Config {
-	pub fn load<P: AsRef<Path>>(path: P) -> Result<Config, SetupError> {
-		let mut file = fs::File::open(path)?;
+	pub fn load<P: AsRef<Path>>(path: P) -> Result<Config, Error> {
+		let mut file = fs::File::open(path).chain_err(|| "Cannot open config")?;
 		let mut buffer = String::new();
 		file.read_to_string(&mut buffer);
 		Self::load_from_str(&buffer)
 	}
 
-	fn load_from_str(s: &str) -> Result<Config, SetupError> {
-		let config: load::Config = toml::from_str(s)?;
+	fn load_from_str(s: &str) -> Result<Config, Error> {
+		let config: load::Config = toml::from_str(s).chain_err(|| "Cannot parse config")?;
 		Ok(config.into())
 	}
 }

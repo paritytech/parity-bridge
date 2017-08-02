@@ -7,9 +7,10 @@ use tokio_core::reactor::{Core, Handle};
 use web3::{Web3, Transport};
 use web3::transports::ipc::Ipc;
 use web3::types::TransactionRequest;
-use error::{AppError, Error, DatabaseError};
+use error::{Error, ErrorKind, ResultExt};
 use config::Config;
 use database::{Database, BlockchainState};
+use api;
 
 pub struct App<T> where T: Transport {
 	event_loop: Core,
@@ -19,22 +20,25 @@ pub struct App<T> where T: Transport {
 }
 
 pub struct Connections<T> where T: Transport {
-	mainnet: Arc<Web3<T>>,
-	testnet: Arc<Web3<T>>,
+	mainnet: T,
+	testnet: T,
 }
 
 impl Connections<Ipc> {
-	pub fn new_ipc<P: AsRef<Path>>(handle: &Handle, mainnet: P, testnet: P) -> Result<Self, AppError> {
+	pub fn new_ipc<P: AsRef<Path>>(handle: &Handle, mainnet: P, testnet: P) -> Result<Self, Error> {
+		let mainnet = Ipc::with_event_loop(mainnet, handle).chain_err(|| "Cannot connect to mainnet node ipc")?;
+		let testnet = Ipc::with_event_loop(testnet, handle).chain_err(|| "Cannot connect to testnet node ipc")?;
+
 		let result = Connections {
-			mainnet: Arc::new(Web3::new(Ipc::with_event_loop(mainnet, handle)?)),
-			testnet: Arc::new(Web3::new(Ipc::with_event_loop(testnet, handle)?)),
+			mainnet,
+			testnet,
 		};
 		Ok(result)
 	}
 }
 
 impl App<Ipc> {
-	pub fn new_ipc<P: AsRef<Path>>(config: Config, database_path: P) -> Result<Self, AppError> {
+	pub fn new_ipc<P: AsRef<Path>>(config: Config, database_path: P) -> Result<Self, Error> {
 		let event_loop = Core::new()?;
 		let connections = Connections::new_ipc(&event_loop.handle(), &config.mainnet.ipc, &config.testnet.ipc)?;
 		let result = App {
@@ -48,10 +52,10 @@ impl App<Ipc> {
 
 	pub fn ensure_deployed<'a>(&'a self) -> Box<Future<Item = Database, Error = Error> + 'a> {
 		let database_path = self.database_path.clone();
-		match Database::load(&database_path) {
+		match Database::load(&database_path).map_err(ErrorKind::from) {
 			Ok(database) => future::result(Ok(database)).boxed(),
-			Err(DatabaseError::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
-				let future = self.deploy().map_err(Error::App).and_then(|database| {
+			Err(ErrorKind::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
+				let future = self.deploy().and_then(|database| {
 					database.save(database_path)?;
 					Ok(database)
 				});
@@ -61,7 +65,7 @@ impl App<Ipc> {
 		}
 	}
 
-	pub fn deploy<'a>(&'a self) -> Box<Future<Item = Database, Error = AppError> + 'a> {
+	pub fn deploy<'a>(&'a self) -> Box<Future<Item = Database, Error = Error> + 'a> {
 		let main_tx_request = TransactionRequest {
 			from: self.config.mainnet.account.parse().expect("TODO: verify toml earlier"),
 			to: None,
@@ -84,8 +88,9 @@ impl App<Ipc> {
 			condition: None,
 		};
 
-		let main_future = self.connections.mainnet.send_transaction_with_confirmation(main_tx_request, self.config.mainnet.poll_interval, self.config.mainnet.required_confirmations);
-		let test_future = self.connections.testnet.send_transaction_with_confirmation(test_tx_request, self.config.testnet.poll_interval, self.config.testnet.required_confirmations);
+
+		let main_future = api::send_transaction_with_confirmation(&self.connections.mainnet, main_tx_request, self.config.mainnet.poll_interval, self.config.mainnet.required_confirmations);
+		let test_future = api::send_transaction_with_confirmation(&self.connections.testnet, test_tx_request, self.config.testnet.poll_interval, self.config.testnet.required_confirmations);
 
 		let deploy = main_future.join(test_future)
 			.map(|(main_receipt, test_receipt)| {
@@ -104,7 +109,8 @@ impl App<Ipc> {
 					}
 				}
 			})
-			.map_err(AppError::Web3);
+			.map_err(ErrorKind::Web3)
+			.map_err(Error::from);
 
 		Box::new(deploy)
 	}

@@ -1,0 +1,8 @@
+[mainnet]
+account = "1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
+
+[testnet]
+account = "0000000000000000000000000000000000000001"
+ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
+

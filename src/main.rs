@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate futures;
+extern crate futures_after;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -7,12 +8,17 @@ extern crate toml;
 extern crate web3;
 extern crate docopt;
 extern crate tokio_core;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+#[macro_use]
+extern crate error_chain;
 
 mod api;
 mod app;
 mod config;
 mod database;
-mod error;
+pub mod error;
 //mod l;
 pub mod actions;
 
@@ -42,12 +48,18 @@ pub struct Args {
 }
 
 fn main() {
+	let _ = env_logger::init();
 	let result = execute(env::args());	
 	
 	match result {
 		Ok(s) => println!("{}", s),
-		Err(err) => println!("{}", err),
+		Err(err) => print_err(err),
 	}
+}
+
+fn print_err(err: Error) {
+	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n  ");
+	println!("{}", message);
 }
 
 fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item=S>, S: AsRef<str> {

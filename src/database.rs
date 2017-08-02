@@ -2,7 +2,7 @@ use std::path::Path;
 use std::fs;
 use std::io::{Read, Write};
 use toml;
-use error::DatabaseError;
+use error::{Error, ResultExt};
 
 /// Application "database".
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -12,20 +12,20 @@ pub struct Database {
 }
 
 impl Database {
-	pub fn load<P: AsRef<Path>>(path: P) -> Result<Database, DatabaseError> {
-		let mut file = fs::File::open(path)?;
+	pub fn load<P: AsRef<Path>>(path: P) -> Result<Database, Error> {
+		let mut file = fs::File::open(path).chain_err(|| "Cannot open database")?;
 		let mut buffer = String::new();
 		file.read_to_string(&mut buffer);
 		Self::load_from_str(&buffer)
 	}
 
-	fn load_from_str(s: &str) -> Result<Database, DatabaseError> {
-		let data = toml::from_str(s)?;
+	fn load_from_str(s: &str) -> Result<Database, Error> {
+		let data = toml::from_str(s).chain_err(|| "Cannot parse database")?;
 		Ok(data)
 	}
 
-	pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), DatabaseError> {
-		let mut file = fs::File::open(path)?;
+	pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+		let mut file = fs::File::open(path).chain_err(|| "Cannot save database")?;
 		file.write_all(self.save_to_string().as_bytes())?;
 		Ok(())
 	}
