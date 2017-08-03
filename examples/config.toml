@@ -1,8 +1,11 @@
 [mainnet]
-account = "1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
+deploy_tx = { gas = 600000 }
+required_confirmations = 0
 
 [testnet]
-account = "0000000000000000000000000000000000000001"
+account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
-
+deploy_tx = { gas = 600000 }
+required_confirmations = 0

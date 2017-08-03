@@ -2,6 +2,7 @@ use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::Read;
 use std::time::Duration;
+use web3::types::Address;
 use error::{ResultExt, Error};
 use toml;
 
@@ -62,8 +63,7 @@ impl Config {
 
 #[derive(Debug, PartialEq)]
 pub struct Node {
-	// TODO: address
-	pub account: String,
+	pub account: Address,
 	pub ipc: PathBuf,
 	pub deploy_tx: TransactionConfig,
 	pub poll_interval: Duration,
@@ -74,7 +74,7 @@ impl Node {
 	fn default_mainnet() -> Self {
 		// TODO: hardcode default mainnet ipc path
 		Node {
-			account: "".into(),
+			account: Address::default(),
 			ipc: "".into(),
 			deploy_tx: TransactionConfig::deploy_mainnet(),
 			poll_interval: Duration::from_secs(DEFAULT_POLL_INTERVAL),
@@ -85,7 +85,7 @@ impl Node {
 	fn default_testnet() -> Self {
 		// TODO: hardcode default testnet ipc path
 		Node {
-			account: "".into(),
+			account: Address::default(),
 			ipc: "".into(),
 			deploy_tx: TransactionConfig::deploy_testnet(),
 			poll_interval: Duration::from_secs(DEFAULT_POLL_INTERVAL),
@@ -115,7 +115,7 @@ impl TransactionConfig {
 		// TODO: values
 		TransactionConfig {
 			gas: 0,
-			gas_price: 1,
+			gas_price: 0,
 			value: 0,
 		}
 	}
@@ -123,8 +123,8 @@ impl TransactionConfig {
 	fn deploy_testnet() -> Self {
 		// TODO: values
 		TransactionConfig {
-			gas: 2,
-			gas_price: 3,
+			gas: 0,
+			gas_price: 0,
 			value: 0,
 		}
 	}
@@ -135,8 +135,10 @@ impl TransactionConfig {
 /// in application.
 mod load {
 	use std::path::PathBuf;
+	use web3::types::Address;
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct Config {
 		pub mainnet: Node,
 		pub testnet: Node,
@@ -144,8 +146,7 @@ mod load {
 
 	#[derive(Deserialize)]
 	pub struct Node {
-		// TODO: replace with address
-		pub account: String,
+		pub account: Address,
 		pub ipc: Option<PathBuf>,
 		pub deploy_tx: Option<TransactionConfig>,
 		pub poll_interval: Option<u64>,
@@ -169,7 +170,7 @@ mod tests {
 	fn load_full_setup_from_str() {
 		let toml = r#"
 [mainnet]
-account = "1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = "/mainnet.ipc"
 poll_interval = 2
 required_confirmations = 100
@@ -182,7 +183,7 @@ deploy_tx = { gas = 20, value = 15 }
 
 		let expected = Config {
 			mainnet: Node {
-				account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
+				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/mainnet.ipc".into(),
 				deploy_tx: TransactionConfig {
 					gas: 0,
@@ -193,7 +194,7 @@ deploy_tx = { gas = 20, value = 15 }
 				required_confirmations: 100,
 			},
 			testnet: Node {
-				account: "0x0000000000000000000000000000000000000001".into(),
+				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				ipc: "/testnet.ipc".into(),
 				deploy_tx: TransactionConfig {
 					gas: 20,
@@ -213,13 +214,13 @@ deploy_tx = { gas = 20, value = 15 }
 	fn laod_minimal_setup_from_str() {
 		let toml = r#"
 [mainnet]
-account = "1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 [testnet]
-account = "0000000000000000000000000000000000000001"
+account = "0x0000000000000000000000000000000000000001"
 "#;
 		let mut expected = Config::default();
-		expected.mainnet.account = "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into();
-		expected.testnet.account = "0000000000000000000000000000000000000001".into();
+		expected.mainnet.account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap();
+		expected.testnet.account = "0x0000000000000000000000000000000000000001".parse().unwrap();
 		let config = Config::load_from_str(toml).unwrap();
 		assert_eq!(expected, config);
 	}

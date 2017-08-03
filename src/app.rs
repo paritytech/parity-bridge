@@ -3,7 +3,7 @@ use std::io;
 use std::time::Duration;
 use std::sync::Arc;
 use futures::{future, Future};
-use tokio_core::reactor::{Core, Handle};
+use tokio_core::reactor::{Handle};
 use web3::{Web3, Transport};
 use web3::transports::ipc::Ipc;
 use web3::types::TransactionRequest;
@@ -13,7 +13,6 @@ use database::{Database, BlockchainState};
 use api;
 
 pub struct App<T> where T: Transport {
-	event_loop: Core,
 	config: Config,
 	database_path: PathBuf,
 	connections: Connections<T>,
@@ -38,11 +37,9 @@ impl Connections<Ipc> {
 }
 
 impl App<Ipc> {
-	pub fn new_ipc<P: AsRef<Path>>(config: Config, database_path: P) -> Result<Self, Error> {
-		let event_loop = Core::new()?;
-		let connections = Connections::new_ipc(&event_loop.handle(), &config.mainnet.ipc, &config.testnet.ipc)?;
+	pub fn new_ipc<P: AsRef<Path>>(config: Config, database_path: P, handle: &Handle) -> Result<Self, Error> {
+		let connections = Connections::new_ipc(handle, &config.mainnet.ipc, &config.testnet.ipc)?;
 		let result = App {
-			event_loop,
 			config,
 			database_path: database_path.as_ref().to_path_buf(),
 			connections,
@@ -67,7 +64,7 @@ impl App<Ipc> {
 
 	pub fn deploy<'a>(&'a self) -> Box<Future<Item = Database, Error = Error> + 'a> {
 		let main_tx_request = TransactionRequest {
-			from: self.config.mainnet.account.parse().expect("TODO: verify toml earlier"),
+			from: self.config.mainnet.account,
 			to: None,
 			gas: Some(self.config.mainnet.deploy_tx.gas.into()),
 			gas_price: Some(self.config.mainnet.deploy_tx.gas_price.into()),
@@ -78,7 +75,7 @@ impl App<Ipc> {
 		};
 
 		let test_tx_request = TransactionRequest {
-			from: self.config.testnet.account.parse().expect("TODO: verify toml earlier"),
+			from: self.config.testnet.account,
 			to: None,
 			gas: Some(self.config.testnet.deploy_tx.gas.into()),
 			gas_price: Some(self.config.testnet.deploy_tx.gas_price.into()),
@@ -87,7 +84,6 @@ impl App<Ipc> {
 			nonce: None,
 			condition: None,
 		};
-
 
 		let main_future = api::send_transaction_with_confirmation(&self.connections.mainnet, main_tx_request, self.config.mainnet.poll_interval, self.config.mainnet.required_confirmations);
 		let test_future = api::send_transaction_with_confirmation(&self.connections.testnet, test_tx_request, self.config.testnet.poll_interval, self.config.testnet.required_confirmations);
@@ -110,7 +106,8 @@ impl App<Ipc> {
 				}
 			})
 			.map_err(ErrorKind::Web3)
-			.map_err(Error::from);
+			.map_err(Error::from)
+			.map_err(|e| e.chain_err(|| "Failed to deploy contracts"));
 
 		Box::new(deploy)
 	}

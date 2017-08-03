@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate futures;
+extern crate futures_cpupool;
 extern crate futures_after;
 extern crate serde;
 #[macro_use]
@@ -25,6 +26,7 @@ pub mod actions;
 use std::env;
 use std::path::PathBuf;
 use docopt::Docopt;
+use tokio_core::reactor::Core;
 use app::App;
 use config::Config;
 use error::Error;
@@ -63,15 +65,24 @@ fn print_err(err: Error) {
 }
 
 fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item=S>, S: AsRef<str> {
+	trace!(target: "bridge", "Parsing cli arguments");
 	let args: Args = Docopt::new(USAGE)
 		.and_then(|d| d.argv(command).deserialize())?;
 
+	trace!(target: "bridge", "Loading config");
 	let config = match args.arg_config {
 		Some(path) => Config::load(path)?,
 		None => Config::default(),
 	};
 
-	let app = App::new_ipc(config, args.arg_database)?;
+	trace!(target: "bridge", "Starting event loop");
+	let mut event_loop = Core::new().unwrap();
+
+	trace!(target: "bridge", "Establishing ipc connection");
+	let app = App::new_ipc(config, args.arg_database, &event_loop.handle())?;
+
+	trace!(target: "bridge", "Deploying contracts (if needed)");
+	event_loop.run(app.deploy())?;
 
 	Ok("Done".into())
 }
