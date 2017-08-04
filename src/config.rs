@@ -187,7 +187,7 @@ deploy_tx = { gas = 20, value = 15 }
 				ipc: "/mainnet.ipc".into(),
 				deploy_tx: TransactionConfig {
 					gas: 0,
-					gas_price: 1,
+					gas_price: 0,
 					value: 0,
 				},
 				poll_interval: Duration::from_secs(2),
@@ -198,7 +198,7 @@ deploy_tx = { gas = 20, value = 15 }
 				ipc: "/testnet.ipc".into(),
 				deploy_tx: TransactionConfig {
 					gas: 20,
-					gas_price: 3,
+					gas_price: 0,
 					value: 15,
 				},
 				poll_interval: Duration::from_secs(1),

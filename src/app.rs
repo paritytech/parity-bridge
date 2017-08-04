@@ -12,6 +12,11 @@ use config::Config;
 use database::{Database, BlockchainState};
 use api;
 
+pub enum Deployed {
+	New(Database),
+	None(Database),
+}
+
 pub struct App<T> where T: Transport {
 	config: Config,
 	database_path: PathBuf,
@@ -47,19 +52,14 @@ impl App<Ipc> {
 		Ok(result)
 	}
 
-	pub fn ensure_deployed<'a>(&'a self) -> Box<Future<Item = Database, Error = Error> + 'a> {
+	pub fn ensure_deployed<'a>(&'a self) -> Box<Future<Item = Deployed, Error = Error> + 'a> {
 		let database_path = self.database_path.clone();
 		match Database::load(&database_path).map_err(ErrorKind::from) {
-			Ok(database) => future::result(Ok(database)).boxed(),
-			Err(ErrorKind::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
-				let future = self.deploy().and_then(|database| {
-					database.save(database_path)?;
-					Ok(database)
-				});
-				Box::new(future)
-			},
+			Ok(database) => future::result(Ok(Deployed::None(database))).boxed(),
+			Err(ErrorKind::MissingFile(_)) => Box::new(self.deploy().map(Deployed::New)),
 			Err(err) => future::result(Err(err.into())).boxed(),
 		}
+
 	}
 
 	pub fn deploy<'a>(&'a self) -> Box<Future<Item = Database, Error = Error> + 'a> {
@@ -94,14 +94,12 @@ impl App<Ipc> {
 					mainnet: BlockchainState {
 						deploy_block_number: main_receipt.block_number.low_u64(),
 						last_block_number: main_receipt.block_number.low_u64(),
-						// TODO: fix to_string
-						bridge_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed").to_string(),
+						bridge_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
 					},
 					testnet: BlockchainState {
 						deploy_block_number: test_receipt.block_number.low_u64(),
 						last_block_number: test_receipt.block_number.low_u64(),
-						// TODO: fix to_string
-						bridge_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed").to_string(),
+						bridge_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
 					}
 				}
 			})

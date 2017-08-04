@@ -20,14 +20,13 @@ mod app;
 mod config;
 mod database;
 pub mod error;
-//mod l;
 pub mod actions;
 
 use std::env;
 use std::path::PathBuf;
 use docopt::Docopt;
 use tokio_core::reactor::Core;
-use app::App;
+use app::{App, Deployed};
 use config::Config;
 use error::Error;
 
@@ -79,10 +78,20 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 	let mut event_loop = Core::new().unwrap();
 
 	trace!(target: "bridge", "Establishing ipc connection");
-	let app = App::new_ipc(config, args.arg_database, &event_loop.handle())?;
+	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
 
 	trace!(target: "bridge", "Deploying contracts (if needed)");
-	event_loop.run(app.deploy())?;
+	let deployed = event_loop.run(app.ensure_deployed())?;
+
+	match deployed {
+		Deployed::New(database) => {
+			trace!(target: "bridge", "Deployed new bridge contracts");
+			trace!(target: "bridge", "\n\n{}\n", database);
+		},
+		Deployed::None(database) => {
+			trace!(target: "bridge", "Loaded database");
+		},
+	}
 
 	Ok("Done".into())
 }
