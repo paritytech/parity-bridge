@@ -2,9 +2,9 @@ use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::Read;
 use std::time::Duration;
-use web3::types::Address;
+use web3::types::{Address, Bytes};
 use error::{ResultExt, Error};
-use toml;
+use {toml, ethabi};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
 const DEFAULT_CONFIRMATIONS: u64 = 12;
@@ -14,37 +14,6 @@ const DEFAULT_CONFIRMATIONS: u64 = 12;
 pub struct Config {
 	pub mainnet: Node,
 	pub testnet: Node,
-}
-
-impl Default for Config {
-	fn default() -> Self {
-		Config {
-			mainnet: Node::default_mainnet(),
-			testnet: Node::default_testnet(),
-		}
-	}
-}
-
-impl From<load::Config> for Config {
-	fn from(config: load::Config) -> Self {
-		let default = Self::default();
-		Config {
-			mainnet: Node {
-				account: config.mainnet.account,
-				ipc: config.mainnet.ipc.unwrap_or(default.mainnet.ipc),
-				deploy_tx: default.mainnet.deploy_tx.with(config.mainnet.deploy_tx),
-				poll_interval: config.mainnet.poll_interval.map(Duration::from_secs).unwrap_or(default.mainnet.poll_interval),
-				required_confirmations: config.mainnet.required_confirmations.unwrap_or(default.mainnet.required_confirmations),
-			},
-			testnet: Node {
-				account: config.testnet.account,
-				ipc: config.testnet.ipc.unwrap_or(default.testnet.ipc),
-				deploy_tx: default.testnet.deploy_tx.with(config.testnet.deploy_tx),
-				poll_interval: config.testnet.poll_interval.map(Duration::from_secs).unwrap_or(default.testnet.poll_interval),
-				required_confirmations: config.testnet.required_confirmations.unwrap_or(default.testnet.required_confirmations),
-			}
-		}
-	}
 }
 
 impl Config {
@@ -57,40 +26,66 @@ impl Config {
 
 	fn load_from_str(s: &str) -> Result<Config, Error> {
 		let config: load::Config = toml::from_str(s).chain_err(|| "Cannot parse config")?;
-		Ok(config.into())
+		Config::from_load_struct(config)
+	}
+
+	fn from_load_struct(config: load::Config) -> Result<Config, Error> {
+		let result = Config {
+			mainnet: Node::from_load_struct(config.mainnet, NodeDefaults::mainnet())?,
+			testnet: Node::from_load_struct(config.testnet, NodeDefaults::testnet())?,
+		};
+
+		Ok(result)
 	}
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Node {
 	pub account: Address,
+	pub contract: ContractConfig,
 	pub ipc: PathBuf,
 	pub deploy_tx: TransactionConfig,
 	pub poll_interval: Duration,
 	pub required_confirmations: u64,
 }
 
-impl Node {
-	fn default_mainnet() -> Self {
-		// TODO: hardcode default mainnet ipc path
-		Node {
-			account: Address::default(),
+struct NodeDefaults {
+	ipc: PathBuf,
+}
+
+impl NodeDefaults {
+	fn mainnet() -> Self {
+		NodeDefaults {
 			ipc: "".into(),
-			deploy_tx: TransactionConfig::deploy_mainnet(),
-			poll_interval: Duration::from_secs(DEFAULT_POLL_INTERVAL),
-			required_confirmations: DEFAULT_CONFIRMATIONS,
 		}
 	}
 
-	fn default_testnet() -> Self {
-		// TODO: hardcode default testnet ipc path
-		Node {
-			account: Address::default(),
+	fn testnet() -> Self {
+		NodeDefaults {
 			ipc: "".into(),
-			deploy_tx: TransactionConfig::deploy_testnet(),
-			poll_interval: Duration::from_secs(DEFAULT_POLL_INTERVAL),
-			required_confirmations: DEFAULT_CONFIRMATIONS,
 		}
+	}
+}
+
+impl Node {
+	fn from_load_struct(node: load::Node, defaults: NodeDefaults) -> Result<Node, Error> {
+		let result = Node {
+			account: node.account,
+			contract: ContractConfig {
+				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
+				abi: ethabi::Contract::load(fs::File::open(node.contract.abi)?)?,
+			},
+			ipc: node.ipc.unwrap_or(defaults.ipc),
+			deploy_tx: TransactionConfig {
+				gas: node.deploy_tx.as_ref().and_then(|tx| tx.gas).unwrap_or_default(),
+				gas_price: node.deploy_tx.as_ref().and_then(|tx| tx.gas_price).unwrap_or_default(),
+				value: node.deploy_tx.as_ref().and_then(|tx| tx.value).unwrap_or_default(),
+			},
+			poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
+			required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
+		};
+	
+		Ok(result)
 	}
 }
 
@@ -101,33 +96,10 @@ pub struct TransactionConfig {
 	pub value: u64,
 }
 
-impl TransactionConfig {
-	fn with(&self, loaded: Option<load::TransactionConfig>) -> Self {
-		let loaded_ref = loaded.as_ref();
-		TransactionConfig {
-			gas: loaded_ref.and_then(|tx| tx.gas).unwrap_or(self.gas),
-			gas_price: loaded_ref.and_then(|tx| tx.gas_price).unwrap_or(self.gas_price),
-			value: loaded_ref.and_then(|tx| tx.value).unwrap_or(self.value),
-		}
-	}
-
-	fn deploy_mainnet() -> Self {
-		// TODO: values
-		TransactionConfig {
-			gas: 0,
-			gas_price: 0,
-			value: 0,
-		}
-	}
-
-	fn deploy_testnet() -> Self {
-		// TODO: values
-		TransactionConfig {
-			gas: 0,
-			gas_price: 0,
-			value: 0,
-		}
-	}
+#[derive(Debug, PartialEq)]
+pub struct ContractConfig {
+	pub bin: Bytes,
+	pub abi: ethabi::Contract,
 }
 
 /// Some config values may not be defined in `toml` file, but they should be specified at runtime.
@@ -147,6 +119,7 @@ mod load {
 	#[derive(Deserialize)]
 	pub struct Node {
 		pub account: Address,
+		pub contract: ContractConfig,
 		pub ipc: Option<PathBuf>,
 		pub deploy_tx: Option<TransactionConfig>,
 		pub poll_interval: Option<u64>,
@@ -159,12 +132,19 @@ mod load {
 		pub gas_price: Option<u64>,
 		pub value: Option<u64>,
 	}
+
+	#[derive(Deserialize)]
+	pub struct ContractConfig {
+		pub bin: PathBuf,
+		pub abi: PathBuf,
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use std::time::Duration;
-	use super::{Config, Node, TransactionConfig};
+	use ethabi;
+	use super::{Config, Node, TransactionConfig, ContractConfig};
 
 	#[test]
 	fn load_full_setup_from_str() {
@@ -175,16 +155,28 @@ ipc = "/mainnet.ipc"
 poll_interval = 2
 required_confirmations = 100
 
+[mainnet.contract]
+bin = "contracts/EthereumBridge.bin"
+abi = "contracts/EthereumBridge.abi"
+
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
 ipc = "/testnet.ipc"
 deploy_tx = { gas = 20, value = 15 }
+
+[testnet.contract]
+bin = "contracts/KovanBridge.bin"
+abi = "contracts/KovanBridge.abi"
 "#;
 
 		let expected = Config {
 			mainnet: Node {
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/mainnet.ipc".into(),
+				contract: ContractConfig {
+					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
+					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
+				},
 				deploy_tx: TransactionConfig {
 					gas: 0,
 					gas_price: 0,
@@ -195,6 +187,10 @@ deploy_tx = { gas = 20, value = 15 }
 			},
 			testnet: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+				contract: ContractConfig {
+					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
+					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
+				},
 				ipc: "/testnet.ipc".into(),
 				deploy_tx: TransactionConfig {
 					gas: 20,
@@ -215,12 +211,51 @@ deploy_tx = { gas = 20, value = 15 }
 		let toml = r#"
 [mainnet]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+
+[mainnet.contract]
+bin = "contracts/EthereumBridge.bin"
+abi = "contracts/EthereumBridge.abi"
+
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
+
+[testnet.contract]
+bin = "contracts/KovanBridge.bin"
+abi = "contracts/KovanBridge.abi"
 "#;
-		let mut expected = Config::default();
-		expected.mainnet.account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap();
-		expected.testnet.account = "0x0000000000000000000000000000000000000001".parse().unwrap();
+		let expected = Config {
+			mainnet: Node {
+				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
+				ipc: "".into(),
+				contract: ContractConfig {
+					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
+					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
+				},
+				deploy_tx: TransactionConfig {
+					gas: 0,
+					gas_price: 0,
+					value: 0,
+				},
+				poll_interval: Duration::from_secs(1),
+				required_confirmations: 12,
+			},
+			testnet: Node {
+				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+				ipc: "".into(),
+				contract: ContractConfig {
+					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
+					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
+				},
+				deploy_tx: TransactionConfig {
+					gas: 0,
+					gas_price: 0,
+					value: 0,
+				},
+				poll_interval: Duration::from_secs(1),
+				required_confirmations: 12,
+			}
+		};
+
 		let config = Config::load_from_str(toml).unwrap();
 		assert_eq!(expected, config);
 	}

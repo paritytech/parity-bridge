@@ -86,12 +86,12 @@ last_block_number = 121
 		let expected = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
 				last_block_number: 120,
 			},
 			testnet: BlockchainState {
 				deploy_block_number: 101,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
+				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 				last_block_number: 121,
 			},
 		};
@@ -105,12 +105,12 @@ last_block_number = 121
 		let database = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
 				last_block_number: 120,
 			},
 			testnet: BlockchainState {
 				deploy_block_number: 101,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
+				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 				last_block_number: 121,
 			},
 		};

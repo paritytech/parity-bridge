@@ -1,5 +1,5 @@
 use std::{io, fmt};
-use {web3, toml, docopt};
+use {web3, toml, docopt, ethabi};
 
 error_chain! {
 	types {
@@ -10,6 +10,7 @@ error_chain! {
 		Io(io::Error);
 		Toml(toml::de::Error);
 		Docopt(docopt::Error);
+		Ethabi(ethabi::Error);
 	}
 
 	errors {

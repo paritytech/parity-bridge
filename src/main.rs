@@ -14,13 +14,15 @@ extern crate log;
 extern crate env_logger;
 #[macro_use]
 extern crate error_chain;
+extern crate ethabi;
 
 mod api;
 mod app;
 mod config;
 mod database;
 pub mod error;
-pub mod actions;
+mod bridge;
+mod state;
 
 use std::env;
 use std::path::PathBuf;
@@ -44,7 +46,7 @@ Options:
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
-	arg_config: Option<PathBuf>,
+	arg_config: PathBuf,
 	arg_database: PathBuf,
 }
 
@@ -69,10 +71,7 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 		.and_then(|d| d.argv(command).deserialize())?;
 
 	trace!(target: "bridge", "Loading config");
-	let config = match args.arg_config {
-		Some(path) => Config::load(path)?,
-		None => Config::default(),
-	};
+	let config = Config::load(args.arg_config)?;
 
 	trace!(target: "bridge", "Starting event loop");
 	let mut event_loop = Core::new().unwrap();
