@@ -27,14 +27,11 @@ impl KovanBridge {
 		Bytes(result)
 	}
 
-	pub fn deposits_filter(&self, address: Address, block: BlockNumber) -> Filter {
+	pub fn deposits_filter(&self, address: Address) -> FilterBuilder {
 		let event = self.contract.event("Deposit").expect("to find event `Deposit`");
 		FilterBuilder::default()
-			.from_block(block.clone())
-			.to_block(block)
 			.address(vec![address])
 			.topics(Some(vec![H256(event.signature())]), None, None, None)
-			.build()
 	}
 
 	pub fn log_to_deposit(&self, log: Log) -> Result<KovanDeposit, Error> {

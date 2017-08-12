@@ -1,4 +1,5 @@
 use std::{io, fmt};
+use tokio_timer::TimerError;
 use {web3, toml, docopt, ethabi};
 
 error_chain! {
@@ -11,6 +12,7 @@ error_chain! {
 		Toml(toml::de::Error);
 		Docopt(docopt::Error);
 		Ethabi(ethabi::Error);
+		Timer(TimerError);
 	}
 
 	errors {

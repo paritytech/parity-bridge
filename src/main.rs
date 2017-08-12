@@ -9,6 +9,7 @@ extern crate toml;
 extern crate web3;
 extern crate docopt;
 extern crate tokio_core;
+extern crate tokio_timer;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
