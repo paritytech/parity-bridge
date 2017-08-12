@@ -10,6 +10,7 @@ use web3::types::TransactionRequest;
 use error::{Error, ErrorKind, ResultExt};
 use config::Config;
 use database::{Database, BlockchainState};
+use bridge::{EthereumBridge, KovanBridge};
 use api;
 
 pub enum Deployed {
@@ -18,14 +19,14 @@ pub enum Deployed {
 }
 
 pub struct App<T> where T: Transport {
-	config: Config,
-	database_path: PathBuf,
-	connections: Connections<T>,
+	pub config: Config,
+	pub database_path: PathBuf,
+	pub connections: Connections<T>,
 }
 
 pub struct Connections<T> where T: Transport {
-	mainnet: T,
-	testnet: T,
+	pub mainnet: T,
+	pub testnet: T,
 }
 
 impl Connections<Ipc> {
@@ -51,7 +52,9 @@ impl App<Ipc> {
 		};
 		Ok(result)
 	}
+}
 
+impl<T: Transport> App<T> {
 	pub fn ensure_deployed<'a>(&'a self) -> Box<Future<Item = Deployed, Error = Error> + 'a> {
 		let database_path = self.database_path.clone();
 		match Database::load(&database_path).map_err(ErrorKind::from) {
@@ -108,6 +111,14 @@ impl App<Ipc> {
 			.map_err(|e| e.chain_err(|| "Failed to deploy contracts"));
 
 		Box::new(deploy)
+	}
+
+	pub fn mainnet_bridge(&self) -> EthereumBridge {
+		EthereumBridge(&self.config.mainnet.contract.abi)
+	}
+
+	pub fn testnet_bridge(&self) -> KovanBridge {
+		KovanBridge(&self.config.mainnet.contract.abi)
 	}
 }
 

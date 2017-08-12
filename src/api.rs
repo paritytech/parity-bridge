@@ -5,7 +5,7 @@ use futures_after::{After, AfterStream};
 use tokio_timer::{Timer, Interval};
 use web3::{self, api, Transport};
 use web3::api::{Namespace, FilterStream, CreateFilter};
-use web3::types::{Log, Filter, H256, Block, BlockId, BlockNumber, U256, FilterBuilder};
+use web3::types::{Log, Filter, H256, Block, BlockId, BlockNumber, U256, FilterBuilder, TransactionRequest};
 use web3::helpers::CallResult;
 use error::{Error, ErrorKind};
 
@@ -21,6 +21,10 @@ pub fn block<T: Transport>(transport: T, id: BlockId) -> CallResult<Block<H256>,
 
 pub fn block_number<T: Transport>(transport: T) -> CallResult<U256, T::Out> {
 	api::Eth::new(transport).block_number()
+}
+
+pub fn send_transaction<T: Transport>(transport: T, tx: TransactionRequest) -> CallResult<H256, T::Out> {
+	api::Eth::new(transport).send_transaction(tx)
 }
 
 pub struct LogStreamInit {

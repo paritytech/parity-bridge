@@ -4,6 +4,7 @@ use std::io::Read;
 use std::time::Duration;
 use web3::types::{Address, Bytes};
 use error::{ResultExt, Error};
+use bridge::{EthereumBridge, KovanBridge};
 use {toml, ethabi};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
