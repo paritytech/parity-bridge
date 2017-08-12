@@ -17,13 +17,16 @@ extern crate env_logger;
 extern crate error_chain;
 extern crate ethabi;
 
+#[macro_use]
+mod macros;
+
 mod api;
 mod app;
 mod config;
+mod bridge;
+mod contracts;
 mod database;
 pub mod error;
-mod bridge;
-mod state;
 
 use std::env;
 use std::path::PathBuf;

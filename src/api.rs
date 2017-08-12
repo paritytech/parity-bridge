@@ -1,6 +1,6 @@
 use std::vec;
 use std::time::Duration;
-use futures::{Future, Stream, Poll};
+use futures::{Future, Stream, Poll, Async};
 use futures_after::{After, AfterStream};
 use tokio_timer::{Timer, Interval};
 use web3::{self, api, Transport};
@@ -67,9 +67,9 @@ impl<T: Transport> Stream for LogStream<T> {
 	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
 		loop {
 			let next_state = match self.state {
-				LogStreamState::Wait => match try_ready!(self.interval.poll()) {
-					None => return Ok(None.into()),
-					Some(_) => LogStreamState::FetchBlockNumber(block_number(&self.transport)),
+				LogStreamState::Wait => {
+					let _ = try_stream!(self.interval.poll());
+					LogStreamState::FetchBlockNumber(block_number(&self.transport))
 				},
 				LogStreamState::FetchBlockNumber(ref mut future) => {
 					let last_block = try_ready!(future.poll().map_err(ErrorKind::Web3)).low_u64();

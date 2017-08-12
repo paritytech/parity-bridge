@@ -4,7 +4,6 @@ use std::io::Read;
 use std::time::Duration;
 use web3::types::{Address, Bytes};
 use error::{ResultExt, Error};
-use bridge::{EthereumBridge, KovanBridge};
 use {toml, ethabi};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
@@ -45,7 +44,7 @@ pub struct Node {
 	pub account: Address,
 	pub contract: ContractConfig,
 	pub ipc: PathBuf,
-	pub deploy_tx: TransactionConfig,
+	pub txs: Transactions,
 	pub poll_interval: Duration,
 	pub required_confirmations: u64,
 }
@@ -77,11 +76,7 @@ impl Node {
 				abi: ethabi::Contract::load(fs::File::open(node.contract.abi)?)?,
 			},
 			ipc: node.ipc.unwrap_or(defaults.ipc),
-			deploy_tx: TransactionConfig {
-				gas: node.deploy_tx.as_ref().and_then(|tx| tx.gas).unwrap_or_default(),
-				gas_price: node.deploy_tx.as_ref().and_then(|tx| tx.gas_price).unwrap_or_default(),
-				value: node.deploy_tx.as_ref().and_then(|tx| tx.value).unwrap_or_default(),
-			},
+			txs: node.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
 			poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
 			required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
 		};
@@ -90,11 +85,36 @@ impl Node {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
+pub struct Transactions {
+	pub deploy: TransactionConfig,
+	pub deposit: TransactionConfig,
+}
+
+impl Transactions {
+	fn from_load_struct(cfg: load::Transactions) -> Self {
+		Transactions {
+			deploy: cfg.deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			deposit: cfg.deposit.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+		}
+	}
+}
+
+#[derive(Debug, PartialEq, Default)]
 pub struct TransactionConfig {
 	pub gas: u64,
 	pub gas_price: u64,
 	pub value: u64,
+}
+
+impl TransactionConfig {
+	fn from_load_struct(cfg: load::TransactionConfig) -> Self {
+		TransactionConfig {
+			gas: cfg.gas.unwrap_or_default(),
+			gas_price: cfg.gas_price.unwrap_or_default(),
+			value: cfg.value.unwrap_or_default(),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -122,9 +142,15 @@ mod load {
 		pub account: Address,
 		pub contract: ContractConfig,
 		pub ipc: Option<PathBuf>,
-		pub deploy_tx: Option<TransactionConfig>,
+		pub transactions: Option<Transactions>,
 		pub poll_interval: Option<u64>,
 		pub required_confirmations: Option<u64>,
+	}
+
+	#[derive(Deserialize)]
+	pub struct Transactions {
+		pub deploy: Option<TransactionConfig>,
+		pub deposit: Option<TransactionConfig>,
 	}
 
 	#[derive(Deserialize)]
@@ -145,7 +171,7 @@ mod load {
 mod tests {
 	use std::time::Duration;
 	use ethabi;
-	use super::{Config, Node, TransactionConfig, ContractConfig};
+	use super::{Config, Node, TransactionConfig, ContractConfig, Transactions};
 
 	#[test]
 	fn load_full_setup_from_str() {
@@ -163,7 +189,9 @@ abi = "contracts/EthereumBridge.abi"
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
 ipc = "/testnet.ipc"
-deploy_tx = { gas = 20, value = 15 }
+
+[testnet.transactions]
+deploy = { gas = 20, value = 15 }
 
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
@@ -178,10 +206,17 @@ abi = "contracts/KovanBridge.abi"
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
 					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
 				},
-				deploy_tx: TransactionConfig {
-					gas: 0,
-					gas_price: 0,
-					value: 0,
+				txs: Transactions {
+					deploy: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
+					deposit: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
 				},
 				poll_interval: Duration::from_secs(2),
 				required_confirmations: 100,
@@ -193,10 +228,17 @@ abi = "contracts/KovanBridge.abi"
 					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
 				},
 				ipc: "/testnet.ipc".into(),
-				deploy_tx: TransactionConfig {
-					gas: 20,
-					gas_price: 0,
-					value: 15,
+				txs: Transactions {
+					deploy: TransactionConfig {
+						gas: 20,
+						gas_price: 0,
+						value: 15,
+					},
+					deposit: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
@@ -232,10 +274,17 @@ abi = "contracts/KovanBridge.abi"
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
 					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
 				},
-				deploy_tx: TransactionConfig {
-					gas: 0,
-					gas_price: 0,
-					value: 0,
+				txs: Transactions {
+					deploy: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
+					deposit: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
@@ -247,10 +296,17 @@ abi = "contracts/KovanBridge.abi"
 					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
 					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
 				},
-				deploy_tx: TransactionConfig {
-					gas: 0,
-					gas_price: 0,
-					value: 0,
+				txs: Transactions {
+					deploy: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
+					deposit: TransactionConfig {
+						gas: 0,
+						gas_price: 0,
+						value: 0,
+					},
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,

@@ -51,7 +51,7 @@ pub struct BlockchainState {
 	/// Block number at which bridge has been deployed.
 	pub deploy_block_number: u64,
 	/// Bridge contract address.
-	pub bridge_contract_address: Address,
+	pub contract_address: Address,
 	/// Last handled block number
 	pub last_block_number: u64,
 }
@@ -60,7 +60,7 @@ impl BlockchainState {
 	pub fn new(block_number: u64, contract_address: Address) -> Self {
 		BlockchainState {
 			deploy_block_number: block_number,
-			bridge_contract_address: contract_address,
+			contract_address: contract_address,
 			last_block_number: block_number,
 		}
 	}
@@ -75,23 +75,23 @@ mod tests {
 		let toml = r#"
 [mainnet]
 deploy_block_number = 100
-bridge_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
+contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
 last_block_number = 120
 [testnet]
 deploy_block_number = 101
-bridge_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
+contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
 last_block_number = 121
 "#;
 
 		let expected = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
 				last_block_number: 120,
 			},
 			testnet: BlockchainState {
 				deploy_block_number: 101,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 				last_block_number: 121,
 			},
 		};
@@ -105,24 +105,24 @@ last_block_number = 121
 		let database = Database {
 			mainnet: BlockchainState {
 				deploy_block_number: 100,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
 				last_block_number: 120,
 			},
 			testnet: BlockchainState {
 				deploy_block_number: 101,
-				bridge_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 				last_block_number: 121,
 			},
 		};
 		
 		let expected = r#"[mainnet]
 deploy_block_number = 100
-bridge_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
+contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
 last_block_number = 120
 
 [testnet]
 deploy_block_number = 101
-bridge_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
+contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
 last_block_number = 121
 "#;
 

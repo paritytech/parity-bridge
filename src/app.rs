@@ -10,7 +10,7 @@ use web3::types::TransactionRequest;
 use error::{Error, ErrorKind, ResultExt};
 use config::Config;
 use database::{Database, BlockchainState};
-use bridge::{EthereumBridge, KovanBridge};
+use contracts::{EthereumBridge, KovanBridge};
 use api;
 
 pub enum Deployed {
@@ -69,9 +69,9 @@ impl<T: Transport> App<T> {
 		let main_tx_request = TransactionRequest {
 			from: self.config.mainnet.account,
 			to: None,
-			gas: Some(self.config.mainnet.deploy_tx.gas.into()),
-			gas_price: Some(self.config.mainnet.deploy_tx.gas_price.into()),
-			value: Some(self.config.mainnet.deploy_tx.value.into()),
+			gas: Some(self.config.mainnet.txs.deploy.gas.into()),
+			gas_price: Some(self.config.mainnet.txs.deploy.gas_price.into()),
+			value: Some(self.config.mainnet.txs.deploy.value.into()),
 			data: Some(include_bytes!("../contracts/EthereumBridge.bin").to_vec().into()),
 			nonce: None,
 			condition: None,
@@ -80,9 +80,9 @@ impl<T: Transport> App<T> {
 		let test_tx_request = TransactionRequest {
 			from: self.config.testnet.account,
 			to: None,
-			gas: Some(self.config.testnet.deploy_tx.gas.into()),
-			gas_price: Some(self.config.testnet.deploy_tx.gas_price.into()),
-			value: Some(self.config.testnet.deploy_tx.value.into()),
+			gas: Some(self.config.testnet.txs.deploy.gas.into()),
+			gas_price: Some(self.config.testnet.txs.deploy.gas_price.into()),
+			value: Some(self.config.testnet.txs.deploy.value.into()),
 			data: Some(include_bytes!("../contracts/KovanBridge.bin").to_vec().into()),
 			nonce: None,
 			condition: None,
@@ -97,12 +97,12 @@ impl<T: Transport> App<T> {
 					mainnet: BlockchainState {
 						deploy_block_number: main_receipt.block_number.low_u64(),
 						last_block_number: main_receipt.block_number.low_u64(),
-						bridge_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+						contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
 					},
 					testnet: BlockchainState {
 						deploy_block_number: test_receipt.block_number.low_u64(),
 						last_block_number: test_receipt.block_number.low_u64(),
-						bridge_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+						contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
 					}
 				}
 			})
