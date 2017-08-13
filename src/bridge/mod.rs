@@ -5,7 +5,7 @@ mod withdraw_relay;
 use futures::{Stream, Poll, Async};
 use web3::Transport;
 use error::Error;
-use self::deposit_relay::DepositRelay;
+use self::deposit_relay::{DepositRelay, create_deposit_relay};
 use self::withdraw_relay::WithdrawRelay;
 use self::withdraw_confirm::WithdrawConfirm;
 

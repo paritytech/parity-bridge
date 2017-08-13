@@ -20,7 +20,7 @@ impl Config {
 	pub fn load<P: AsRef<Path>>(path: P) -> Result<Config, Error> {
 		let mut file = fs::File::open(path).chain_err(|| "Cannot open config")?;
 		let mut buffer = String::new();
-		file.read_to_string(&mut buffer);
+		file.read_to_string(&mut buffer).expect("TODO");
 		Self::load_from_str(&buffer)
 	}
 

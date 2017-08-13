@@ -1,4 +1,4 @@
-use web3::types::{Filter, FilterBuilder, Address, TransactionRequest, U256, H256, H160, Bytes, BlockNumber, Log};
+use web3::types::{FilterBuilder, Address, U256, H256, H160, Bytes, Log};
 use ethabi::{Contract, Token};
 use error::{Error, ResultExt};
 use contracts::{EthereumDeposit, KovanDeposit};

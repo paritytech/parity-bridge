@@ -1,4 +1,6 @@
-use std::{io, fmt};
+#![allow(unknown_lints)]
+
+use std::io;
 use tokio_timer::TimerError;
 use {web3, toml, docopt, ethabi};
 

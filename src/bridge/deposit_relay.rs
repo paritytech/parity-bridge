@@ -3,7 +3,7 @@ use futures::{Future, Stream, Poll, Async};
 use futures::future::{JoinAll, join_all};
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{TransactionRequest, H256, Log, Address};
+use web3::types::{TransactionRequest, H256, Address};
 use api::{LogStream, self};
 use error::{Error, ErrorKind};
 use database::Database;
@@ -22,7 +22,7 @@ enum DepositRelayState<T: Transport> {
 	Yield(Option<u64>),
 }
 
-fn deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> DepositRelay<T> {
+pub fn create_deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> DepositRelay<T> {
 	let logs_init = api::LogStreamInit {
 		after: init.checked_deposit_relay,
 		poll_interval: app.config.mainnet.poll_interval,

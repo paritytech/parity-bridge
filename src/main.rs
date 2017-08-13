@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate futures;
 extern crate futures_cpupool;
-extern crate futures_after;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -20,12 +19,12 @@ extern crate ethabi;
 #[macro_use]
 mod macros;
 
-mod api;
-mod app;
-mod config;
-mod bridge;
-mod contracts;
-mod database;
+pub mod api;
+pub mod app;
+pub mod config;
+pub mod bridge;
+pub mod contracts;
+pub mod database;
 pub mod error;
 
 use std::env;

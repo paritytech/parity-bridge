@@ -1,10 +1,9 @@
 use std::time::Duration;
 use futures::{Future, Stream, Poll, Async};
-use futures_after::{After, AfterStream};
 use tokio_timer::{Timer, Interval};
-use web3::{self, api, Transport};
-use web3::api::{Namespace, FilterStream, CreateFilter};
-use web3::types::{Log, Filter, H256, Block, BlockId, BlockNumber, U256, FilterBuilder, TransactionRequest};
+use web3::{api, Transport};
+use web3::api::Namespace;
+use web3::types::{Log, Filter, H256, Block, BlockId, U256, FilterBuilder, TransactionRequest};
 use web3::helpers::CallResult;
 use error::{Error, ErrorKind};
 
@@ -125,8 +124,8 @@ impl<T: Transport> Stream for LogStream<T> {
 					LogStreamState::NextItem(Some(item))
 				},
 				LogStreamState::NextItem(ref mut item) => match item.take() {
-					some => return Ok(some.into()),
 					None => LogStreamState::Wait,
+					some => return Ok(some.into()),
 				},
 			};
 

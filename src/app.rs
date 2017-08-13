@@ -1,10 +1,7 @@
 use std::path::{Path, PathBuf};
-use std::io;
-use std::time::Duration;
-use std::sync::Arc;
 use futures::{future, Future};
 use tokio_core::reactor::{Handle};
-use web3::{Web3, Transport};
+use web3::Transport;
 use web3::transports::ipc::Ipc;
 use web3::types::TransactionRequest;
 use error::{Error, ErrorKind, ResultExt};

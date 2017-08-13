@@ -47,7 +47,7 @@ impl Database {
 		};
 
 		let mut buffer = String::new();
-		file.read_to_string(&mut buffer);
+		file.read_to_string(&mut buffer).expect("TODO");
 		buffer.parse()
 	}
 
