@@ -1,3 +1,4 @@
+mod deploy;
 mod deposit_relay;
 mod withdraw_confirm;
 mod withdraw_relay;
@@ -8,6 +9,8 @@ use web3::Transport;
 use app::App;
 use database::Database;
 use error::Error;
+
+pub use self::deploy::{Deploy, Deployed, create_deploy};
 use self::deposit_relay::{DepositRelay, create_deposit_relay};
 use self::withdraw_relay::{WithdrawRelay, create_withdraw_relay};
 use self::withdraw_confirm::{WithdrawConfirm, create_withdraw_confirm};

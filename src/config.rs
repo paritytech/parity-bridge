@@ -10,7 +10,7 @@ const DEFAULT_POLL_INTERVAL: u64 = 1;
 const DEFAULT_CONFIRMATIONS: u64 = 12;
 
 /// Application config.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Config {
 	pub mainnet: Node,
 	pub testnet: Node,
@@ -39,7 +39,7 @@ impl Config {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Node {
 	pub account: Address,
 	pub contract: ContractConfig,
@@ -85,7 +85,7 @@ impl Node {
 	}
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transactions {
 	pub deploy: TransactionConfig,
 	pub deposit: TransactionConfig,
@@ -100,7 +100,7 @@ impl Transactions {
 	}
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct TransactionConfig {
 	pub gas: u64,
 	pub gas_price: u64,
@@ -117,7 +117,7 @@ impl TransactionConfig {
 	}
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ContractConfig {
 	pub bin: Bytes,
 	pub abi: ethabi::Contract,

@@ -1,8 +1,10 @@
 [mainnet]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
-deploy_tx = { gas = 600000 }
 required_confirmations = 0
+
+[mainnet.transactions]
+deploy = { gas = 600000 }
 
 [mainnet.contract]
 bin = "contracts/EthereumBridge.bin"
@@ -11,8 +13,10 @@ abi = "contracts/EthereumBridge.abi"
 [testnet]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
-deploy_tx = { gas = 600000 }
 required_confirmations = 0
+
+[testnet.transactions]
+deploy = { gas = 600000 }
 
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"

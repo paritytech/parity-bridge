@@ -28,10 +28,12 @@ pub mod database;
 pub mod error;
 
 use std::env;
+use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
 use tokio_core::reactor::Core;
-use app::{App, Deployed};
+use app::App;
+use bridge::{create_deploy, Deployed};
 use config::Config;
 use error::Error;
 
@@ -81,10 +83,11 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 
 	trace!(target: "bridge", "Establishing ipc connection");
 	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
+	let app_ref = Arc::new(app.as_ref());
 
 	trace!(target: "bridge", "Deploying contracts (if needed)");
-	let deployed = event_loop.run(app.ensure_deployed())?;
-
+	let deployed = event_loop.run(create_deploy(app_ref.clone()))?;
+		
 	match deployed {
 		Deployed::New(database) => {
 			trace!(target: "bridge", "Deployed new bridge contracts");

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use futures::{Future, Stream, Poll};
-use futures::future::{JoinAll, join_all};
+use futures::future::{JoinAll};
 use web3::Transport;
 use web3::helpers::CallResult;
 use web3::types::{H256, Address};
