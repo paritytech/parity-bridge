@@ -1,4 +1,4 @@
-macro_rules! try_channel {
+macro_rules! try_bridge {
 	($e: expr) => (match $e {
 		Err(err) => return Err(From::from(err)),
 		Ok($crate::futures::Async::NotReady) => None,

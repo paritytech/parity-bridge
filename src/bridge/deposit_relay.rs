@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use futures::{Future, Stream, Poll, Async};
+use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
 use web3::Transport;
 use web3::helpers::CallResult;

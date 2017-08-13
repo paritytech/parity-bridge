@@ -1,7 +1,7 @@
 use web3::types::{FilterBuilder, Address, U256, H256, H160, H520, Bytes, Log};
 use ethabi::{Contract, Token};
 use error::{Error, ResultExt};
-use contracts::{EthereumDeposit, KovanDeposit, KovanWithdraw};
+use contracts::{EthereumDeposit, KovanDeposit, KovanWithdraw, KovanCollectSignatures};
 
 pub struct KovanBridge<'a>(pub &'a Contract);
 
@@ -74,7 +74,32 @@ impl<'a> KovanBridge<'a> {
 		Ok(result)
 	}
 
-	pub fn collect_signatures_payload(&self, _signature: H520, _withdraw: KovanWithdraw) -> Bytes {
+	pub fn collect_signatures_payload(&self, signature: H520, withdraw: KovanWithdraw) -> Bytes {
+		// TODO: do assert with ecrecover here
+
+		let mut r = vec![0u8; 32];
+		r.copy_from_slice(&signature[0..32]);
+		let mut s = vec![0u8; 32];
+		s.copy_from_slice(&signature[32..64]);
+		let mut v = [0u8; 32];
+		v[31] = signature.0[64];
+
+		let function = self.0.function("collectSignatures").expect("to find function `collectSignatures`");
+		let params = vec![
+			Token::Uint(v),
+			Token::FixedBytes(r),
+			Token::FixedBytes(s),
+			Token::Bytes(withdraw.bytes().0),
+		];
+		let result = function.encode_call(params).expect("the params to be valid");
+		Bytes(result)
+	}
+
+	pub fn collect_signatures_filter(&self, _address: Address) -> FilterBuilder {
+		unimplemented!();
+	}
+
+	pub fn collect_signatures_from_log(&self, _log: Log) -> KovanCollectSignatures {
 		unimplemented!();
 	}
 }

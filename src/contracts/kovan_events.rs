@@ -20,3 +20,5 @@ impl KovanWithdraw {
 		bytes.into()
 	}
 }
+
+pub struct KovanCollectSignatures;
