@@ -42,7 +42,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						.map(|deposit| self.app.testnet_bridge().deposit_payload(deposit))
 						.map(|payload| TransactionRequest {
 							from: self.app.config.testnet.account.clone(),
-							to: Some(self.init.testnet.contract_address.clone()),
+							to: Some(self.init.testnet_contract_address.clone()),
 							gas: Some(self.app.config.testnet.txs.deposit.gas.into()),
 							gas_price: Some(self.app.config.testnet.txs.deposit.gas_price.into()),
 							value: Some(self.app.config.testnet.txs.deposit.value.into()),

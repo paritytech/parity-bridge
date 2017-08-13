@@ -8,8 +8,20 @@ use error::{Error, ResultExt, ErrorKind};
 /// Application "database".
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Database {
-	pub mainnet: BlockchainState,
-	pub testnet: BlockchainState,
+	/// Address of mainnet contract.
+	pub mainnet_contract_address: Address,
+	/// Address of testnet contract.
+	pub testnet_contract_address: Address,
+	/// Number of block at which mainnet contract has been deployed.
+	pub mainnet_deploy: u64,
+	/// Number of block at which testnet contract has been deployed.
+	pub testnet_deploy: u64,
+	/// Number of last block which has been checked for deposit relays.
+	pub checked_deposit_relay: u64,
+	/// Number of last block which has been checked for withdraw relays.
+	pub checked_withdraw_relay: u64,
+	/// Number of last block which has been checked for withdraw confirms.
+	pub checked_withdraw_confirm: u64,
 }
 
 impl str::FromStr for Database {
@@ -46,88 +58,35 @@ impl Database {
 	}
 }
 
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct BlockchainState {
-	/// Block number at which bridge has been deployed.
-	pub deploy_block_number: u64,
-	/// Bridge contract address.
-	pub contract_address: Address,
-	/// Last handled block number
-	pub last_block_number: u64,
-}
-
-impl BlockchainState {
-	pub fn new(block_number: u64, contract_address: Address) -> Self {
-		BlockchainState {
-			deploy_block_number: block_number,
-			contract_address: contract_address,
-			last_block_number: block_number,
-		}
-	}
-}
-
 #[cfg(test)]
 mod tests {
-	use super::{Database, BlockchainState};
+	use super::Database;
 
 	#[test]
-	fn laod_databse_from_str() {
-		let toml = r#"
-[mainnet]
-deploy_block_number = 100
-contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
-last_block_number = 120
-[testnet]
-deploy_block_number = 101
-contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
-last_block_number = 121
+	fn databse_to_and_from_str() {
+		let toml = 
+r#"mainnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
+testnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
+mainnet_deploy = 100
+testnet_deploy = 101
+checked_deposit_relay = 120
+checked_withdraw_relay = 121
+checked_withdraw_confirm = 121
 "#;
 
 		let expected = Database {
-			mainnet: BlockchainState {
-				deploy_block_number: 100,
-				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-				last_block_number: 120,
-			},
-			testnet: BlockchainState {
-				deploy_block_number: 101,
-				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
-				last_block_number: 121,
-			},
+			mainnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+			testnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+			mainnet_deploy: 100,
+			testnet_deploy: 101,
+			checked_deposit_relay: 120,
+			checked_withdraw_relay: 121,
+			checked_withdraw_confirm: 121,
 		};
 
 		let database = toml.parse().unwrap();
 		assert_eq!(expected, database);
-	}
-
-	#[test]
-	fn save_database_to_string() {
-		let database = Database {
-			mainnet: BlockchainState {
-				deploy_block_number: 100,
-				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-				last_block_number: 120,
-			},
-			testnet: BlockchainState {
-				deploy_block_number: 101,
-				contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
-				last_block_number: 121,
-			},
-		};
-		
-		let expected = r#"[mainnet]
-deploy_block_number = 100
-contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
-last_block_number = 120
-
-[testnet]
-deploy_block_number = 101
-contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
-last_block_number = 121
-"#;
-
-		let raw = database.to_string();
-		assert_eq!(expected, &raw);
-
+		let s = database.to_string();
+		assert_eq!(s, toml);
 	}
 }

@@ -9,7 +9,7 @@ use web3::transports::ipc::Ipc;
 use web3::types::TransactionRequest;
 use error::{Error, ErrorKind, ResultExt};
 use config::Config;
-use database::{Database, BlockchainState};
+use database::Database;
 use contracts::{EthereumBridge, KovanBridge};
 use api;
 
@@ -94,16 +94,13 @@ impl<T: Transport> App<T> {
 		let deploy = main_future.join(test_future)
 			.map(|(main_receipt, test_receipt)| {
 				Database {
-					mainnet: BlockchainState {
-						deploy_block_number: main_receipt.block_number.low_u64(),
-						last_block_number: main_receipt.block_number.low_u64(),
-						contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
-					},
-					testnet: BlockchainState {
-						deploy_block_number: test_receipt.block_number.low_u64(),
-						last_block_number: test_receipt.block_number.low_u64(),
-						contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
-					}
+					mainnet_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+					testnet_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+					mainnet_deploy: main_receipt.block_number.low_u64(),
+					testnet_deploy: test_receipt.block_number.low_u64(),
+					checked_deposit_relay: main_receipt.block_number.low_u64(),
+					checked_withdraw_relay: test_receipt.block_number.low_u64(),
+					checked_withdraw_confirm: test_receipt.block_number.low_u64(),
 				}
 			})
 			.map_err(ErrorKind::Web3)
