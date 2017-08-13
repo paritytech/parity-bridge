@@ -14,6 +14,7 @@ const DEFAULT_CONFIRMATIONS: u64 = 12;
 pub struct Config {
 	pub mainnet: Node,
 	pub testnet: Node,
+	pub authorities: Authorities,
 }
 
 impl Config {
@@ -33,6 +34,10 @@ impl Config {
 		let result = Config {
 			mainnet: Node::from_load_struct(config.mainnet, NodeDefaults::mainnet())?,
 			testnet: Node::from_load_struct(config.testnet, NodeDefaults::testnet())?,
+			authorities: Authorities {
+				accounts: config.authorities.accounts,
+				required_signatures: config.authorities.required_signatures,
+			}
 		};
 
 		Ok(result)
@@ -123,6 +128,12 @@ pub struct ContractConfig {
 	pub abi: ethabi::Contract,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Authorities {
+	pub accounts: Vec<Address>,
+	pub required_signatures: u64,
+}
+
 /// Some config values may not be defined in `toml` file, but they should be specified at runtime.
 /// `load` module separates `Config` representation in file with optional from the one used 
 /// in application.
@@ -135,6 +146,7 @@ mod load {
 	pub struct Config {
 		pub mainnet: Node,
 		pub testnet: Node,
+		pub authorities: Authorities,
 	}
 
 	#[derive(Deserialize)]
@@ -165,13 +177,19 @@ mod load {
 		pub bin: PathBuf,
 		pub abi: PathBuf,
 	}
+
+	#[derive(Deserialize)]
+	pub struct Authorities {
+		pub accounts: Vec<Address>,
+		pub required_signatures: u64,
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use std::time::Duration;
 	use ethabi;
-	use super::{Config, Node, TransactionConfig, ContractConfig, Transactions};
+	use super::{Config, Node, TransactionConfig, ContractConfig, Transactions, Authorities};
 
 	#[test]
 	fn load_full_setup_from_str() {
@@ -196,6 +214,14 @@ deploy = { gas = 20, value = 15 }
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
 abi = "contracts/KovanBridge.abi"
+
+[authorities]
+accounts = [
+	"0x0000000000000000000000000000000000000001",
+	"0x0000000000000000000000000000000000000002",
+	"0x0000000000000000000000000000000000000003"
+]
+required_signatures = 2
 "#;
 
 		let expected = Config {
@@ -242,6 +268,14 @@ abi = "contracts/KovanBridge.abi"
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
+			},
+			authorities: Authorities {
+				accounts: vec![
+					"0x0000000000000000000000000000000000000001".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000002".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000003".parse().unwrap(), 
+				],
+				required_signatures: 2,
 			}
 		};
 
@@ -265,6 +299,14 @@ account = "0x0000000000000000000000000000000000000001"
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
 abi = "contracts/KovanBridge.abi"
+
+[authorities]
+accounts = [
+	"0x0000000000000000000000000000000000000001",
+	"0x0000000000000000000000000000000000000002",
+	"0x0000000000000000000000000000000000000003"
+]
+required_signatures = 2
 "#;
 		let expected = Config {
 			mainnet: Node {
@@ -310,6 +352,14 @@ abi = "contracts/KovanBridge.abi"
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
+			},
+			authorities: Authorities {
+				accounts: vec![
+					"0x0000000000000000000000000000000000000001".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000002".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000003".parse().unwrap(), 
+				],
+				required_signatures: 2,
 			}
 		};
 
