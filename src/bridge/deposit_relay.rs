@@ -3,26 +3,45 @@ use futures::{Future, Stream, Poll, Async};
 use futures::future::{JoinAll, join_all};
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{TransactionRequest, H256, Log};
+use web3::types::{TransactionRequest, H256, Log, Address};
 use api::{LogStream, self};
 use error::{Error, ErrorKind};
 use database::Database;
 use app::App;
 
-pub enum DepositRelayState<T: Transport> {
+/// State of deposits relay.
+enum DepositRelayState<T: Transport> {
+	/// Deposit relay is waiting for logs.
 	Wait,
+	/// Relaying deposits in progress.
 	RelayDeposits {
 		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
 		block: u64,
 	},
+	/// All deposits from given block has been relayed.
 	Yield(Option<u64>),
+}
+
+fn deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> DepositRelay<T> {
+	let logs_init = api::LogStreamInit {
+		after: init.checked_deposit_relay,
+		poll_interval: app.config.mainnet.poll_interval,
+		confirmations: app.config.mainnet.required_confirmations,
+		filter: app.mainnet_bridge().deposits_filter(init.mainnet_contract_address.clone()),
+	};
+	DepositRelay {
+		logs: api::log_stream(app.connections.mainnet.clone(), logs_init),
+		testnet_contract: init.testnet_contract_address.clone(),
+		state: DepositRelayState::Wait,
+		app,
+	}
 }
 
 pub struct DepositRelay<T: Transport> {
 	app: Arc<App<T>>,
 	logs: LogStream<T>,
 	state: DepositRelayState<T>,
-	init: Database,
+	testnet_contract: Address,
 }
 
 impl<T: Transport> Stream for DepositRelay<T> {
@@ -42,7 +61,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						.map(|deposit| self.app.testnet_bridge().deposit_payload(deposit))
 						.map(|payload| TransactionRequest {
 							from: self.app.config.testnet.account.clone(),
-							to: Some(self.init.testnet_contract_address.clone()),
+							to: Some(self.testnet_contract.clone()),
 							gas: Some(self.app.config.testnet.txs.deposit.gas.into()),
 							gas_price: Some(self.app.config.testnet.txs.deposit.gas_price.into()),
 							value: Some(self.app.config.testnet.txs.deposit.value.into()),

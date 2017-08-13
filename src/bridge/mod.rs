@@ -2,7 +2,6 @@ mod deposit_relay;
 mod withdraw_confirm;
 mod withdraw_relay;
 
-use std::vec;
 use futures::{Stream, Poll, Async};
 use web3::Transport;
 use error::Error;
@@ -19,7 +18,7 @@ pub enum BridgeChecked {
 
 enum BridgeStatus {
 	Wait,
-	NextItem(vec::IntoIter<BridgeChecked>),
+	NextItem(Option<Vec<BridgeChecked>>),
 }
 
 pub struct Bridge<T: Transport> {
@@ -30,7 +29,7 @@ pub struct Bridge<T: Transport> {
 }
 
 impl<T: Transport> Stream for Bridge<T> {
-	type Item = BridgeChecked;
+	type Item = Vec<BridgeChecked>;
 	type Error = Error;
 
 	fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -41,14 +40,13 @@ impl<T: Transport> Stream for Bridge<T> {
 					let w_relay = try_channel!(self.withdraw_relay.poll()).map(BridgeChecked::WithdrawRelay);
 					let w_confirm = try_channel!(self.withdraw_confirm.poll()).map(BridgeChecked::WithdrawConfirm);
 
-					let result: Vec<_> = [d_relay, w_relay, w_confirm]
+					let result = [d_relay, w_relay, w_confirm]
 						.into_iter()
 						.filter_map(|c| *c)
 						.collect();
-					BridgeStatus::NextItem(result.into_iter())
-
+					BridgeStatus::NextItem(Some(result))
 				},
-				BridgeStatus::NextItem(ref mut iter) => match iter.next() {
+				BridgeStatus::NextItem(ref mut v) => match v.take() {
 					None => BridgeStatus::Wait,
 					some => return Ok(some.into()),
 				},
