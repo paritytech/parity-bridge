@@ -8,20 +8,42 @@ use web3::types::{H256, H520, Address, TransactionRequest};
 use api::{self, LogStream};
 use app::App;
 use contracts::KovanWithdraw;
+use database::Database;
 use error::{Error, ErrorKind};
 
-pub enum WithdrawConfirmState<T: Transport> {
+/// State of withdraw confirmation.
+enum WithdrawConfirmState<T: Transport> {
+	/// Withdraw confirm is waiting for logs.
 	Wait,
+	/// Signing withdraws.
 	SignWithraws {
 		withdraws: Vec<KovanWithdraw>,
 		future: JoinAll<Vec<CallResult<H520, T::Out>>>,
 		block: u64,
 	},
+	/// Confirming withdraws.
 	ConfirmWithdraws {
 		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
 		block: u64,
 	},
+	/// All withdraws till given block has been confirmed.
 	Yield(Option<u64>),
+}
+
+pub fn create_withdraw_confirm<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> WithdrawConfirm<T> {
+	let logs_init = api::LogStreamInit {
+		after: init.checked_withdraw_confirm,
+		poll_interval: app.config.testnet.poll_interval,
+		confirmations: app.config.testnet.required_confirmations,
+		filter: app.testnet_bridge().withdraws_filter(init.testnet_contract_address.clone()),
+	};
+
+	WithdrawConfirm {
+		logs: api::log_stream(app.connections.testnet.clone(), logs_init),
+		testnet_contract: init.testnet_contract_address.clone(),
+		state: WithdrawConfirmState::Wait,
+		app,
+	}
 }
 
 pub struct WithdrawConfirm<T: Transport> {

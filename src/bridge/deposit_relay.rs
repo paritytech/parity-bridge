@@ -18,7 +18,7 @@ enum DepositRelayState<T: Transport> {
 		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
 		block: u64,
 	},
-	/// All deposits from given block has been relayed.
+	/// All deposits till given block has been relayed.
 	Yield(Option<u64>),
 }
 

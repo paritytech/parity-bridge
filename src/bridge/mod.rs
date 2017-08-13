@@ -10,7 +10,7 @@ use database::Database;
 use error::Error;
 use self::deposit_relay::{DepositRelay, create_deposit_relay};
 use self::withdraw_relay::WithdrawRelay;
-use self::withdraw_confirm::WithdrawConfirm;
+use self::withdraw_confirm::{WithdrawConfirm, create_withdraw_confirm};
 
 #[derive(Clone, Copy)]
 pub enum BridgeChecked {
@@ -28,7 +28,7 @@ pub fn create_bridge<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) ->
 	Bridge {
 		deposit_relay: create_deposit_relay(app.clone(), init),
 		withdraw_relay: { unimplemented!(); },
-		withdraw_confirm: { unimplemented!(); },
+		withdraw_confirm: create_withdraw_confirm(app.clone(), init),
 		state: BridgeStatus::Wait,
 	}
 }

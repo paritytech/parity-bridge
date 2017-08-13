@@ -45,6 +45,13 @@ impl<'a> KovanBridge<'a> {
 		Ok(result)
 	}
 
+	pub fn withdraws_filter(&self, address: Address) -> FilterBuilder {
+		let event = self.0.event("Withdraw").expect("to find event `Withdraw`");
+		FilterBuilder::default()
+			.address(vec![address])
+			.topics(Some(vec![H256(event.signature())]), None, None, None)
+	}
+
 	pub fn withdraw_from_log(&self, log: Log) -> Result<KovanWithdraw, Error> {
 		let event = self.0.event("Withdraw").expect("to find event `Withdraw`");
 		let mut decoded = event.decode_log(
