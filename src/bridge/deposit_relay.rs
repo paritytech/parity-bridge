@@ -74,7 +74,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 
 					DepositRelayState::RelayDeposits {
 						future: join_all(deposits),
-						block: item.to
+						block: item.to,
 					}
 				},
 				DepositRelayState::RelayDeposits { ref mut future, block } => {

@@ -1,5 +1,5 @@
 use web3::types::{FilterBuilder, Address, U256, H256, H160, Log};
-use ethabi::Contract;
+use ethabi::{Contract, Token};
 use error::{Error, ResultExt};
 use contracts::{EthereumDeposit};
 
@@ -24,12 +24,11 @@ impl<'a> EthereumBridge<'a> {
 			return Err("Invalid len of decoded deposit event".into())
 		}
 
-		let value = decoded.pop().and_then(|v| v.value.to_uint()).map(U256).chain_err(|| "expected uint")?;
-		let recipient = decoded.pop().and_then(|v| v.value.to_address()).map(H160).chain_err(|| "expected address")?;
+		let mut iter = decoded.into_iter().map(|v| v.value);
 
 		let result = EthereumDeposit {
-			recipient,
-			value,
+			recipient: iter.next().and_then(Token::to_address).map(H160).chain_err(|| "expected address")?,
+			value: iter.next().and_then(Token::to_uint).map(U256).chain_err(|| "expected uint")?,
 			hash: log.transaction_hash.expect("hash to exist"),
 		};
 

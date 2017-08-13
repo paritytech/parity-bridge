@@ -11,8 +11,10 @@ use contracts::{EthereumBridge, KovanBridge};
 use api;
 
 pub enum Deployed {
+	/// No existing database found. Deployed new contracts.
 	New(Database),
-	None(Database),
+	/// Reusing existing contracts.
+	Existing(Database),
 }
 
 pub struct App<T> where T: Transport {
@@ -55,7 +57,7 @@ impl<T: Transport> App<T> {
 	pub fn ensure_deployed<'a>(&'a self) -> Box<Future<Item = Deployed, Error = Error> + 'a> {
 		let database_path = self.database_path.clone();
 		match Database::load(&database_path).map_err(ErrorKind::from) {
-			Ok(database) => future::result(Ok(Deployed::None(database))).boxed(),
+			Ok(database) => future::result(Ok(Deployed::Existing(database))).boxed(),
 			Err(ErrorKind::MissingFile(_)) => Box::new(self.deploy().map(Deployed::New)),
 			Err(err) => future::result(Err(err.into())).boxed(),
 		}

@@ -90,7 +90,7 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 			trace!(target: "bridge", "Deployed new bridge contracts");
 			trace!(target: "bridge", "\n\n{}\n", database);
 		},
-		Deployed::None(database) => {
+		Deployed::Existing(_database) => {
 			trace!(target: "bridge", "Loaded database");
 		},
 	}

@@ -2,8 +2,11 @@ mod deposit_relay;
 mod withdraw_confirm;
 mod withdraw_relay;
 
-use futures::{Stream, Poll, Async};
+use std::sync::Arc;
+use futures::{Stream, Poll};
 use web3::Transport;
+use app::App;
+use database::Database;
 use error::Error;
 use self::deposit_relay::{DepositRelay, create_deposit_relay};
 use self::withdraw_relay::WithdrawRelay;
@@ -19,6 +22,15 @@ pub enum BridgeChecked {
 enum BridgeStatus {
 	Wait,
 	NextItem(Option<Vec<BridgeChecked>>),
+}
+
+pub fn create_bridge<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> Bridge<T> {
+	Bridge {
+		deposit_relay: create_deposit_relay(app.clone(), init),
+		withdraw_relay: { unimplemented!(); },
+		withdraw_confirm: { unimplemented!(); },
+		state: BridgeStatus::Wait,
+	}
 }
 
 pub struct Bridge<T: Transport> {

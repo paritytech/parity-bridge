@@ -1,9 +1,9 @@
 use std::time::Duration;
-use futures::{Future, Stream, Poll, Async};
+use futures::{Future, Stream, Poll};
 use tokio_timer::{Timer, Interval};
 use web3::{api, Transport};
 use web3::api::Namespace;
-use web3::types::{Log, Filter, H256, Block, BlockId, U256, FilterBuilder, TransactionRequest};
+use web3::types::{Log, Filter, H256, H520, Block, BlockId, U256, FilterBuilder, TransactionRequest, Bytes, Address};
 use web3::helpers::CallResult;
 use error::{Error, ErrorKind};
 
@@ -28,6 +28,10 @@ pub fn block_number<T: Transport>(transport: T) -> CallResult<U256, T::Out> {
 /// Imperative wrapper for web3 function.
 pub fn send_transaction<T: Transport>(transport: T, tx: TransactionRequest) -> CallResult<H256, T::Out> {
 	api::Eth::new(transport).send_transaction(tx)
+}
+
+pub fn sign<T: Transport>(transport: T, address: Address, data: Bytes) -> CallResult<H520, T::Out> {
+	api::Eth::new(transport).sign(address, data)
 }
 
 /// Used for `LogStream` initialization.

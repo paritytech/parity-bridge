@@ -7,7 +7,7 @@ use error::Error;
 
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
-	RelayDeposits {
+	RelayWithdraws {
 		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
 		block: u64,
 	},

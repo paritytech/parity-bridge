@@ -1,7 +1,7 @@
-use web3::types::{FilterBuilder, Address, U256, H256, H160, Bytes, Log};
+use web3::types::{FilterBuilder, Address, U256, H256, H160, H520, Bytes, Log};
 use ethabi::{Contract, Token};
 use error::{Error, ResultExt};
-use contracts::{EthereumDeposit, KovanDeposit};
+use contracts::{EthereumDeposit, KovanDeposit, KovanWithdraw};
 
 pub struct KovanBridge<'a>(pub &'a Contract);
 
@@ -26,6 +26,27 @@ impl<'a> KovanBridge<'a> {
 
 	pub fn deposit_from_log(&self, log: Log) -> Result<KovanDeposit, Error> {
 		let event = self.0.event("Deposit").expect("to find event `Deposit`");
+		let decoded = event.decode_log(
+			log.topics.into_iter().map(|t| t.0).collect(),
+			log.data.0
+		)?;
+
+		if decoded.len() != 2 {
+			return Err("Invalid len of decoded deposit event".into())
+		}
+
+		let mut iter = decoded.into_iter().map(|v| v.value);
+
+		let result = KovanDeposit {
+			recipient: iter.next().and_then(Token::to_address).map(H160).chain_err(|| "expected address")?,
+			value: iter.next().and_then(Token::to_uint).map(U256).chain_err(|| "expected uint")?,
+		};
+
+		Ok(result)
+	}
+
+	pub fn withdraw_from_log(&self, log: Log) -> Result<KovanWithdraw, Error> {
+		let event = self.0.event("Withdraw").expect("to find event `Withdraw`");
 		let mut decoded = event.decode_log(
 			log.topics.into_iter().map(|t| t.0).collect(),
 			log.data.0
@@ -35,15 +56,19 @@ impl<'a> KovanBridge<'a> {
 			return Err("Invalid len of decoded deposit event".into())
 		}
 
-		let value = decoded.pop().and_then(|v| v.value.to_uint()).map(U256).chain_err(|| "expected uint")?;
-		let recipient = decoded.pop().and_then(|v| v.value.to_address()).map(H160).chain_err(|| "expected address")?;
+		let mut iter = decoded.into_iter().map(|v| v.value);
 
-		let result = KovanDeposit {
-			recipient,
-			value,
+		let result = KovanWithdraw {
+			recipient: iter.next().and_then(Token::to_address).map(H160).chain_err(|| "expected address")?,
+			value: iter.next().and_then(Token::to_uint).map(U256).chain_err(|| "expected uint")?,
+			hash: log.transaction_hash.expect("hash to exist"),
 		};
 
 		Ok(result)
+	}
+
+	pub fn collect_signatures_payload(&self, _signature: H520, _withdraw: KovanWithdraw) -> Bytes {
+		unimplemented!();
 	}
 }
 
