@@ -13,7 +13,7 @@ impl<'a> KovanBridge<'a> {
 			Token::Uint(deposit.value.0), 
 			Token::FixedBytes(deposit.hash.0.to_vec())
 		];
-		let result = function.encode_call(params).expect("the params to be valid");
+		let result = function.encode_input(&params).expect("the params to be valid");
 		Bytes(result)
 	}
 
@@ -26,10 +26,10 @@ impl<'a> KovanBridge<'a> {
 
 	pub fn deposit_from_log(&self, log: Log) -> Result<KovanDeposit, Error> {
 		let event = self.0.event("Deposit").expect("to find event `Deposit`");
-		let decoded = event.decode_log(
+		let decoded = event.parse_log((
 			log.topics.into_iter().map(|t| t.0).collect(),
 			log.data.0
-		)?;
+		).into())?.params;
 
 		if decoded.len() != 2 {
 			return Err("Invalid len of decoded deposit event".into())
@@ -54,10 +54,10 @@ impl<'a> KovanBridge<'a> {
 
 	pub fn withdraw_from_log(&self, log: Log) -> Result<KovanWithdraw, Error> {
 		let event = self.0.event("Withdraw").expect("to find event `Withdraw`");
-		let mut decoded = event.decode_log(
+		let mut decoded = event.parse_log((
 			log.topics.into_iter().map(|t| t.0).collect(),
 			log.data.0
-		)?;
+		).into())?.params;
 
 		if decoded.len() != 2 {
 			return Err("Invalid len of decoded deposit event".into())
@@ -91,7 +91,7 @@ impl<'a> KovanBridge<'a> {
 			Token::FixedBytes(s),
 			Token::Bytes(withdraw.bytes().0),
 		];
-		let result = function.encode_call(params).expect("the params to be valid");
+		let result = function.encode_input(&params).expect("the params to be valid");
 		Bytes(result)
 	}
 

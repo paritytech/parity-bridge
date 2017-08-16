@@ -15,10 +15,10 @@ impl<'a> EthereumBridge<'a> {
 
 	pub fn deposit_from_log(&self, log: Log) -> Result<EthereumDeposit, Error> {
 		let event = self.0.event("Deposit").expect("to find event `Deposit`");
-		let mut decoded = event.decode_log(
+		let mut decoded = event.parse_log((
 			log.topics.into_iter().map(|t| t.0).collect(),
 			log.data.0
-		)?;
+		).into())?.params;
 
 		if decoded.len() != 2 {
 			return Err("Invalid len of decoded deposit event".into())

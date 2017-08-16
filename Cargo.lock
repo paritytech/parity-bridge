@@ -5,7 +5,7 @@ dependencies = [
  "docopt 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.11.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethabi 3.0.0 (git+https://github.com/paritytech/ethabi?branch=bridge)",
+ "ethabi 3.0.0 (git+https://github.com/paritytech/ethabi?branch=use_contract)",
  "futures 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -141,7 +141,7 @@ dependencies = [
 [[package]]
 name = "ethabi"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/ethabi?branch=bridge#131ad218e3c5a0781f77b5c8246bc7c7ceec2665"
+source = "git+https://github.com/paritytech/ethabi?branch=use_contract#29920403271e0e2164993479d0e7cbf495b4df28"
 dependencies = [
  "error-chain 0.11.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -771,7 +771,7 @@ dependencies = [
 "checksum env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "15abd780e45b3ea4f76b4e9a26ff4843258dd8a3eed2775a0e7368c2e7936c2f"
 "checksum error-chain 0.11.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)" = "38d3a55d9a7a456748f2a3912c0941a5d9a68006eb15b3c3c9836b8420dc102d"
 "checksum ethabi 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0c3d62319ee0f35abf20afe8859dd2668195912614346447bb2dee9fb8da7c62"
-"checksum ethabi 3.0.0 (git+https://github.com/paritytech/ethabi?branch=bridge)" = "<none>"
+"checksum ethabi 3.0.0 (git+https://github.com/paritytech/ethabi?branch=use_contract)" = "<none>"
 "checksum futures 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "4b63a4792d4f8f686defe3b39b92127fea6344de5d38202b2ee5a11bbbf29d6a"
 "checksum futures-cpupool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a283c84501e92cade5ea673a2a7ca44f71f209ccdd302a3e0896f50083d2c5ff"
 "checksum gcc 0.3.51 (registry+https://github.com/rust-lang/crates.io-index)" = "120d07f202dcc3f72859422563522b66fe6463a4c513df062874daad05f85f0a"
