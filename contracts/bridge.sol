@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.15;
 
 library Authorities {
     function contains (address[] self, address value) internal returns (bool) {
@@ -33,10 +33,10 @@ contract EthereumBridge {
     mapping (bytes32 => bool) withdraws;
     
     /// Event created on money deposit.
-    event Deposit (address, uint);
+    event Deposit (address recipient, uint value);
     
     /// Event created on money withdraw.
-    event Withdraw (address, uint);
+    event Withdraw (address recipient, uint value);
     
     /// Multisig authority validation
     modifier allAuthorities (uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
@@ -161,13 +161,13 @@ contract KovanBridge {
     mapping (bytes32 => SignaturesCollection) signatures;
     
     /// Event created on money deposit.
-    event Deposit(address, uint);
+    event Deposit(address recipient, uint value);
     
     /// Event created on money withdraw.
-    event Withdraw(address, uint);
+    event Withdraw(address recipient, uint value);
     
     /// Event created on money transfer
-    event Transfer(address from, address to, uint);
+    event Transfer(address from, address to, uint value);
     
     /// Collected signatures which should be relayed to ehtereum chain.
     event CollectedSignatures(bytes message, uint8[] r, bytes32[] s, bytes32[] v);

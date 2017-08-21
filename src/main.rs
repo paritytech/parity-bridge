@@ -15,6 +15,10 @@ extern crate env_logger;
 #[macro_use]
 extern crate error_chain;
 extern crate ethabi;
+#[macro_use]
+extern crate ethabi_derive;
+#[macro_use]
+extern crate ethabi_contract;
 
 #[macro_use]
 mod macros;

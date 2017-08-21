@@ -6,7 +6,7 @@ use web3::types::{TransactionRequest};
 use app::App;
 use database::Database;
 use error::{Error, ErrorKind};
-use api;
+use {api, ethabi};
 
 pub enum Deployed {
 	/// No existing database found. Deployed new contracts.
@@ -42,13 +42,24 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 				DeployState::CheckIfNeeded => match Database::load(&self.app.database_path).map_err(ErrorKind::from) {
 					Ok(database) => return Ok(Deployed::Existing(database).into()),
 					Err(ErrorKind::MissingFile(_)) => {
+						let main_data = self.app.mainnet_bridge.constructor(
+							self.app.config.mainnet.contract.bin.clone().0,
+							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect()
+						);
+						let test_data = self.app.testnet_bridge.constructor(
+							self.app.config.testnet.contract.bin.clone().0,
+							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect()
+						);
+
 						let main_tx_request = TransactionRequest {
 							from: self.app.config.mainnet.account,
 							to: None,
 							gas: Some(self.app.config.mainnet.txs.deploy.gas.into()),
 							gas_price: Some(self.app.config.mainnet.txs.deploy.gas_price.into()),
 							value: Some(self.app.config.mainnet.txs.deploy.value.into()),
-							data: Some(self.app.config.mainnet.contract.bin.clone()),
+							data: Some(main_data.into()),
 							nonce: None,
 							condition: None,
 						};
@@ -59,7 +70,7 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 							gas: Some(self.app.config.testnet.txs.deploy.gas.into()),
 							gas_price: Some(self.app.config.testnet.txs.deploy.gas_price.into()),
 							value: Some(self.app.config.testnet.txs.deploy.value.into()),
-							data: Some(self.app.config.testnet.contract.bin.clone()),
+							data: Some(test_data.into()),
 							nonce: None,
 							condition: None,
 						};

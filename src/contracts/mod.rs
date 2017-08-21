@@ -1,9 +1,10 @@
-mod eth;
-mod eth_events;
-mod kovan;
-mod kovan_events;
+use web3::types::H256;
+use ethabi;
 
-pub use self::eth::EthereumBridge;
-pub use self::kovan::KovanBridge;
-pub use self::eth_events::EthereumDeposit;
-pub use self::kovan_events::{KovanDeposit, KovanWithdraw, KovanCollectSignatures};
+use_contract!(mainnet, "EthereumBridge", "contracts/EthereumBridge.abi");
+use_contract!(testnet, "KovanBridge", "contracts/KovanBridge.abi");
+
+pub fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
+	let t: Vec<ethabi::Hash> = topic.into();
+	Some(t.into_iter().map(|x| H256(x)).collect())
+}

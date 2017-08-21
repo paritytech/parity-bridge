@@ -4,7 +4,7 @@ use std::io::Read;
 use std::time::Duration;
 use web3::types::{Address, Bytes};
 use error::{ResultExt, Error};
-use {toml, ethabi};
+use {toml};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
 const DEFAULT_CONFIRMATIONS: u64 = 12;
@@ -78,7 +78,6 @@ impl Node {
 			account: node.account,
 			contract: ContractConfig {
 				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
-				abi: ethabi::Contract::load(fs::File::open(node.contract.abi)?)?,
 			},
 			ipc: node.ipc.unwrap_or(defaults.ipc),
 			txs: node.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
@@ -125,13 +124,12 @@ impl TransactionConfig {
 #[derive(Debug, PartialEq, Clone)]
 pub struct ContractConfig {
 	pub bin: Bytes,
-	pub abi: ethabi::Contract,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Authorities {
 	pub accounts: Vec<Address>,
-	pub required_signatures: u64,
+	pub required_signatures: u32,
 }
 
 /// Some config values may not be defined in `toml` file, but they should be specified at runtime.
@@ -175,20 +173,18 @@ mod load {
 	#[derive(Deserialize)]
 	pub struct ContractConfig {
 		pub bin: PathBuf,
-		pub abi: PathBuf,
 	}
 
 	#[derive(Deserialize)]
 	pub struct Authorities {
 		pub accounts: Vec<Address>,
-		pub required_signatures: u64,
+		pub required_signatures: u32,
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use std::time::Duration;
-	use ethabi;
 	use super::{Config, Node, TransactionConfig, ContractConfig, Transactions, Authorities};
 
 	#[test]
@@ -202,7 +198,6 @@ required_confirmations = 100
 
 [mainnet.contract]
 bin = "contracts/EthereumBridge.bin"
-abi = "contracts/EthereumBridge.abi"
 
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
@@ -213,7 +208,6 @@ deploy = { gas = 20, value = 15 }
 
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
-abi = "contracts/KovanBridge.abi"
 
 [authorities]
 accounts = [
@@ -230,7 +224,6 @@ required_signatures = 2
 				ipc: "/mainnet.ipc".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
-					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
 				},
 				txs: Transactions {
 					deploy: TransactionConfig {
@@ -251,7 +244,6 @@ required_signatures = 2
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
-					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
 				},
 				ipc: "/testnet.ipc".into(),
 				txs: Transactions {
@@ -291,14 +283,12 @@ account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 
 [mainnet.contract]
 bin = "contracts/EthereumBridge.bin"
-abi = "contracts/EthereumBridge.abi"
 
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
 
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
-abi = "contracts/KovanBridge.abi"
 
 [authorities]
 accounts = [
@@ -314,7 +304,6 @@ required_signatures = 2
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
-					abi: ethabi::Contract::load(include_bytes!("../contracts/EthereumBridge.abi") as &[u8]).unwrap(),
 				},
 				txs: Transactions {
 					deploy: TransactionConfig {
@@ -336,7 +325,6 @@ required_signatures = 2
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
-					abi: ethabi::Contract::load(include_bytes!("../contracts/KovanBridge.abi") as &[u8]).unwrap(),
 				},
 				txs: Transactions {
 					deploy: TransactionConfig {

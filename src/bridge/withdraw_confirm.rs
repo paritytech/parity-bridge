@@ -2,14 +2,45 @@ use std::sync::Arc;
 use std::ops;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
+use ethabi::RawLog;
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{H256, H520, Address, TransactionRequest};
+use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream};
 use app::App;
-use contracts::KovanWithdraw;
+use contracts::{testnet, web3_topic};
 use database::Database;
 use error::{Error, ErrorKind};
+
+fn withdraws_filter(testnet: &testnet::KovanBridge, address: Address) -> FilterBuilder {
+	let filter = testnet.events().withdraw().create_filter();
+	let t0 = web3_topic(filter.topic0);
+	let t1 = web3_topic(filter.topic1);
+	let t2 = web3_topic(filter.topic2);
+	let t3 = web3_topic(filter.topic3);
+	FilterBuilder::default()
+		.address(vec![address])
+		.topics(t0, t1, t2, t3)
+}
+
+fn withdraw_confirm_payload(testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes, Error> {
+	let raw_log = RawLog {
+		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		data: log.data.0,
+	};
+	let withdraw_log = testnet.events().withdraw().parse_log(raw_log)?;
+	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
+	let mut result = vec![0u8; 84];
+	result[0..20].copy_from_slice(&withdraw_log.recipient);
+	result[20..52].copy_from_slice(&withdraw_log.value);
+	result[52..84].copy_from_slice(&hash);
+	Ok(result.into())
+}
+
+fn withdraw_collect_signatures_payload(_testnet: &testnet::KovanBridge, _withdraw_payload: Bytes, _signature: H520) -> Bytes {
+	// TODO: this is likely to change
+	unimplemented!();
+}
 
 /// State of withdraw confirmation.
 enum WithdrawConfirmState<T: Transport> {
@@ -17,7 +48,7 @@ enum WithdrawConfirmState<T: Transport> {
 	Wait,
 	/// Signing withdraws.
 	SignWithraws {
-		withdraws: Vec<KovanWithdraw>,
+		withdraws: Vec<Bytes>,
 		future: JoinAll<Vec<CallResult<H520, T::Out>>>,
 		block: u64,
 	},
@@ -35,7 +66,7 @@ pub fn create_withdraw_confirm<T: Transport + Clone>(app: Arc<App<T>>, init: &Da
 		after: init.checked_withdraw_confirm,
 		poll_interval: app.config.testnet.poll_interval,
 		confirmations: app.config.testnet.required_confirmations,
-		filter: app.testnet_bridge().withdraws_filter(init.testnet_contract_address.clone()),
+		filter: withdraws_filter(&app.testnet_bridge, init.testnet_contract_address.clone()),
 	};
 
 	WithdrawConfirm {
@@ -64,11 +95,11 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					let item = try_stream!(self.logs.poll());
 					let withdraws = item.logs
 						.into_iter()
-						.map(|log| self.app.testnet_bridge().withdraw_from_log(log))
+						.map(|log| withdraw_confirm_payload(&self.app.testnet_bridge, log))
 						.collect::<Result<Vec<_>, _>>()?;
 
-					let requests = withdraws.iter()
-						.map(KovanWithdraw::bytes)
+					let requests = withdraws.clone()
+						.into_iter()
 						.map(|bytes| api::sign(&self.app.connections.testnet, self.app.config.testnet.account.clone(), bytes))
 						.collect::<Vec<_>>();
 
@@ -86,7 +117,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					let confirmations = withdraws
 						.drain(ops::RangeFull)
 						.zip(signatures.into_iter())
-						.map(|(withdraw, signature)| app.testnet_bridge().collect_signatures_payload(signature, withdraw))
+						.map(|(withdraw, signature)| withdraw_collect_signatures_payload(&app.testnet_bridge, withdraw, signature))
 						.map(|payload| TransactionRequest {
 							// TODO: gas pricing should be taken from correct config option!!!
 							from: app.config.testnet.account.clone(),

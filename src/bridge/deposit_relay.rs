@@ -3,11 +3,35 @@ use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{TransactionRequest, H256, Address};
+use web3::types::{TransactionRequest, H256, Address, Bytes, Log, FilterBuilder};
+use ethabi::RawLog;
 use api::{LogStream, self};
-use error::{Error, ErrorKind};
+use error::{Error, ErrorKind, Result};
 use database::Database;
+use contracts::{mainnet, testnet, web3_topic};
 use app::App;
+
+fn deposits_filter(mainnet: &mainnet::EthereumBridge, address: Address) -> FilterBuilder {
+	let filter = mainnet.events().deposit().create_filter();
+	let t0 = web3_topic(filter.topic0);
+	let t1 = web3_topic(filter.topic1);
+	let t2 = web3_topic(filter.topic2);
+	let t3 = web3_topic(filter.topic3);
+	FilterBuilder::default()
+		.address(vec![address])
+		.topics(t0, t1, t2, t3)
+}
+
+fn deposit_relay_payload(mainnet: &mainnet::EthereumBridge, testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes> {
+	let raw_log = RawLog {
+		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		data: log.data.0,
+	};
+	let deposit_log = mainnet.events().deposit().parse_log(raw_log)?;
+	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
+	let payload = testnet.functions().deposit().input(deposit_log.recipient, deposit_log.value, hash.0);
+	Ok(payload.into())
+}
 
 /// State of deposits relay.
 enum DepositRelayState<T: Transport> {
@@ -27,7 +51,7 @@ pub fn create_deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Datab
 		after: init.checked_deposit_relay,
 		poll_interval: app.config.mainnet.poll_interval,
 		confirmations: app.config.mainnet.required_confirmations,
-		filter: app.mainnet_bridge().deposits_filter(init.mainnet_contract_address.clone()),
+		filter: deposits_filter(&app.mainnet_bridge, init.mainnet_contract_address.clone()),
 	};
 	DepositRelay {
 		logs: api::log_stream(app.connections.mainnet.clone(), logs_init),
@@ -55,10 +79,9 @@ impl<T: Transport> Stream for DepositRelay<T> {
 					let item = try_stream!(self.logs.poll());
 					let deposits = item.logs
 						.into_iter()
-						.map(|log| self.app.mainnet_bridge().deposit_from_log(log))
-						.collect::<Result<Vec<_>, _>>()?
+						.map(|log| deposit_relay_payload(&self.app.mainnet_bridge, &self.app.testnet_bridge, log))
+						.collect::<Result<Vec<_>>>()?
 						.into_iter()
-						.map(|deposit| self.app.testnet_bridge().deposit_payload(deposit))
 						.map(|payload| TransactionRequest {
 							from: self.app.config.testnet.account.clone(),
 							to: Some(self.testnet_contract.clone()),

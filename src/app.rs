@@ -4,12 +4,14 @@ use web3::Transport;
 use web3::transports::ipc::Ipc;
 use error::{Error, ResultExt};
 use config::Config;
-use contracts::{EthereumBridge, KovanBridge};
+use contracts::{mainnet, testnet};
 
 pub struct App<T> where T: Transport {
 	pub config: Config,
 	pub database_path: PathBuf,
 	pub connections: Connections<T>,
+	pub mainnet_bridge: mainnet::EthereumBridge,
+	pub testnet_bridge: testnet::KovanBridge,
 }
 
 pub struct Connections<T> where T: Transport {
@@ -46,6 +48,8 @@ impl App<Ipc> {
 			config,
 			database_path: database_path.as_ref().to_path_buf(),
 			connections,
+			mainnet_bridge: mainnet::EthereumBridge::new(),
+			testnet_bridge: testnet::KovanBridge::new(),
 		};
 		Ok(result)
 	}
@@ -57,14 +61,8 @@ impl<T: Transport> App<T> {
 			config: self.config.clone(),
 			connections: self.connections.as_ref(),
 			database_path: self.database_path.clone(),
+			mainnet_bridge: mainnet::EthereumBridge::new(),
+			testnet_bridge: testnet::KovanBridge::new(),
 		}
-	}
-
-	pub fn mainnet_bridge(&self) -> EthereumBridge {
-		EthereumBridge(&self.config.mainnet.contract.abi)
-	}
-
-	pub fn testnet_bridge(&self) -> KovanBridge {
-		KovanBridge(&self.config.mainnet.contract.abi)
 	}
 }

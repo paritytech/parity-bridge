@@ -3,11 +3,17 @@ use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll};
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{H256, Address};
+use web3::types::{H256, Address, FilterBuilder};
 use app::App;
 use api::{self, LogStream};
+use contracts::{testnet};
 use database::Database;
 use error::{Error, ErrorKind};
+
+fn collected_signatures_filter(_testnet: &testnet::KovanBridge, _address: Address) -> FilterBuilder {
+	// TODO: this will be changed significantly
+	unimplemented!();
+}
 
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
@@ -23,7 +29,7 @@ pub fn create_withdraw_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Data
 		after: init.checked_withdraw_relay,
 		poll_interval: app.config.testnet.poll_interval,
 		confirmations: app.config.testnet.required_confirmations,
-		filter: app.testnet_bridge().collect_signatures_filter(init.testnet_contract_address.clone()),
+		filter: collected_signatures_filter(&app.testnet_bridge, init.testnet_contract_address.clone()),
 	};
 
 	WithdrawRelay {
