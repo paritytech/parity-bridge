@@ -160,7 +160,7 @@ contract KovanBridge {
     event Transfer(address from, address to, uint value);
     
     /// Collected signatures which should be relayed to ethereum chain.
-    event CollectedSignatures(address authority, bytes message);
+    event CollectedSignatures(address authority, bytes32 messageHash);
     
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
@@ -220,12 +220,17 @@ contract KovanBridge {
     
         // TODO: this may cause troubles if requriedSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
-            CollectedSignatures(msg.sender, message);
+            CollectedSignatures(msg.sender, hash);
         }
     }
     
     /// Get signature 
     function signature (bytes32 hash, uint index) constant returns (bytes) {
         return signatures[hash].signatures[index];
+    }
+    
+    /// Get message
+    function message (bytes32 hash) constant returns (bytes) {
+        return signatures[hash].message;
     }
 }
