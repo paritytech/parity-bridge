@@ -127,11 +127,10 @@ contract KovanBridge {
     struct SignaturesCollection {
         /// Signed message.
         bytes message;
-        /// Authorities who signed signature.
+        /// Authorities who signed the message.
         address[] signed;
-        uint8[] r;
-        bytes32[] s;
-        bytes32[] v;
+        /// Signaturs
+        bytes[] signatures;
     }
     
     /// Number of authorities signatures required to withdraw the money.
@@ -160,8 +159,8 @@ contract KovanBridge {
     /// Event created on money transfer
     event Transfer(address from, address to, uint value);
     
-    /// Collected signatures which should be relayed to ehtereum chain.
-    event CollectedSignatures(bytes message, uint8[] r, bytes32[] s, bytes32[] v);
+    /// Collected signatures which should be relayed to ethereum chain.
+    event CollectedSignatures(address authority, bytes message);
     
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
@@ -210,20 +209,23 @@ contract KovanBridge {
     /// Should be used as sync tool
     /// 
     /// Message is a message that should be relayed to main chain once authorities sign it.
-    function collectSignatures (uint8 r, bytes32 s, bytes32 v, bytes message) onlyAuthority() {
+    function submitSignature (bytes signature, bytes message) onlyAuthority() {
         var hash = sha3(message);
         
         // Duplicated signatures
         require(!signatures[hash].signed.contains(msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
-        signatures[hash].r.push(r);
-        signatures[hash].s.push(s);
-        signatures[hash].v.push(v);
+        signatures[hash].signatures.push(signature);
     
         // TODO: this may cause troubles if requriedSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
-            CollectedSignatures(message, signatures[hash].r, signatures[hash].s, signatures[hash].v);
+            CollectedSignatures(msg.sender, message);
         }
+    }
+    
+    /// Get signature 
+    function signature (bytes32 hash, uint index) constant returns (bytes) {
+        return signatures[hash].signatures[index];
     }
 }
