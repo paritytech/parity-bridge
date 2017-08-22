@@ -43,15 +43,12 @@ contract EthereumBridge {
         var hash = sha3(message);
         var used = new address[](requiredSignatures);
         
-        if (v.length < requiredSignatures) {
-            throw;
-        }
+        require(requiredSignatures <= v.length);
         
         for (uint i = 0; i < requiredSignatures; i++) {
             var a = ecrecover(hash, v[i], r[i], s[i]);
-            if (!authorities.contains(a) || used.contains(a)) {
-                throw;
-            }
+            require(authorities.contains(a));
+            require(!used.contains(a));
             used[i] = a;
         }
         _;
@@ -59,9 +56,7 @@ contract EthereumBridge {
     
     /// Constructor.
     function EthereumBridge (uint n, address[] a) {
-        if (requiredSignatures > a.length) {
-            throw;
-        }
+        require(requiredSignatures <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
@@ -88,9 +83,7 @@ contract EthereumBridge {
         }
         
         // Duplicated withdraw
-        if (withdraws[hash]) {
-            throw;
-        }
+        require(!withdraws[hash]);
         
         // Order of operations below is critical to avoid TheDAO-like bug
         withdraws[hash] = true;
@@ -114,9 +107,7 @@ contract EthereumBridge {
             newAuthoritiesNumber := mload(add(message, 0x32))
         }
 
-        if (newRequiredSignatures > newAuthoritiesNumber) {
-            throw;
-        }
+        require(newRequiredSignatures <= newAuthoritiesNumber);
 
         authorities.truncate(newAuthoritiesNumber);
 
@@ -174,18 +165,14 @@ contract KovanBridge {
     
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
-        if (requiredSignatures > a.length) {
-            throw;
-        }
+        require(requiredSignatures <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
 
     /// Multisig authority validation
     modifier onlyAuthority () {
-        if (!authorities.contains(msg.sender)) {
-            throw;
-        }
+        require(authorities.contains(msg.sender));
         _;
     }
     
@@ -197,9 +184,7 @@ contract KovanBridge {
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
     function deposit (address recipient, uint value, bytes32 hash) onlyAuthority() {
         // Duplicated deposits
-        if (deposits[hash].contains(msg.sender)) {
-            throw;
-        }
+        require(!deposits[hash].contains(msg.sender));
 
         deposits[hash].push(msg.sender);
         // TODO: this may cause troubles if requriedSignatures len is changed
@@ -211,9 +196,7 @@ contract KovanBridge {
     
     /// Used to transfer money between accounts
     function transfer (address recipient, uint value, bool externalTransfer) {
-        if (balances[msg.sender] < value) {
-            throw;
-        }
+        require(balances[msg.sender] >= value);
         
         balances[msg.sender] -= value;
         if (externalTransfer) {
@@ -231,9 +214,7 @@ contract KovanBridge {
         var hash = sha3(message);
         
         // Duplicated signatures
-        if (signatures[hash].signed.contains(msg.sender)) {
-            throw;
-        }
+        require(!signatures[hash].signed.contains(msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
         signatures[hash].r.push(r);
