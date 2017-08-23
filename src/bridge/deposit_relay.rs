@@ -8,18 +8,12 @@ use ethabi::RawLog;
 use api::{LogStream, self};
 use error::{Error, ErrorKind, Result};
 use database::Database;
-use contracts::{mainnet, testnet, web3_topic};
+use contracts::{mainnet, testnet, web3_filter};
 use app::App;
 
 fn deposits_filter(mainnet: &mainnet::EthereumBridge, address: Address) -> FilterBuilder {
 	let filter = mainnet.events().deposit().create_filter();
-	let t0 = web3_topic(filter.topic0);
-	let t1 = web3_topic(filter.topic1);
-	let t2 = web3_topic(filter.topic2);
-	let t3 = web3_topic(filter.topic3);
-	FilterBuilder::default()
-		.address(vec![address])
-		.topics(t0, t1, t2, t3)
+	web3_filter(filter, address)
 }
 
 fn deposit_relay_payload(mainnet: &mainnet::EthereumBridge, testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes> {

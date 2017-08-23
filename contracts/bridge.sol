@@ -209,6 +209,11 @@ contract KovanBridge {
     /// Should be used as sync tool
     /// 
     /// Message is a message that should be relayed to main chain once authorities sign it.
+    /// 
+    /// for withdraw message contains:
+    /// withdrawal recipient (bytes20)
+    /// withdrawal value (uint)
+    /// kovan transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature (bytes signature, bytes message) onlyAuthority() {
         var hash = sha3(message);
         
