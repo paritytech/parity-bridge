@@ -8,19 +8,13 @@ use web3::helpers::CallResult;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream};
 use app::App;
-use contracts::{testnet, web3_topic};
+use contracts::{testnet, web3_filter};
 use database::Database;
 use error::{Error, ErrorKind};
 
 fn withdraws_filter(testnet: &testnet::KovanBridge, address: Address) -> FilterBuilder {
 	let filter = testnet.events().withdraw().create_filter();
-	let t0 = web3_topic(filter.topic0);
-	let t1 = web3_topic(filter.topic1);
-	let t2 = web3_topic(filter.topic2);
-	let t3 = web3_topic(filter.topic3);
-	FilterBuilder::default()
-		.address(vec![address])
-		.topics(t0, t1, t2, t3)
+	web3_filter(filter, address)
 }
 
 fn withdraw_confirm_payload(testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes, Error> {
@@ -37,9 +31,8 @@ fn withdraw_confirm_payload(testnet: &testnet::KovanBridge, log: Log) -> Result<
 	Ok(result.into())
 }
 
-fn withdraw_collect_signatures_payload(_testnet: &testnet::KovanBridge, _withdraw_payload: Bytes, _signature: H520) -> Bytes {
-	// TODO: this is likely to change
-	unimplemented!();
+fn withdraw_submit_signature_payload(testnet: &testnet::KovanBridge, withdraw_payload: Bytes, signature: H520) -> Bytes {
+	testnet.functions().submit_signature().input(signature.to_vec(), withdraw_payload.0).into()
 }
 
 /// State of withdraw confirmation.
@@ -117,7 +110,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					let confirmations = withdraws
 						.drain(ops::RangeFull)
 						.zip(signatures.into_iter())
-						.map(|(withdraw, signature)| withdraw_collect_signatures_payload(&app.testnet_bridge, withdraw, signature))
+						.map(|(withdraw, signature)| withdraw_submit_signature_payload(&app.testnet_bridge, withdraw, signature))
 						.map(|payload| TransactionRequest {
 							// TODO: gas pricing should be taken from correct config option!!!
 							from: app.config.testnet.account.clone(),

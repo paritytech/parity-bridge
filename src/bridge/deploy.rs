@@ -45,12 +45,12 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						let main_data = self.app.mainnet_bridge.constructor(
 							self.app.config.mainnet.contract.bin.clone().0,
 							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect()
+							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
 						);
 						let test_data = self.app.testnet_bridge.constructor(
 							self.app.config.testnet.contract.bin.clone().0,
 							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect()
+							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
 						);
 
 						let main_tx_request = TransactionRequest {

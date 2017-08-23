@@ -43,15 +43,12 @@ contract EthereumBridge {
         var hash = sha3(message);
         var used = new address[](requiredSignatures);
         
-        if (v.length < requiredSignatures) {
-            throw;
-        }
+        require(requiredSignatures <= v.length);
         
         for (uint i = 0; i < requiredSignatures; i++) {
             var a = ecrecover(hash, v[i], r[i], s[i]);
-            if (!authorities.contains(a) || used.contains(a)) {
-                throw;
-            }
+            require(authorities.contains(a));
+            require(!used.contains(a));
             used[i] = a;
         }
         _;
@@ -59,9 +56,7 @@ contract EthereumBridge {
     
     /// Constructor.
     function EthereumBridge (uint n, address[] a) {
-        if (requiredSignatures > a.length) {
-            throw;
-        }
+        require(requiredSignatures <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
@@ -88,9 +83,7 @@ contract EthereumBridge {
         }
         
         // Duplicated withdraw
-        if (withdraws[hash]) {
-            throw;
-        }
+        require(!withdraws[hash]);
         
         // Order of operations below is critical to avoid TheDAO-like bug
         withdraws[hash] = true;
@@ -114,9 +107,7 @@ contract EthereumBridge {
             newAuthoritiesNumber := mload(add(message, 0x32))
         }
 
-        if (newRequiredSignatures > newAuthoritiesNumber) {
-            throw;
-        }
+        require(newRequiredSignatures <= newAuthoritiesNumber);
 
         authorities.truncate(newAuthoritiesNumber);
 
@@ -136,11 +127,10 @@ contract KovanBridge {
     struct SignaturesCollection {
         /// Signed message.
         bytes message;
-        /// Authorities who signed signature.
+        /// Authorities who signed the message.
         address[] signed;
-        uint8[] r;
-        bytes32[] s;
-        bytes32[] v;
+        /// Signaturs
+        bytes[] signatures;
     }
     
     /// Number of authorities signatures required to withdraw the money.
@@ -169,23 +159,19 @@ contract KovanBridge {
     /// Event created on money transfer
     event Transfer(address from, address to, uint value);
     
-    /// Collected signatures which should be relayed to ehtereum chain.
-    event CollectedSignatures(bytes message, uint8[] r, bytes32[] s, bytes32[] v);
+    /// Collected signatures which should be relayed to ethereum chain.
+    event CollectedSignatures(address authority, bytes32 messageHash);
     
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
-        if (requiredSignatures > a.length) {
-            throw;
-        }
+        require(requiredSignatures <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
 
     /// Multisig authority validation
     modifier onlyAuthority () {
-        if (!authorities.contains(msg.sender)) {
-            throw;
-        }
+        require(authorities.contains(msg.sender));
         _;
     }
     
@@ -197,9 +183,7 @@ contract KovanBridge {
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
     function deposit (address recipient, uint value, bytes32 hash) onlyAuthority() {
         // Duplicated deposits
-        if (deposits[hash].contains(msg.sender)) {
-            throw;
-        }
+        require(!deposits[hash].contains(msg.sender));
 
         deposits[hash].push(msg.sender);
         // TODO: this may cause troubles if requriedSignatures len is changed
@@ -211,9 +195,7 @@ contract KovanBridge {
     
     /// Used to transfer money between accounts
     function transfer (address recipient, uint value, bool externalTransfer) {
-        if (balances[msg.sender] < value) {
-            throw;
-        }
+        require(balances[msg.sender] >= value);
         
         balances[msg.sender] -= value;
         if (externalTransfer) {
@@ -227,22 +209,33 @@ contract KovanBridge {
     /// Should be used as sync tool
     /// 
     /// Message is a message that should be relayed to main chain once authorities sign it.
-    function collectSignatures (uint8 r, bytes32 s, bytes32 v, bytes message) onlyAuthority() {
+    /// 
+    /// for withdraw message contains:
+    /// withdrawal recipient (bytes20)
+    /// withdrawal value (uint)
+    /// kovan transaction hash (bytes32) // to avoid transaction duplication
+    function submitSignature (bytes signature, bytes message) onlyAuthority() {
         var hash = sha3(message);
         
         // Duplicated signatures
-        if (signatures[hash].signed.contains(msg.sender)) {
-            throw;
-        }
+        require(!signatures[hash].signed.contains(msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
-        signatures[hash].r.push(r);
-        signatures[hash].s.push(s);
-        signatures[hash].v.push(v);
+        signatures[hash].signatures.push(signature);
     
         // TODO: this may cause troubles if requriedSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
-            CollectedSignatures(message, signatures[hash].r, signatures[hash].s, signatures[hash].v);
+            CollectedSignatures(msg.sender, hash);
         }
+    }
+    
+    /// Get signature 
+    function signature (bytes32 hash, uint index) constant returns (bytes) {
+        return signatures[hash].signatures[index];
+    }
+    
+    /// Get message
+    function message (bytes32 hash) constant returns (bytes) {
+        return signatures[hash].message;
     }
 }
