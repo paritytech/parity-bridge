@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use tokio_core::reactor::{Handle};
 use web3::Transport;
 use web3::transports::ipc::Ipc;
-use error::{Error, ResultExt};
+use error::{Error, ResultExt, ErrorKind};
 use config::Config;
 use contracts::{mainnet, testnet};
 
@@ -21,8 +21,14 @@ pub struct Connections<T> where T: Transport {
 
 impl Connections<Ipc> {
 	pub fn new_ipc<P: AsRef<Path>>(handle: &Handle, mainnet: P, testnet: P) -> Result<Self, Error> {
-		let mainnet = Ipc::with_event_loop(mainnet, handle).chain_err(|| "Cannot connect to mainnet node ipc")?;
-		let testnet = Ipc::with_event_loop(testnet, handle).chain_err(|| "Cannot connect to testnet node ipc")?;
+		let mainnet = Ipc::with_event_loop(mainnet, handle)
+			.map_err(ErrorKind::Web3)
+			.map_err(Error::from)
+			.chain_err(|| "Cannot connect to mainnet node ipc")?;
+		let testnet = Ipc::with_event_loop(testnet, handle)
+			.map_err(ErrorKind::Web3)
+			.map_err(Error::from)
+			.chain_err(|| "Cannot connect to testnet node ipc")?;
 
 		let result = Connections {
 			mainnet,
@@ -48,8 +54,8 @@ impl App<Ipc> {
 			config,
 			database_path: database_path.as_ref().to_path_buf(),
 			connections,
-			mainnet_bridge: mainnet::EthereumBridge::new(),
-			testnet_bridge: testnet::KovanBridge::new(),
+			mainnet_bridge: mainnet::EthereumBridge::default(),
+			testnet_bridge: testnet::KovanBridge::default(),
 		};
 		Ok(result)
 	}
@@ -61,8 +67,8 @@ impl<T: Transport> App<T> {
 			config: self.config.clone(),
 			connections: self.connections.as_ref(),
 			database_path: self.database_path.clone(),
-			mainnet_bridge: mainnet::EthereumBridge::new(),
-			testnet_bridge: testnet::KovanBridge::new(),
+			mainnet_bridge: mainnet::EthereumBridge::default(),
+			testnet_bridge: testnet::KovanBridge::default(),
 		}
 	}
 }
