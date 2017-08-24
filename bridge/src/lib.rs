@@ -14,7 +14,6 @@ extern crate ethabi;
 extern crate ethabi_derive;
 #[macro_use]
 extern crate ethabi_contract;
-extern crate jsonrpc_core as rpc;
 
 #[macro_use]
 mod macros;
