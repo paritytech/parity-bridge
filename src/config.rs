@@ -15,6 +15,7 @@ pub struct Config {
 	pub mainnet: Node,
 	pub testnet: Node,
 	pub authorities: Authorities,
+	pub txs: Transactions,
 }
 
 impl Config {
@@ -37,7 +38,8 @@ impl Config {
 			authorities: Authorities {
 				accounts: config.authorities.accounts,
 				required_signatures: config.authorities.required_signatures,
-			}
+			},
+			txs: config.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
 		};
 
 		Ok(result)
@@ -49,7 +51,6 @@ pub struct Node {
 	pub account: Address,
 	pub contract: ContractConfig,
 	pub ipc: PathBuf,
-	pub txs: Transactions,
 	pub poll_interval: Duration,
 	pub required_confirmations: u64,
 }
@@ -80,7 +81,6 @@ impl Node {
 				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
 			},
 			ipc: node.ipc.unwrap_or(defaults.ipc),
-			txs: node.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
 			poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
 			required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
 		};
@@ -91,15 +91,21 @@ impl Node {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transactions {
-	pub deploy: TransactionConfig,
-	pub deposit: TransactionConfig,
+	pub mainnet_deploy: TransactionConfig,
+	pub testnet_deploy: TransactionConfig,
+	pub deposit_relay: TransactionConfig,
+	pub withdraw_confirm: TransactionConfig,
+	pub withdraw_relay: TransactionConfig,
 }
 
 impl Transactions {
 	fn from_load_struct(cfg: load::Transactions) -> Self {
 		Transactions {
-			deploy: cfg.deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
-			deposit: cfg.deposit.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			mainnet_deploy: cfg.mainnet_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			testnet_deploy: cfg.testnet_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			deposit_relay: cfg.deposit_relay.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			withdraw_confirm: cfg.withdraw_confirm.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			withdraw_relay: cfg.withdraw_relay.map(TransactionConfig::from_load_struct).unwrap_or_default(),
 		}
 	}
 }
@@ -108,7 +114,6 @@ impl Transactions {
 pub struct TransactionConfig {
 	pub gas: u64,
 	pub gas_price: u64,
-	pub value: u64,
 }
 
 impl TransactionConfig {
@@ -116,7 +121,6 @@ impl TransactionConfig {
 		TransactionConfig {
 			gas: cfg.gas.unwrap_or_default(),
 			gas_price: cfg.gas_price.unwrap_or_default(),
-			value: cfg.value.unwrap_or_default(),
 		}
 	}
 }
@@ -145,37 +149,44 @@ mod load {
 		pub mainnet: Node,
 		pub testnet: Node,
 		pub authorities: Authorities,
+		pub transactions: Option<Transactions>,
 	}
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct Node {
 		pub account: Address,
 		pub contract: ContractConfig,
 		pub ipc: Option<PathBuf>,
-		pub transactions: Option<Transactions>,
 		pub poll_interval: Option<u64>,
 		pub required_confirmations: Option<u64>,
 	}
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct Transactions {
-		pub deploy: Option<TransactionConfig>,
-		pub deposit: Option<TransactionConfig>,
+		pub mainnet_deploy: Option<TransactionConfig>,
+		pub testnet_deploy: Option<TransactionConfig>,
+		pub deposit_relay: Option<TransactionConfig>,
+		pub withdraw_confirm: Option<TransactionConfig>,
+		pub withdraw_relay: Option<TransactionConfig>,
 	}
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct TransactionConfig {
 		pub gas: Option<u64>,
 		pub gas_price: Option<u64>,
-		pub value: Option<u64>,
 	}
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct ContractConfig {
 		pub bin: PathBuf,
 	}
 
 	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
 	pub struct Authorities {
 		pub accounts: Vec<Address>,
 		pub required_signatures: u32,
@@ -185,7 +196,7 @@ mod load {
 #[cfg(test)]
 mod tests {
 	use std::time::Duration;
-	use super::{Config, Node, TransactionConfig, ContractConfig, Transactions, Authorities};
+	use super::{Config, Node, ContractConfig, Transactions, Authorities, TransactionConfig};
 
 	#[test]
 	fn load_full_setup_from_str() {
@@ -203,9 +214,6 @@ bin = "contracts/EthereumBridge.bin"
 account = "0x0000000000000000000000000000000000000001"
 ipc = "/testnet.ipc"
 
-[testnet.transactions]
-deploy = { gas = 20, value = 15 }
-
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
 
@@ -216,26 +224,18 @@ accounts = [
 	"0x0000000000000000000000000000000000000003"
 ]
 required_signatures = 2
+
+[transactions]
+mainnet_deploy = { gas = 20 }
 "#;
 
-		let expected = Config {
+		let mut expected = Config {
+			txs: Transactions::default(),
 			mainnet: Node {
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/mainnet.ipc".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
-				},
-				txs: Transactions {
-					deploy: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
-					deposit: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
 				},
 				poll_interval: Duration::from_secs(2),
 				required_confirmations: 100,
@@ -246,18 +246,6 @@ required_signatures = 2
 					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
 				},
 				ipc: "/testnet.ipc".into(),
-				txs: Transactions {
-					deploy: TransactionConfig {
-						gas: 20,
-						gas_price: 0,
-						value: 15,
-					},
-					deposit: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
-				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
 			},
@@ -269,6 +257,11 @@ required_signatures = 2
 				],
 				required_signatures: 2,
 			}
+		};
+
+		expected.txs.mainnet_deploy = TransactionConfig {
+			gas: 20,
+			gas_price: 0,
 		};
 
 		let config = Config::load_from_str(toml).unwrap();
@@ -299,23 +292,12 @@ accounts = [
 required_signatures = 2
 "#;
 		let expected = Config {
+			txs: Transactions::default(),
 			mainnet: Node {
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
-				},
-				txs: Transactions {
-					deploy: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
-					deposit: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
@@ -325,18 +307,6 @@ required_signatures = 2
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
-				},
-				txs: Transactions {
-					deploy: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
-					deposit: TransactionConfig {
-						gas: 0,
-						gas_price: 0,
-						value: 0,
-					},
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,

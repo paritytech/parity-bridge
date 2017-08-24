@@ -79,9 +79,9 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						.map(|payload| TransactionRequest {
 							from: self.app.config.testnet.account.clone(),
 							to: Some(self.testnet_contract.clone()),
-							gas: Some(self.app.config.testnet.txs.deposit.gas.into()),
-							gas_price: Some(self.app.config.testnet.txs.deposit.gas_price.into()),
-							value: Some(self.app.config.testnet.txs.deposit.value.into()),
+							gas: Some(self.app.config.txs.deposit_relay.gas.into()),
+							gas_price: Some(self.app.config.txs.deposit_relay.gas_price.into()),
+							value: None,
 							data: Some(payload),
 							nonce: None,
 							condition: None,

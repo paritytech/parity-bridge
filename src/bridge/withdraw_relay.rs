@@ -155,12 +155,11 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					let relays = messages.into_iter().zip(signatures.into_iter())
 						.map(|(message, signatures)| relay_payload(&app.mainnet_bridge, signatures, message))
 						.map(|payload| TransactionRequest {
-							// TODO: fix prices
 							from: app.config.mainnet.account.clone(),
 							to: Some(mainnet_contract.clone()),
-							gas: Some(app.config.mainnet.txs.deposit.gas.into()),
-							gas_price: Some(app.config.mainnet.txs.deposit.gas_price.into()),
-							value: Some(app.config.mainnet.txs.deposit.value.into()),
+							gas: Some(app.config.txs.withdraw_relay.gas.into()),
+							gas_price: Some(app.config.txs.withdraw_relay.gas_price.into()),
+							value: None,
 							data: Some(payload),
 							nonce: None,
 							condition: None,

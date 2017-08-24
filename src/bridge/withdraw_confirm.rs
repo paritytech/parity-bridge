@@ -112,12 +112,11 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.zip(signatures.into_iter())
 						.map(|(withdraw, signature)| withdraw_submit_signature_payload(&app.testnet_bridge, withdraw, signature))
 						.map(|payload| TransactionRequest {
-							// TODO: gas pricing should be taken from correct config option!!!
 							from: app.config.testnet.account.clone(),
 							to: Some(testnet_contract.clone()),
-							gas: Some(app.config.testnet.txs.deposit.gas.into()),
-							gas_price: Some(app.config.testnet.txs.deposit.gas_price.into()),
-							value: Some(app.config.testnet.txs.deposit.value.into()),
+							gas: Some(app.config.txs.withdraw_confirm.gas.into()),
+							gas_price: Some(app.config.txs.withdraw_confirm.gas_price.into()),
+							value: None,
 							data: Some(payload),
 							nonce: None,
 							condition: None,
