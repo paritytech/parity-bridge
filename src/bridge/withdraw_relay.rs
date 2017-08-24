@@ -48,7 +48,21 @@ fn signatures_payload(testnet: &testnet::KovanBridge, signatures: u32, my_addres
 }
 
 fn relay_payload(mainnet: &mainnet::EthereumBridge, signatures: Vec<Bytes>, message: Bytes) -> Bytes {
-	unimplemented!();
+	let mut v_vec = Vec::new();
+	let mut r_vec = Vec::new();
+	let mut s_vec = Vec::new();
+	for signature in signatures {
+		let mut r = [0u8; 32];
+		let mut s= [0u8; 32];
+		let mut v = [0u8; 32];
+		r.copy_from_slice(&signature.0[0..32]);
+		s.copy_from_slice(&signature.0[32..64]);
+		v[31] = signature.0[64];
+		v_vec.push(v);
+		s_vec.push(s);
+		r_vec.push(r);
+	}
+	mainnet.functions().withdraw().input(v_vec, r_vec, s_vec, message.0).into()
 }
 
 pub enum WithdrawRelayState<T: Transport> {
