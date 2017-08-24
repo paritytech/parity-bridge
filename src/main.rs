@@ -30,6 +30,7 @@ pub mod bridge;
 pub mod contracts;
 pub mod database;
 pub mod error;
+pub mod util;
 
 use std::env;
 use std::sync::Arc;
@@ -61,8 +62,8 @@ pub struct Args {
 
 fn main() {
 	let _ = env_logger::init();
-	let result = execute(env::args());	
-	
+	let result = execute(env::args());
+
 	match result {
 		Ok(s) => println!("{}", s),
 		Err(err) => print_err(err),
@@ -91,7 +92,7 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 
 	trace!(target: "bridge", "Deploying contracts (if needed)");
 	let deployed = event_loop.run(create_deploy(app_ref.clone()))?;
-		
+
 	match deployed {
 		Deployed::New(database) => {
 			trace!(target: "bridge", "Deployed new bridge contracts");

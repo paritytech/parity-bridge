@@ -8,7 +8,8 @@ use web3::helpers::CallResult;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream};
 use app::App;
-use contracts::{testnet, web3_filter};
+use contracts::testnet;
+use util::web3_filter;
 use database::Database;
 use error::{Error, ErrorKind};
 

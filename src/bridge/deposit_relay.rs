@@ -8,7 +8,8 @@ use ethabi::RawLog;
 use api::{LogStream, self};
 use error::{Error, ErrorKind, Result};
 use database::Database;
-use contracts::{mainnet, testnet, web3_filter};
+use contracts::{mainnet, testnet};
+use util::web3_filter;
 use app::App;
 
 fn deposits_filter(mainnet: &mainnet::EthereumBridge, address: Address) -> FilterBuilder {
