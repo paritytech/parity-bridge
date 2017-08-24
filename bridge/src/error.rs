@@ -2,7 +2,7 @@
 
 use std::io;
 use tokio_timer::TimerError;
-use {web3, toml, docopt, ethabi};
+use {web3, toml, ethabi};
 
 error_chain! {
 	types {
@@ -12,7 +12,6 @@ error_chain! {
 	foreign_links {
 		Io(io::Error);
 		Toml(toml::de::Error);
-		Docopt(docopt::Error);
 		Ethabi(ethabi::Error);
 		Timer(TimerError);
 	}

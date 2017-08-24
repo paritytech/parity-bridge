@@ -190,14 +190,14 @@ poll_interval = 2
 required_confirmations = 100
 
 [mainnet.contract]
-bin = "contracts/EthereumBridge.bin"
+bin = "../contracts/EthereumBridge.bin"
 
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
 ipc = "/testnet.ipc"
 
 [testnet.contract]
-bin = "contracts/KovanBridge.bin"
+bin = "../contracts/KovanBridge.bin"
 
 [authorities]
 accounts = [
@@ -217,7 +217,7 @@ mainnet_deploy = { gas = 20 }
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/mainnet.ipc".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
+					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(2),
 				required_confirmations: 100,
@@ -225,7 +225,7 @@ mainnet_deploy = { gas = 20 }
 			testnet: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				contract: ContractConfig {
-					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
+					bin: include_bytes!("../../contracts/KovanBridge.bin").to_vec().into(),
 				},
 				ipc: "/testnet.ipc".into(),
 				poll_interval: Duration::from_secs(1),
@@ -258,14 +258,14 @@ account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = ""
 
 [mainnet.contract]
-bin = "contracts/EthereumBridge.bin"
+bin = "../contracts/EthereumBridge.bin"
 
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
 ipc = ""
 
 [testnet.contract]
-bin = "contracts/KovanBridge.bin"
+bin = "../contracts/KovanBridge.bin"
 
 [authorities]
 accounts = [
@@ -281,7 +281,7 @@ required_signatures = 2
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../contracts/EthereumBridge.bin").to_vec().into(),
+					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,
@@ -290,7 +290,7 @@ required_signatures = 2
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../contracts/KovanBridge.bin").to_vec().into(),
+					bin: include_bytes!("../../contracts/KovanBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				required_confirmations: 12,

@@ -55,6 +55,7 @@ pub struct LogStreamInit {
 }
 
 /// Contains all logs matching `LogStream` filter in inclusive range `[from, to]`.
+#[derive(Debug, PartialEq)]
 pub struct LogStreamItem {
 	pub from: u64,
 	pub to: u64,

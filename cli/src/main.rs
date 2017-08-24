@@ -1,46 +1,23 @@
-#[macro_use]
-extern crate futures;
-extern crate futures_cpupool;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate toml;
-extern crate web3;
 extern crate docopt;
 extern crate tokio_core;
-extern crate tokio_timer;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-#[macro_use]
-extern crate error_chain;
-extern crate ethabi;
-#[macro_use]
-extern crate ethabi_derive;
-#[macro_use]
-extern crate ethabi_contract;
-
-#[macro_use]
-mod macros;
-
-pub mod api;
-pub mod app;
-pub mod config;
-pub mod bridge;
-pub mod contracts;
-pub mod database;
-pub mod error;
-pub mod util;
+extern crate bridge;
 
 use std::env;
 use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
 use tokio_core::reactor::Core;
-use app::App;
-use bridge::{create_deploy, Deployed};
-use config::Config;
-use error::Error;
+
+use bridge::app::App;
+use bridge::bridge::{create_deploy, Deployed};
+use bridge::config::Config;
+use bridge::error::Error;
 
 const USAGE: &'static str = r#"
 Ethereum-Kovan bridge.
@@ -78,7 +55,7 @@ fn print_err(err: Error) {
 fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item=S>, S: AsRef<str> {
 	trace!(target: "bridge", "Parsing cli arguments");
 	let args: Args = Docopt::new(USAGE)
-		.and_then(|d| d.argv(command).deserialize())?;
+		.and_then(|d| d.argv(command).deserialize()).map_err(|e| e.to_string())?;
 
 	trace!(target: "bridge", "Loading config");
 	let config = Config::load(args.arg_config)?;
