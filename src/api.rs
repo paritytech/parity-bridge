@@ -31,8 +31,15 @@ pub fn send_transaction<T: Transport>(transport: T, tx: TransactionRequest) -> C
 }
 
 /// Imperative wrapper for web3 function.
-pub fn call<T: Transport>(transport: T, tx: CallRequest) -> CallResult<Bytes, T::Out> {
-	api::Eth::new(transport).call(tx, None)
+pub fn call<T: Transport>(transport: T, address: Address, payload: Bytes) -> CallResult<Bytes, T::Out> {
+	api::Eth::new(transport).call(CallRequest {
+		from: None,
+		to: address,
+		gas: None,
+		gas_price: None,
+		value: None,
+		data: Some(payload),
+	}, None)
 }
 
 pub fn sign<T: Transport>(transport: T, address: Address, data: Bytes) -> CallResult<H520, T::Out> {

@@ -1,13 +1,13 @@
 use std::sync::Arc;
 use futures::{Future, Stream, Poll};
-use futures::future::{JoinAll, join_all};
+use futures::future::{JoinAll, join_all, Join};
 use web3::Transport;
 use web3::helpers::CallResult;
-use web3::types::{H256, Address, FilterBuilder, Log, Bytes, CallRequest};
+use web3::types::{H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream};
-use contracts::{testnet, web3_filter};
+use contracts::{mainnet, testnet, web3_filter};
 use database::Database;
 use error::{self, Error, ErrorKind};
 
@@ -18,16 +18,10 @@ fn collected_signatures_filter(testnet: &testnet::KovanBridge, address: Address)
 
 enum RelayAssignment {
 	Ignore,
-	Do(Vec<Bytes>),
-}
-
-impl RelayAssignment {
-	fn flatten(self) -> Vec<Bytes> {
-		match self {
-			RelayAssignment::Ignore => vec![],
-			RelayAssignment::Do(v) => v,
-		}
-	}
+	Do {
+		signature_payloads: Vec<Bytes>,
+		message_payload: Bytes,
+	},
 }
 
 fn signatures_payload(testnet: &testnet::KovanBridge, signatures: u32, my_address: Address, log: Log) -> error::Result<RelayAssignment> {
@@ -40,18 +34,27 @@ fn signatures_payload(testnet: &testnet::KovanBridge, signatures: u32, my_addres
 		// someone else will relay this transaction to mainnet
 		return Ok(RelayAssignment::Ignore);
 	}
-	let payloads = (0..signatures).into_iter()
+	let signature_payloads = (0..signatures).into_iter()
 		.map(|index| ethabi::util::pad_u32(index))
 		.map(|index| testnet.functions().signature().input(collected_signatures.message_hash, index))
 		.map(Into::into)
 		.collect();
-	Ok(RelayAssignment::Do(payloads))
+	let message_payload = testnet.functions().message().input(collected_signatures.message_hash).into();
+
+	Ok(RelayAssignment::Do {
+		signature_payloads,
+		message_payload,
+	})
+}
+
+fn relay_payload(mainnet: &mainnet::EthereumBridge, signatures: Vec<Bytes>, message: Bytes) -> Bytes {
+	unimplemented!();
 }
 
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
-	FetchSignatures {
-		future: JoinAll<Vec<JoinAll<Vec<CallResult<Bytes, T::Out>>>>>,
+	Fetch {
+		future: Join<JoinAll<Vec<CallResult<Bytes, T::Out>>>, JoinAll<Vec<JoinAll<Vec<CallResult<Bytes, T::Out>>>>>>,
 		block: u64,
 	},
 	RelayWithdraws {
@@ -103,32 +106,57 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								self.app.config.testnet.account.clone(),
 								log))
 						.collect::<error::Result<Vec<_>>>()?;
-					let all_calls = assignments.into_iter()
-						.map(RelayAssignment::flatten)
+
+					let (signatures, messages): (Vec<_>, Vec<_>) = assignments.into_iter()
+						.filter_map(|a| match a {
+							RelayAssignment::Ignore => None,
+							RelayAssignment::Do { signature_payloads, message_payload } => Some((signature_payloads, message_payload))
+						})
+						.unzip();
+					
+					let message_calls = messages.into_iter()
+						.map(|payload| api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload))
+						.collect::<Vec<_>>();
+
+					let signature_calls = signatures.into_iter()
 						.map(|payloads| {
 							payloads.into_iter()
-								.map(|payload| CallRequest {
-									from: None,
-									to: self.testnet_contract.clone(),
-									gas: None,
-									gas_price: None,
-									value: None,
-									data: Some(payload),
-								})
-								.map(|request| api::call(&self.app.connections.testnet, request))
+								.map(|payload| api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload))
 								.collect::<Vec<_>>()
 						})
 						.map(|calls| join_all(calls))
 						.collect::<Vec<_>>();
 					
-					WithdrawRelayState::FetchSignatures {
-						future: join_all(all_calls),
+					WithdrawRelayState::Fetch {
+						future: join_all(message_calls).join(join_all(signature_calls)),
 						block: item.to,
 					}
 				},
-				WithdrawRelayState::FetchSignatures { ref mut future, block } => {
-					let _ = try_ready!(future.poll().map_err(ErrorKind::Web3));
-					unimplemented!();
+				WithdrawRelayState::Fetch { ref mut future, block } => {
+					let (messages, signatures) = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					assert_eq!(messages.len(), signatures.len());
+					let app = &self.app;
+					let mainnet_contract = &self.mainnet_contract;
+					
+					let relays = messages.into_iter().zip(signatures.into_iter())
+						.map(|(message, signatures)| relay_payload(&app.mainnet_bridge, signatures, message))
+						.map(|payload| TransactionRequest {
+							// TODO: fix prices
+							from: app.config.mainnet.account.clone(),
+							to: Some(mainnet_contract.clone()),
+							gas: Some(app.config.mainnet.txs.deposit.gas.into()),
+							gas_price: Some(app.config.mainnet.txs.deposit.gas_price.into()),
+							value: Some(app.config.mainnet.txs.deposit.value.into()),
+							data: Some(payload),
+							nonce: None,
+							condition: None,
+						})
+						.map(|request| api::send_transaction(&app.connections.mainnet, request))
+						.collect::<Vec<_>>();
+					WithdrawRelayState::RelayWithdraws {
+						future: join_all(relays),
+						block,
+					}
 				},
 				WithdrawRelayState::RelayWithdraws { ref mut future, block } => {
 					let _ = try_ready!(future.poll().map_err(ErrorKind::Web3));
