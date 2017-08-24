@@ -33,8 +33,8 @@ impl Config {
 
 	fn from_load_struct(config: load::Config) -> Result<Config, Error> {
 		let result = Config {
-			mainnet: Node::from_load_struct(config.mainnet, NodeDefaults::mainnet())?,
-			testnet: Node::from_load_struct(config.testnet, NodeDefaults::testnet())?,
+			mainnet: Node::from_load_struct(config.mainnet)?,
+			testnet: Node::from_load_struct(config.testnet)?,
 			authorities: Authorities {
 				accounts: config.authorities.accounts,
 				required_signatures: config.authorities.required_signatures,
@@ -55,36 +55,18 @@ pub struct Node {
 	pub required_confirmations: u64,
 }
 
-struct NodeDefaults {
-	ipc: PathBuf,
-}
-
-impl NodeDefaults {
-	fn mainnet() -> Self {
-		NodeDefaults {
-			ipc: "".into(),
-		}
-	}
-
-	fn testnet() -> Self {
-		NodeDefaults {
-			ipc: "".into(),
-		}
-	}
-}
-
 impl Node {
-	fn from_load_struct(node: load::Node, defaults: NodeDefaults) -> Result<Node, Error> {
+	fn from_load_struct(node: load::Node) -> Result<Node, Error> {
 		let result = Node {
 			account: node.account,
 			contract: ContractConfig {
 				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
 			},
-			ipc: node.ipc.unwrap_or(defaults.ipc),
+			ipc: node.ipc,
 			poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
 			required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
 		};
-	
+
 		Ok(result)
 	}
 }
@@ -137,7 +119,7 @@ pub struct Authorities {
 }
 
 /// Some config values may not be defined in `toml` file, but they should be specified at runtime.
-/// `load` module separates `Config` representation in file with optional from the one used 
+/// `load` module separates `Config` representation in file with optional from the one used
 /// in application.
 mod load {
 	use std::path::PathBuf;
@@ -157,7 +139,7 @@ mod load {
 	pub struct Node {
 		pub account: Address,
 		pub contract: ContractConfig,
-		pub ipc: Option<PathBuf>,
+		pub ipc: PathBuf,
 		pub poll_interval: Option<u64>,
 		pub required_confirmations: Option<u64>,
 	}
@@ -251,9 +233,9 @@ mainnet_deploy = { gas = 20 }
 			},
 			authorities: Authorities {
 				accounts: vec![
-					"0x0000000000000000000000000000000000000001".parse().unwrap(), 
-					"0x0000000000000000000000000000000000000002".parse().unwrap(), 
-					"0x0000000000000000000000000000000000000003".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000001".parse().unwrap(),
+					"0x0000000000000000000000000000000000000002".parse().unwrap(),
+					"0x0000000000000000000000000000000000000003".parse().unwrap(),
 				],
 				required_signatures: 2,
 			}
@@ -273,12 +255,14 @@ mainnet_deploy = { gas = 20 }
 		let toml = r#"
 [mainnet]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
+ipc = ""
 
 [mainnet.contract]
 bin = "contracts/EthereumBridge.bin"
 
 [testnet]
 account = "0x0000000000000000000000000000000000000001"
+ipc = ""
 
 [testnet.contract]
 bin = "contracts/KovanBridge.bin"
@@ -313,9 +297,9 @@ required_signatures = 2
 			},
 			authorities: Authorities {
 				accounts: vec![
-					"0x0000000000000000000000000000000000000001".parse().unwrap(), 
-					"0x0000000000000000000000000000000000000002".parse().unwrap(), 
-					"0x0000000000000000000000000000000000000003".parse().unwrap(), 
+					"0x0000000000000000000000000000000000000001".parse().unwrap(),
+					"0x0000000000000000000000000000000000000002".parse().unwrap(),
+					"0x0000000000000000000000000000000000000003".parse().unwrap(),
 				],
 				required_signatures: 2,
 			}
