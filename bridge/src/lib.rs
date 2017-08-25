@@ -14,6 +14,7 @@ extern crate ethabi;
 extern crate ethabi_derive;
 #[macro_use]
 extern crate ethabi_contract;
+extern crate rustc_hex;
 
 #[macro_use]
 mod macros;
