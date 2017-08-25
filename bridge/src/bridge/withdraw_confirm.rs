@@ -18,7 +18,7 @@ fn withdraws_filter(testnet: &testnet::KovanBridge, address: Address) -> FilterB
 	web3_filter(filter, address)
 }
 
-fn withdraw_confirm_payload(testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes, Error> {
+fn withdraw_confirm_sign_payload(testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes, Error> {
 	let raw_log = RawLog {
 		topics: log.topics.into_iter().map(|t| t.0).collect(),
 		data: log.data.0,
@@ -89,7 +89,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					let item = try_stream!(self.logs.poll());
 					let withdraws = item.logs
 						.into_iter()
-						.map(|log| withdraw_confirm_payload(&self.app.testnet_bridge, log))
+						.map(|log| withdraw_confirm_sign_payload(&self.app.testnet_bridge, log))
 						.collect::<Result<Vec<_>, _>>()?;
 
 					let requests = withdraws.clone()
@@ -141,5 +141,42 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 			};
 			self.state = next_state;
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use rustc_hex::FromHex;
+	use web3::types::{Log, Bytes};
+	use contracts::testnet;
+	use super::{withdraw_confirm_sign_payload, withdraw_submit_signature_payload};
+
+	#[test]
+	fn test_withdraw_confirm_sign_payload() {
+		let testnet = testnet::KovanBridge::default();
+
+		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
+		let log = Log {
+			data: data.into(),
+			topics: vec!["0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()],
+			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			..Default::default()
+		};
+
+		let payload = withdraw_confirm_sign_payload(&testnet, log).unwrap();
+		let expected: Bytes = "aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap().into();
+		assert_eq!(expected, payload);
+	}
+
+	#[test]
+	fn test_withdraw_submit_signature_payload() {
+		let testnet = testnet::KovanBridge::default();
+
+		let message: Bytes = "aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap().into();
+		let signature = "0x8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".parse().unwrap();
+
+		let payload = withdraw_submit_signature_payload(&testnet, message, signature);
+		let expected: Bytes = "630cea8e000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000418697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364000000000000000000000000".from_hex().unwrap().into();
+		assert_eq!(expected, payload);
 	}
 }
