@@ -41,7 +41,7 @@ enum WithdrawConfirmState<T: Transport> {
 	/// Withdraw confirm is waiting for logs.
 	Wait,
 	/// Signing withdraws.
-	SignWithraws {
+	SignWithdraws {
 		withdraws: Vec<Bytes>,
 		future: JoinAll<Vec<CallResult<H520, T::Out>>>,
 		block: u64,
@@ -97,13 +97,13 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.map(|bytes| api::sign(&self.app.connections.testnet, self.app.config.testnet.account.clone(), bytes))
 						.collect::<Vec<_>>();
 
-					WithdrawConfirmState::SignWithraws {
+					WithdrawConfirmState::SignWithdraws {
 						future: join_all(requests),
 						withdraws: withdraws,
 						block: item.to,
 					}
 				},
-				WithdrawConfirmState::SignWithraws { ref mut future, ref mut withdraws, block } => {
+				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut withdraws, block } => {
 					let signatures = try_ready!(future.poll().map_err(ErrorKind::Web3));
 					// borrow checker...
 					let app = &self.app;

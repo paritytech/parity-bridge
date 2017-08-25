@@ -41,7 +41,12 @@ test_app_stream! {
 
 test_app_stream! {
 	name => deposit_relay_single_log,
-	database => Database::default(),
+	database => {
+		Database {
+			checked_deposit_relay: 5,
+			..Default::default()
+		}
+	},
 	mainnet =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
@@ -61,7 +66,7 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x6","limit":null,"toBlock":"0x1005","topics":[["0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"],[],[],[]]}]"#,
 			res => r#"[{"address":"0x0000000000000000000000000000000000000000","topics":["0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"],"data":"0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0","type":"","transactionHash":"0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"}]"#;
 		"eth_blockNumber" =>
 			req => r#"[]"#,

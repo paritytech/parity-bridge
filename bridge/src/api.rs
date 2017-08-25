@@ -66,7 +66,7 @@ pub struct LogStreamItem {
 enum LogStreamState<T: Transport> {
 	/// Log Stream is waiting for timer to poll.
 	Wait,
-	/// Fetching best block.
+	/// Fetching best block number.
 	FetchBlockNumber(CallResult<U256, T::Out>),
 	/// Fetching logs for new best block.
 	FetchLogs {
