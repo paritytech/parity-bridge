@@ -827,7 +827,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "web3"
 version = "0.0.5"
-source = "git+https://github.com/tomusdrw/rust-web3?branch=bridge#a1e9735f7e13dea44afa99fb3c02df030b7a04aa"
+source = "git+https://github.com/tomusdrw/rust-web3?branch=bridge#0205d57b5e9734049cdbd570c431c3ad35b106fb"
 dependencies = [
  "arrayvec 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethabi 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
