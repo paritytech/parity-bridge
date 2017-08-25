@@ -22,6 +22,7 @@
         "name": "withdraw",
         "outputs": [],
         "payable": false,
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -47,6 +48,7 @@
         "name": "reelect",
         "outputs": [],
         "payable": false,
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -61,10 +63,12 @@
             }
         ],
         "payable": false,
+        "stateMutability": "nonpayable",
         "type": "constructor"
     },
     {
         "payable": true,
+        "stateMutability": "payable",
         "type": "fallback"
     },
     {

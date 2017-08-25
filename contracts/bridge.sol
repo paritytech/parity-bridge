@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.16;
 
 library Authorities {
     function contains (address[] self, address value) internal returns (bool) {
@@ -40,7 +40,8 @@ contract EthereumBridge {
 
     /// Multisig authority validation
     modifier allAuthorities (uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
-        var hash = sha3(message);
+        bytes memory prefix = "\x19Ethereum Signed Message:\n";
+        var hash = sha3(prefix, message.length, message);
         var used = new address[](requiredSignatures);
 
         require(requiredSignatures <= v.length);
