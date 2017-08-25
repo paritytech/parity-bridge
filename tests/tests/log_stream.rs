@@ -9,7 +9,7 @@ use web3::types::{FilterBuilder, H160, H256};
 use bridge::api::{LogStreamInit, log_stream, LogStreamItem};
 
 test_transport_stream! {
-	name => basic,
+	name => log_stream_basic,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 10,
@@ -47,7 +47,7 @@ test_transport_stream! {
 }
 
 test_transport_stream! {
-	name => rollback,
+	name => log_stream_rollback,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 10,
@@ -88,7 +88,7 @@ test_transport_stream! {
 }
 
 test_transport_stream! {
-	name => rollback_before_init,
+	name => log_stream_rollback_before_init,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 10,
@@ -119,7 +119,7 @@ test_transport_stream! {
 }
 
 test_transport_stream! {
-	name => zero_confirmations,
+	name => log_stream_zero_confirmations,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 10,
@@ -167,7 +167,7 @@ test_transport_stream! {
 }
 
 test_transport_stream! {
-	name => filter_with_address,
+	name => log_stream_filter_with_address,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 11,
@@ -202,7 +202,7 @@ test_transport_stream! {
 }
 
 test_transport_stream! {
-	name => filter_with_topics,
+	name => log_stream_filter_with_topics,
 	init => |transport| {
 		let init = LogStreamInit {
 			after: 11,

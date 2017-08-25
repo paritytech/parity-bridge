@@ -37,8 +37,8 @@ impl Transport for MockedTransport {
 	}
 
 	fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
-		let response = self.mocked_responses.iter().nth(self.requests.borrow().len() - 1).expect("out of range");
-		futures::finished(serde_json::from_str(response).expect("invalid json")).boxed()
+		let response = self.mocked_responses.iter().nth(self.requests.borrow().len() - 1).expect("missing response");
+		futures::finished(serde_json::from_str(response).expect("invalid response")).boxed()
 	}
 }
 
