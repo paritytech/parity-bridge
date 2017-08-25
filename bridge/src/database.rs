@@ -6,7 +6,7 @@ use toml;
 use error::{Error, ResultExt, ErrorKind};
 
 /// Application "database".
-#[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Default)]
 pub struct Database {
 	/// Address of mainnet contract.
 	pub mainnet_contract_address: Address,
@@ -64,7 +64,7 @@ mod tests {
 
 	#[test]
 	fn databse_to_and_from_str() {
-		let toml = 
+		let toml =
 r#"mainnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
 testnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
 mainnet_deploy = 100

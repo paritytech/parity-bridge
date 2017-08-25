@@ -11,9 +11,9 @@ use database::Database;
 use error::Error;
 
 pub use self::deploy::{Deploy, Deployed, create_deploy};
-use self::deposit_relay::{DepositRelay, create_deposit_relay};
-use self::withdraw_relay::{WithdrawRelay, create_withdraw_relay};
-use self::withdraw_confirm::{WithdrawConfirm, create_withdraw_confirm};
+pub use self::deposit_relay::{DepositRelay, create_deposit_relay};
+pub use self::withdraw_relay::{WithdrawRelay, create_withdraw_relay};
+pub use self::withdraw_confirm::{WithdrawConfirm, create_withdraw_confirm};
 
 /// Last block checked by the bridge components.
 #[derive(Clone, Copy)]
@@ -68,7 +68,7 @@ impl<T: Transport> Stream for Bridge<T> {
 					some => return Ok(some.into()),
 				},
 			};
-			
+
 			self.state = next_state;
 		}
 	}
