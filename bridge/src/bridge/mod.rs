@@ -131,7 +131,6 @@ impl<T: Transport, F: BridgeBackend> Stream for Bridge<T, F> {
 #[cfg(test)]
 mod tests {
 	extern crate tempdir;
-	use std::fs;
 	use self::tempdir::TempDir;
 	use database::Database;
 	use super::{BridgeBackend, FileBackend, BridgeChecked};

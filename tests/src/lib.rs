@@ -7,7 +7,6 @@ extern crate bridge;
 extern crate pretty_assertions;
 
 use std::cell::RefCell;
-use futures::Future;
 use web3::Transport;
 
 pub struct MockedTransport {
@@ -38,7 +37,8 @@ impl Transport for MockedTransport {
 
 	fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
 		let response = self.mocked_responses.iter().nth(self.requests.borrow().len() - 1).expect("missing response");
-		futures::finished(serde_json::from_str(response).expect("invalid response")).boxed()
+		let f = futures::finished(serde_json::from_str(response).expect("invalid response"));
+		Box::new(f)
 	}
 }
 
