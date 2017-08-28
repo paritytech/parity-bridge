@@ -216,6 +216,10 @@ contract KovanBridge {
     /// withdrawal value (uint)
     /// kovan transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature (bytes signature, bytes message) onlyAuthority() {
+		// Valid signature must have 65 bytes
+		require(signature.length == 65);
+		// Valid withdraw message must have 84 bytes
+		require(message.length == 84);
         var hash = sha3(message);
 
         // Duplicated signatures
