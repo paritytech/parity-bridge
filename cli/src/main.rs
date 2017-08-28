@@ -2,20 +2,22 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate docopt;
+extern crate futures;
 extern crate tokio_core;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate bridge;
 
-use std::env;
+use std::{env, fs};
 use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
+use futures::{Stream, future};
 use tokio_core::reactor::Core;
 
 use bridge::app::App;
-use bridge::bridge::{create_deploy, Deployed};
+use bridge::bridge::{create_bridge, create_deploy, Deployed};
 use bridge::config::Config;
 use bridge::error::Error;
 
@@ -70,15 +72,22 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 	trace!(target: "bridge", "Deploying contracts (if needed)");
 	let deployed = event_loop.run(create_deploy(app_ref.clone()))?;
 
-	match deployed {
+	let database = match deployed {
 		Deployed::New(database) => {
 			trace!(target: "bridge", "Deployed new bridge contracts");
 			trace!(target: "bridge", "\n\n{}\n", database);
+			database.save(fs::File::create(&app_ref.database_path)?)?;
+			database
 		},
-		Deployed::Existing(_database) => {
+		Deployed::Existing(database) => {
 			trace!(target: "bridge", "Loaded database");
+			database
 		},
-	}
+	};
+
+	trace!(target: "bridge", "Starting listening to events");
+	let bridge = create_bridge(app_ref, &database).skip_while(|_| future::ok(true)).collect();
+	event_loop.run(bridge)?;
 
 	Ok("Done".into())
 }

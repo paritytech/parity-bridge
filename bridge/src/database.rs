@@ -6,7 +6,7 @@ use toml;
 use error::{Error, ResultExt, ErrorKind};
 
 /// Application "database".
-#[derive(Debug, PartialEq, Deserialize, Serialize, Default)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone)]
 pub struct Database {
 	/// Address of mainnet contract.
 	pub mainnet_contract_address: Address,
@@ -47,13 +47,12 @@ impl Database {
 		};
 
 		let mut buffer = String::new();
-		file.read_to_string(&mut buffer).expect("TODO");
+		file.read_to_string(&mut buffer)?;
 		buffer.parse()
 	}
 
-	pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-		let mut file = fs::File::open(path).chain_err(|| "Cannot save database")?;
-		file.write_all(self.to_string().as_bytes())?;
+	pub fn save<W: Write>(&self, mut write: W) -> Result<(), Error> {
+		write.write_all(self.to_string().as_bytes())?;
 		Ok(())
 	}
 }

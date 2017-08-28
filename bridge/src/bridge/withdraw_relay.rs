@@ -186,7 +186,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 
 #[cfg(test)]
 mod tests {
-	use rustc_hex::{FromHex, ToHex};
+	use rustc_hex::FromHex;
 	use web3::types::{Log, Bytes};
 	use contracts::{mainnet, testnet};
 	use super::{signatures_payload, withdraw_relay_payload};
