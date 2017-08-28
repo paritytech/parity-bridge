@@ -75,6 +75,7 @@ macro_rules! test_app_stream {
 		mainnet => account => $mainnet_acc: expr, confirmations => $mainnet_conf: expr;
 		testnet => account => $testnet_acc: expr, confirmations => $testnet_conf: expr;
 		authorities => accounts => $authorities_accs: expr, signatures => $signatures: expr;
+		txs => $txs: expr,
 		init => $init_stream: expr,
 		expected => $expected: expr,
 		mainnet_transport => [$($mainnet_method: expr => req => $mainnet_req: expr, res => $mainnet_res: expr ;)*],
@@ -101,7 +102,7 @@ macro_rules! test_app_stream {
 			};
 
 			let config = Config {
-				txs: Transactions::default(),
+				txs: $txs,
 				mainnet: Node {
 					account: $mainnet_acc.parse().unwrap(),
 					ipc: "".into(),
