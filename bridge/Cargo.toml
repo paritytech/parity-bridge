@@ -16,3 +16,6 @@ ethabi = "4.0"
 ethabi-derive = "4.0"
 ethabi-contract = "4.0"
 rustc-hex = "1.0"
+
+[dev-dependencies]
+tempdir = "0.3"

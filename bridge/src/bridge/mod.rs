@@ -6,7 +6,7 @@ mod withdraw_relay;
 use std::fs;
 use std::sync::Arc;
 use std::path::PathBuf;
-use futures::{Stream, Poll};
+use futures::{Stream, Poll, Async};
 use web3::Transport;
 use app::App;
 use database::Database;
@@ -52,6 +52,7 @@ impl BridgeBackend for FileBackend {
 
 		let file = fs::OpenOptions::new()
 			.write(true)
+			.create(true)
 			.open(&self.path)?;
 
 		self.database.save(file)
@@ -104,13 +105,17 @@ impl<T: Transport, F: BridgeBackend> Stream for Bridge<T, F> {
 					let w_relay = try_bridge!(self.withdraw_relay.poll()).map(BridgeChecked::WithdrawRelay);
 					let w_confirm = try_bridge!(self.withdraw_confirm.poll()).map(BridgeChecked::WithdrawConfirm);
 
-					let result = [d_relay, w_relay, w_confirm]
+					let result: Vec<_> = [d_relay, w_relay, w_confirm]
 						.into_iter()
 						.filter_map(|c| *c)
 						.collect();
 
-					self.backend.save(result)?;
-					BridgeStatus::NextItem(Some(()))
+					if result.is_empty() {
+						return Ok(Async::NotReady);
+					} else {
+						self.backend.save(result)?;
+						BridgeStatus::NextItem(Some(()))
+					}
 				},
 				BridgeStatus::NextItem(ref mut v) => match v.take() {
 					None => BridgeStatus::Wait,
@@ -120,5 +125,37 @@ impl<T: Transport, F: BridgeBackend> Stream for Bridge<T, F> {
 
 			self.state = next_state;
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	extern crate tempdir;
+	use std::fs;
+	use self::tempdir::TempDir;
+	use database::Database;
+	use super::{BridgeBackend, FileBackend, BridgeChecked};
+
+	#[test]
+	fn test_file_backend() {
+		let tempdir = TempDir::new("test_file_backend").unwrap();
+		let mut path = tempdir.path().to_owned();
+		path.push("db");
+		let mut backend = FileBackend {
+			path: path.clone(),
+			database: Database::default(),
+		};
+
+		backend.save(vec![BridgeChecked::DepositRelay(1)]).unwrap();
+		assert_eq!(1, backend.database.checked_deposit_relay);
+		assert_eq!(0, backend.database.checked_withdraw_confirm);
+		assert_eq!(0, backend.database.checked_withdraw_relay);
+		backend.save(vec![BridgeChecked::DepositRelay(2), BridgeChecked::WithdrawConfirm(3), BridgeChecked::WithdrawRelay(2)]).unwrap();
+		assert_eq!(2, backend.database.checked_deposit_relay);
+		assert_eq!(3, backend.database.checked_withdraw_confirm);
+		assert_eq!(2, backend.database.checked_withdraw_relay);
+
+		let loaded = Database::load(path).unwrap();
+		assert_eq!(backend.database, loaded);
 	}
 }
