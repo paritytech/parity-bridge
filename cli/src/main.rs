@@ -86,7 +86,7 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 	};
 
 	trace!(target: "bridge", "Starting listening to events");
-	let bridge = create_bridge(app_ref, &database).skip_while(|_| future::ok(true)).collect();
+	let bridge = create_bridge(app_ref, &database).and_then(|_| future::ok(true)).collect();
 	event_loop.run(bridge)?;
 
 	Ok("Done".into())
