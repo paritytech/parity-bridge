@@ -101,6 +101,7 @@ test_app_stream! {
 			"0x0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
+	txs => Transactions::default(),
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x1005, 0x1006],
 	mainnet_transport => [],
