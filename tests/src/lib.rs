@@ -24,21 +24,10 @@ impl From<(&'static str, &'static str)> for MockedRequest {
 }
 
 pub struct MockedTransport {
-	//pub requests: RefCell<Vec<(String, String)>>,
 	pub requests: Cell<usize>,
 	pub expected_requests: Vec<MockedRequest>,
 	pub mocked_responses: Vec<&'static str>,
 }
-
-//impl MockedTransport {
-	//pub fn compare_requests(&self, expected: &[(&str, &str)]) {
-		//let requests_borrow = self.requests.borrow();
-		//let requests: Vec<_> = requests_borrow.iter()
-			//.map(|&(ref l, ref r)| (l as &str, r as &str))
-			//.collect();
-		//assert_eq!(expected, &requests as &[_]);
-	//}
-//}
 
 impl Transport for MockedTransport {
 	type Out = web3::Result<rpc::Value>;
