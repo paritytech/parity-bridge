@@ -6,37 +6,55 @@ extern crate bridge;
 #[macro_use]
 extern crate pretty_assertions;
 
-use std::cell::RefCell;
+use std::cell::Cell;
 use web3::Transport;
 
+pub struct MockedRequest {
+	pub method: String,
+	pub params: Vec<rpc::Value>,
+}
+
+impl From<(&'static str, &'static str)> for MockedRequest {
+	fn from(a: (&'static str, &'static str)) -> Self {
+		MockedRequest {
+			method: a.0.to_owned(),
+			params: serde_json::from_str(a.1).unwrap(),
+		}
+	}
+}
+
 pub struct MockedTransport {
-	pub requests: RefCell<Vec<(String, String)>>,
+	//pub requests: RefCell<Vec<(String, String)>>,
+	pub requests: Cell<usize>,
+	pub expected_requests: Vec<MockedRequest>,
 	pub mocked_responses: Vec<&'static str>,
 }
 
-impl MockedTransport {
-	pub fn compare_requests(&self, expected: &[(&str, &str)]) {
-		let requests_borrow = self.requests.borrow();
-		let requests: Vec<_> = requests_borrow.iter()
-			.map(|&(ref l, ref r)| (l as &str, r as &str))
-			.collect();
-		assert_eq!(expected, &requests as &[_]);
-	}
-}
+//impl MockedTransport {
+	//pub fn compare_requests(&self, expected: &[(&str, &str)]) {
+		//let requests_borrow = self.requests.borrow();
+		//let requests: Vec<_> = requests_borrow.iter()
+			//.map(|&(ref l, ref r)| (l as &str, r as &str))
+			//.collect();
+		//assert_eq!(expected, &requests as &[_]);
+	//}
+//}
 
 impl Transport for MockedTransport {
 	type Out = web3::Result<rpc::Value>;
 
 	fn prepare(&self, method: &str, params: Vec<rpc::Value>) -> (usize, rpc::Call) {
-		let params_string = serde_json::to_string(&params).unwrap();
-		println!("method: {}\nparams:\n{:#?}", method, params_string);
-		self.requests.borrow_mut().push((method.into(), params_string));
+		let n = self.requests.get();
+		assert_eq!(&self.expected_requests[n].method as &str, method, "invalid method called");
+		assert_eq!(self.expected_requests[n].params, params, "invalid method params");
+		self.requests.set(n + 1);
+
 		let request = web3::helpers::build_request(1, method, params);
-		(self.requests.borrow().len(), request)
+		(n + 1, request)
 	}
 
 	fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
-		let response = self.mocked_responses.iter().nth(self.requests.borrow().len() - 1).expect("missing response");
+		let response = self.mocked_responses.iter().nth(self.requests.get() - 1).expect("missing response");
 		let f = futures::finished(serde_json::from_str(response).expect("invalid response"));
 		Box::new(f)
 	}
@@ -56,12 +74,11 @@ macro_rules! test_transport_stream {
 
 			let transport = $crate::MockedTransport {
 				requests: Default::default(),
+				expected_requests: vec![$($method),*].into_iter().zip(vec![$($req),*].into_iter()).map(Into::into).collect(),
 				mocked_responses: vec![$($res),*],
 			};
 			let stream = $init_stream(&transport);
 			let res = stream.collect().wait().unwrap();
-			let expected_requests: Vec<_> = vec![$($method),*].into_iter().zip(vec![$($req),*].into_iter()).collect();
-			transport.compare_requests(&expected_requests);
 			assert_eq!($expected, res);
 		}
 	}
@@ -94,11 +111,13 @@ macro_rules! test_app_stream {
 
 			let mainnet = $crate::MockedTransport {
 				requests: Default::default(),
+				expected_requests: vec![$($mainnet_method),*].into_iter().zip(vec![$($mainnet_req),*].into_iter()).map(Into::into).collect(),
 				mocked_responses: vec![$($mainnet_res),*],
 			};
 
 			let testnet = $crate::MockedTransport {
 				requests: Default::default(),
+				expected_requests: vec![$($testnet_method),*].into_iter().zip(vec![$($testnet_req),*].into_iter()).map(Into::into).collect(),
 				mocked_responses: vec![$($testnet_res),*],
 			};
 
@@ -142,10 +161,6 @@ macro_rules! test_app_stream {
 			let app = Arc::new(app);
 			let stream = $init_stream(app, &$db);
 			let res = stream.collect().wait().unwrap();
-			let expected_mainnet_requests: Vec<_> = vec![$($mainnet_method),*].into_iter().zip(vec![$($mainnet_req),*].into_iter()).collect();
-			mainnet.compare_requests(&expected_mainnet_requests);
-			let expected_testnet_requests: Vec<_> = vec![$($testnet_method),*].into_iter().zip(vec![$($testnet_req),*].into_iter()).collect();
-			testnet.compare_requests(&expected_testnet_requests);
 
 			assert_eq!($expected, res);
 		}
