@@ -59,10 +59,10 @@ macro_rules! test_transport_stream {
 				mocked_responses: vec![$($res),*],
 			};
 			let stream = $init_stream(&transport);
-			let res = stream.collect().wait().unwrap();
+			let res = stream.collect().wait();
 			let expected_requests: Vec<_> = vec![$($method),*].into_iter().zip(vec![$($req),*].into_iter()).collect();
 			transport.compare_requests(&expected_requests);
-			assert_eq!($expected, res);
+			assert_eq!($expected, res.unwrap());
 		}
 	}
 }
@@ -141,13 +141,14 @@ macro_rules! test_app_stream {
 
 			let app = Arc::new(app);
 			let stream = $init_stream(app, &$db);
-			let res = stream.collect().wait().unwrap();
+			let res = stream.collect().wait();
+
 			let expected_mainnet_requests: Vec<_> = vec![$($mainnet_method),*].into_iter().zip(vec![$($mainnet_req),*].into_iter()).collect();
 			mainnet.compare_requests(&expected_mainnet_requests);
 			let expected_testnet_requests: Vec<_> = vec![$($testnet_method),*].into_iter().zip(vec![$($testnet_req),*].into_iter()).collect();
 			testnet.compare_requests(&expected_testnet_requests);
 
-			assert_eq!($expected, res);
+			assert_eq!($expected, res.unwrap());
 		}
 	}
 }
