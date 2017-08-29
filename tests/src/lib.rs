@@ -82,13 +82,14 @@ macro_rules! test_app_stream {
 		testnet_transport => [$($testnet_method: expr => req => $testnet_req: expr, res => $testnet_res: expr ;)*]
 	) => {
 		#[test]
+		#[allow(unused_imports)]
 		fn $name() {
 			use self::std::sync::Arc;
 			use self::std::time::Duration;
 			use self::futures::{Future, Stream};
 			use self::bridge::app::{App, Connections};
 			use self::bridge::contracts::{testnet, mainnet};
-			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions};
+			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig};
 			use self::bridge::database::Database;
 
 			let mainnet = $crate::MockedTransport {
