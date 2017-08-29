@@ -178,7 +178,6 @@ contract KovanBridge {
 
     /// Used to deposit money to the contract.
     ///
-    /// message contains:
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
