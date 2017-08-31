@@ -3,6 +3,7 @@ extern crate futures;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_json;
 extern crate toml;
 extern crate web3;
 extern crate tokio_core;
@@ -15,6 +16,8 @@ extern crate ethabi_derive;
 #[macro_use]
 extern crate ethabi_contract;
 extern crate rustc_hex;
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 mod macros;

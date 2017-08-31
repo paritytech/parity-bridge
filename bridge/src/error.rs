@@ -1,7 +1,8 @@
 #![allow(unknown_lints)]
 
 use std::io;
-use tokio_timer::TimerError;
+use api::ApiCall;
+use tokio_timer::{TimerError, TimeoutError};
 use {web3, toml, ethabi};
 
 error_chain! {
@@ -17,6 +18,11 @@ error_chain! {
 	}
 
 	errors {
+		// api timeout
+		Timeout(request: &'static str) {
+			description("Request timeout"),
+			display("Request {} timed out", request),
+		}
 		// workaround for error_chain not allowing to check internal error kind
 		// https://github.com/rust-lang-nursery/error-chain/issues/206
 		MissingFile(filename: String) {
@@ -27,6 +33,16 @@ error_chain! {
 		Web3(err: web3::Error) {
 			description("web3 error"),
 			display("{:?}", err),
+		}
+	}
+}
+
+impl<T, F> From<TimeoutError<ApiCall<T, F>>> for Error {
+	fn from(err: TimeoutError<ApiCall<T, F>>) -> Self {
+		match err {
+			TimeoutError::Timer(call, _) | TimeoutError::TimedOut(call) => {
+				ErrorKind::Timeout(call.message()).into()
+			}
 		}
 	}
 }

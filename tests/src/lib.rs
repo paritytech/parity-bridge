@@ -119,6 +119,7 @@ macro_rules! test_app_stream {
 						bin: Default::default(),
 					},
 					poll_interval: Duration::from_secs(0),
+					request_timeout: Duration::from_secs(5),
 					required_confirmations: $mainnet_conf,
 				},
 				testnet: Node {
@@ -128,6 +129,7 @@ macro_rules! test_app_stream {
 						bin: Default::default(),
 					},
 					poll_interval: Duration::from_secs(0),
+					request_timeout: Duration::from_secs(5),
 					required_confirmations: $testnet_conf,
 				},
 				authorities: Authorities {
@@ -145,6 +147,7 @@ macro_rules! test_app_stream {
 				},
 				mainnet_bridge: mainnet::EthereumBridge::default(),
 				testnet_bridge: testnet::KovanBridge::default(),
+				timer: Default::default(),
 			};
 
 			let app = Arc::new(app);

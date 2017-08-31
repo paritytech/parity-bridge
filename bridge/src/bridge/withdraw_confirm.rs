@@ -2,16 +2,16 @@ use std::sync::Arc;
 use std::ops;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
+use tokio_timer::Timeout;
 use ethabi::RawLog;
 use web3::Transport;
-use web3::helpers::CallResult;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
-use api::{self, LogStream};
+use api::{self, LogStream, ApiCall};
 use app::App;
 use contracts::testnet;
 use util::web3_filter;
 use database::Database;
-use error::{Error, ErrorKind};
+use error::Error;
 
 fn withdraws_filter(testnet: &testnet::KovanBridge, address: Address) -> FilterBuilder {
 	let filter = testnet.events().withdraw().create_filter();
@@ -43,12 +43,12 @@ enum WithdrawConfirmState<T: Transport> {
 	/// Signing withdraws.
 	SignWithdraws {
 		withdraws: Vec<Bytes>,
-		future: JoinAll<Vec<CallResult<H520, T::Out>>>,
+		future: JoinAll<Vec<Timeout<ApiCall<H520, T::Out>>>>,
 		block: u64,
 	},
 	/// Confirming withdraws.
 	ConfirmWithdraws {
-		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
+		future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
 		block: u64,
 	},
 	/// All withdraws till given block has been confirmed.
@@ -58,13 +58,14 @@ enum WithdrawConfirmState<T: Transport> {
 pub fn create_withdraw_confirm<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> WithdrawConfirm<T> {
 	let logs_init = api::LogStreamInit {
 		after: init.checked_withdraw_confirm,
+		request_timeout: app.config.testnet.request_timeout,
 		poll_interval: app.config.testnet.poll_interval,
 		confirmations: app.config.testnet.required_confirmations,
 		filter: withdraws_filter(&app.testnet_bridge, init.testnet_contract_address.clone()),
 	};
 
 	WithdrawConfirm {
-		logs: api::log_stream(app.connections.testnet.clone(), logs_init),
+		logs: api::log_stream(app.connections.testnet.clone(), app.timer.clone(), logs_init),
 		testnet_contract: init.testnet_contract_address.clone(),
 		state: WithdrawConfirmState::Wait,
 		app,
@@ -94,7 +95,11 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 
 					let requests = withdraws.clone()
 						.into_iter()
-						.map(|bytes| api::sign(&self.app.connections.testnet, self.app.config.testnet.account.clone(), bytes))
+						.map(|bytes| {
+							self.app.timer.timeout(
+								api::sign(&self.app.connections.testnet, self.app.config.testnet.account.clone(), bytes),
+								self.app.config.testnet.request_timeout)
+						})
 						.collect::<Vec<_>>();
 
 					WithdrawConfirmState::SignWithdraws {
@@ -104,7 +109,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					}
 				},
 				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut withdraws, block } => {
-					let signatures = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					let signatures = try_ready!(future.poll());
 					// borrow checker...
 					let app = &self.app;
 					let testnet_contract = &self.testnet_contract;
@@ -122,7 +127,11 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 							nonce: None,
 							condition: None,
 						})
-						.map(|request| api::send_transaction(&app.connections.testnet, request))
+						.map(|request| {
+							app.timer.timeout(
+								api::send_transaction(&app.connections.testnet, request),
+								app.config.testnet.request_timeout)
+						})
 						.collect::<Vec<_>>();
 
 					WithdrawConfirmState::ConfirmWithdraws {
@@ -131,7 +140,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					}
 				},
 				WithdrawConfirmState::ConfirmWithdraws { ref mut future, block } => {
-					let _ = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					let _ = try_ready!(future.poll());
 					WithdrawConfirmState::Yield(Some(block))
 				},
 				WithdrawConfirmState::Yield(ref mut block) => match block.take() {

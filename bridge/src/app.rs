@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use tokio_core::reactor::{Handle};
+use tokio_timer::Timer;
 use web3::Transport;
 use web3::transports::ipc::Ipc;
 use error::{Error, ResultExt, ErrorKind};
@@ -12,6 +13,7 @@ pub struct App<T> where T: Transport {
 	pub connections: Connections<T>,
 	pub mainnet_bridge: mainnet::EthereumBridge,
 	pub testnet_bridge: testnet::KovanBridge,
+	pub timer: Timer,
 }
 
 pub struct Connections<T> where T: Transport {
@@ -56,6 +58,7 @@ impl App<Ipc> {
 			connections,
 			mainnet_bridge: mainnet::EthereumBridge::default(),
 			testnet_bridge: testnet::KovanBridge::default(),
+			timer: Timer::default(),
 		};
 		Ok(result)
 	}
@@ -69,6 +72,7 @@ impl<T: Transport> App<T> {
 			database_path: self.database_path.clone(),
 			mainnet_bridge: mainnet::EthereumBridge::default(),
 			testnet_bridge: testnet::KovanBridge::default(),
+			timer: self.timer.clone(),
 		}
 	}
 }
