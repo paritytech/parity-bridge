@@ -23,5 +23,5 @@ accounts = [
 required_signatures = 2
 
 [transactions]
-mainnet_deploy = { gas = 600000 }
-testnet_deploy = { gas = 600000 }
+mainnet_deploy = { gas = 500000 }
+testnet_deploy = { gas = 500000 }
