@@ -15,10 +15,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 10,
 		};
 
-		log_stream(transport, init).take(2)
+		log_stream(transport, Default::default(), init).take(2)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,
@@ -53,10 +54,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 10,
 		};
 
-		log_stream(transport, init).take(2)
+		log_stream(transport, Default::default(), init).take(2)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,
@@ -94,10 +96,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 10,
 		};
 
-		log_stream(transport, init).take(1)
+		log_stream(transport, Default::default(), init).take(1)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,
@@ -125,10 +128,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 0,
 		};
 
-		log_stream(transport, init).take(3)
+		log_stream(transport, Default::default(), init).take(3)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,
@@ -173,10 +177,11 @@ test_transport_stream! {
 			after: 11,
 			filter: FilterBuilder::default().address(vec![H160([0x11u8; 20])]),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 0,
 		};
 
-		log_stream(transport, init).take(2)
+		log_stream(transport, Default::default(), init).take(2)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xc,
@@ -208,10 +213,11 @@ test_transport_stream! {
 			after: 11,
 			filter: FilterBuilder::default().topics(Some(vec![H256([0x22; 32])]), None, None, None),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 0,
 		};
 
-		log_stream(transport, init).take(2)
+		log_stream(transport, Default::default(), init).take(2)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xc,
@@ -243,10 +249,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 10,
 		};
 
-		log_stream(transport, init).take(1)
+		log_stream(transport, Default::default(), init).take(1)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,
@@ -275,10 +282,11 @@ test_transport_stream! {
 			after: 10,
 			filter: FilterBuilder::default(),
 			poll_interval: Duration::from_secs(0),
+			request_timeout: Duration::from_secs(5),
 			confirmations: 10,
 		};
 
-		log_stream(transport, init).take(3)
+		log_stream(transport, Default::default(), init).take(3)
 	},
 	expected => vec![LogStreamItem {
 		from: 0xb,

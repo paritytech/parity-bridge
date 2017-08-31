@@ -8,6 +8,7 @@ use {toml};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
 const DEFAULT_CONFIRMATIONS: u64 = 12;
+const DEFAULT_TIMEOUT: u64 = 5;
 
 /// Application config.
 #[derive(Debug, PartialEq, Clone)]
@@ -51,6 +52,7 @@ pub struct Node {
 	pub account: Address,
 	pub contract: ContractConfig,
 	pub ipc: PathBuf,
+	pub request_timeout: Duration,
 	pub poll_interval: Duration,
 	pub required_confirmations: u64,
 }
@@ -63,6 +65,7 @@ impl Node {
 				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
 			},
 			ipc: node.ipc,
+			request_timeout: Duration::from_secs(node.request_timeout.unwrap_or(DEFAULT_TIMEOUT)),
 			poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
 			required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
 		};
@@ -140,6 +143,7 @@ mod load {
 		pub account: Address,
 		pub contract: ContractConfig,
 		pub ipc: PathBuf,
+		pub request_timeout: Option<u64>,
 		pub poll_interval: Option<u64>,
 		pub required_confirmations: Option<u64>,
 	}
@@ -220,6 +224,7 @@ mainnet_deploy = { gas = 20 }
 					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(2),
+				request_timeout: Duration::from_secs(5),
 				required_confirmations: 100,
 			},
 			testnet: Node {
@@ -229,6 +234,7 @@ mainnet_deploy = { gas = 20 }
 				},
 				ipc: "/testnet.ipc".into(),
 				poll_interval: Duration::from_secs(1),
+				request_timeout: Duration::from_secs(5),
 				required_confirmations: 12,
 			},
 			authorities: Authorities {
@@ -284,6 +290,7 @@ required_signatures = 2
 					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(1),
+				request_timeout: Duration::from_secs(5),
 				required_confirmations: 12,
 			},
 			testnet: Node {
@@ -293,6 +300,7 @@ required_signatures = 2
 					bin: include_bytes!("../../contracts/KovanBridge.bin").to_vec().into(),
 				},
 				poll_interval: Duration::from_secs(1),
+				request_timeout: Duration::from_secs(5),
 				required_confirmations: 12,
 			},
 			authorities: Authorities {

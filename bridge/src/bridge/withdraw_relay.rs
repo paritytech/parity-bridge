@@ -1,16 +1,16 @@
 use std::sync::Arc;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all, Join};
+use tokio_timer::Timeout;
 use web3::Transport;
-use web3::helpers::CallResult;
 use web3::types::{H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
 use ethabi::{RawLog, self};
 use app::App;
-use api::{self, LogStream};
+use api::{self, LogStream, ApiCall};
 use contracts::{mainnet, testnet};
 use util::web3_filter;
 use database::Database;
-use error::{self, Error, ErrorKind};
+use error::{self, Error};
 
 fn collected_signatures_filter(testnet: &testnet::KovanBridge, address: Address) -> FilterBuilder {
 	let filter = testnet.events().collected_signatures().create_filter();
@@ -69,11 +69,11 @@ fn withdraw_relay_payload(mainnet: &mainnet::EthereumBridge, signatures: Vec<Byt
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
 	Fetch {
-		future: Join<JoinAll<Vec<CallResult<Bytes, T::Out>>>, JoinAll<Vec<JoinAll<Vec<CallResult<Bytes, T::Out>>>>>>,
+		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
 		block: u64,
 	},
 	RelayWithdraws {
-		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
+		future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
 		block: u64,
 	},
 	Yield(Option<u64>),
@@ -82,13 +82,14 @@ pub enum WithdrawRelayState<T: Transport> {
 pub fn create_withdraw_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> WithdrawRelay<T> {
 	let logs_init = api::LogStreamInit {
 		after: init.checked_withdraw_relay,
+		request_timeout: app.config.testnet.request_timeout,
 		poll_interval: app.config.testnet.poll_interval,
 		confirmations: app.config.testnet.required_confirmations,
 		filter: collected_signatures_filter(&app.testnet_bridge, init.testnet_contract_address.clone()),
 	};
 
 	WithdrawRelay {
-		logs: api::log_stream(app.connections.testnet.clone(), logs_init),
+		logs: api::log_stream(app.connections.testnet.clone(), app.timer.clone(), logs_init),
 		mainnet_contract: init.mainnet_contract_address.clone(),
 		testnet_contract: init.testnet_contract_address.clone(),
 		state: WithdrawRelayState::Wait,
@@ -128,13 +129,21 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.unzip();
 
 					let message_calls = messages.into_iter()
-						.map(|payload| api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload))
+						.map(|payload| {
+							self.app.timer.timeout(
+								api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload),
+								self.app.config.testnet.request_timeout)
+						})
 						.collect::<Vec<_>>();
 
 					let signature_calls = signatures.into_iter()
 						.map(|payloads| {
 							payloads.into_iter()
-								.map(|payload| api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload))
+								.map(|payload| {
+									self.app.timer.timeout(
+										api::call(&self.app.connections.testnet, self.testnet_contract.clone(), payload),
+										self.app.config.testnet.request_timeout)
+								})
 								.collect::<Vec<_>>()
 						})
 						.map(|calls| join_all(calls))
@@ -146,7 +155,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					}
 				},
 				WithdrawRelayState::Fetch { ref mut future, block } => {
-					let (messages, signatures) = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					let (messages, signatures) = try_ready!(future.poll());
 					assert_eq!(messages.len(), signatures.len());
 					let app = &self.app;
 					let mainnet_contract = &self.mainnet_contract;
@@ -163,7 +172,11 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 							nonce: None,
 							condition: None,
 						})
-						.map(|request| api::send_transaction(&app.connections.mainnet, request))
+						.map(|request| {
+							app.timer.timeout(
+								api::send_transaction(&app.connections.mainnet, request),
+								app.config.mainnet.request_timeout)
+						})
 						.collect::<Vec<_>>();
 					WithdrawRelayState::RelayWithdraws {
 						future: join_all(relays),
@@ -171,7 +184,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					}
 				},
 				WithdrawRelayState::RelayWithdraws { ref mut future, block } => {
-					let _ = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					let _ = try_ready!(future.poll());
 					WithdrawRelayState::Yield(Some(block))
 				},
 				WithdrawRelayState::Yield(ref mut block) => match block.take() {

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
+use tokio_timer::Timeout;
 use web3::Transport;
-use web3::helpers::CallResult;
 use web3::types::{TransactionRequest, H256, Address, Bytes, Log, FilterBuilder};
 use ethabi::RawLog;
-use api::{LogStream, self};
-use error::{Error, ErrorKind, Result};
+use api::{LogStream, self, ApiCall};
+use error::{Error, Result};
 use database::Database;
 use contracts::{mainnet, testnet};
 use util::web3_filter;
@@ -34,7 +34,7 @@ enum DepositRelayState<T: Transport> {
 	Wait,
 	/// Relaying deposits in progress.
 	RelayDeposits {
-		future: JoinAll<Vec<CallResult<H256, T::Out>>>,
+		future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
 		block: u64,
 	},
 	/// All deposits till given block has been relayed.
@@ -44,12 +44,13 @@ enum DepositRelayState<T: Transport> {
 pub fn create_deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> DepositRelay<T> {
 	let logs_init = api::LogStreamInit {
 		after: init.checked_deposit_relay,
+		request_timeout: app.config.mainnet.request_timeout,
 		poll_interval: app.config.mainnet.poll_interval,
 		confirmations: app.config.mainnet.required_confirmations,
 		filter: deposits_filter(&app.mainnet_bridge, init.mainnet_contract_address.clone()),
 	};
 	DepositRelay {
-		logs: api::log_stream(app.connections.mainnet.clone(), logs_init),
+		logs: api::log_stream(app.connections.mainnet.clone(), app.timer.clone(), logs_init),
 		testnet_contract: init.testnet_contract_address.clone(),
 		state: DepositRelayState::Wait,
 		app,
@@ -87,7 +88,11 @@ impl<T: Transport> Stream for DepositRelay<T> {
 							nonce: None,
 							condition: None,
 						})
-						.map(|request| api::send_transaction(&self.app.connections.testnet, request))
+						.map(|request| {
+							self.app.timer.timeout(
+								api::send_transaction(&self.app.connections.testnet, request),
+								self.app.config.testnet.request_timeout)
+						})
 						.collect::<Vec<_>>();
 
 					DepositRelayState::RelayDeposits {
@@ -96,7 +101,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 					}
 				},
 				DepositRelayState::RelayDeposits { ref mut future, block } => {
-					let _ = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					let _ = try_ready!(future.poll());
 					DepositRelayState::Yield(Some(block))
 				},
 				DepositRelayState::Yield(ref mut block) => match block.take() {
