@@ -183,7 +183,10 @@ contract KovanBridge {
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
-    function deposit (address recipient, uint value, bytes32 hash) onlyAuthority() {
+    function deposit (address recipient, uint value, bytes32 transactionHash) onlyAuthority() {
+		// Protection from misbehaing authority
+		var hash = sha3(recipient, value, transactionHash);
+
         // Duplicated deposits
         require(!deposits[hash].contains(msg.sender));
 

@@ -49,7 +49,7 @@ contract('EthereumBridge', function(accounts) {
         from: user_account
       })
     }).then(function(result) {
-      assert.equal(1, result.logs.length, "Only one event should have been created");
+      assert.equal(1, result.logs.length, "Exactly one event should have been created");
       assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
       assert.equal(user_account, result.logs[0].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[0].args.value, "Event value should match deposited ether");
