@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.15;
 
 library Authorities {
     function contains (address[] self, address value) internal returns (bool) {
@@ -24,10 +24,10 @@ contract EthereumBridge {
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
-    uint requiredSignatures;
+    uint public requiredSignatures;
 
     /// Contract authorities.
-    address[] authorities;
+    address[] public authorities;
 
     /// Used kovan transaction hashes.
     mapping (bytes32 => bool) withdraws;
@@ -57,7 +57,8 @@ contract EthereumBridge {
 
     /// Constructor.
     function EthereumBridge (uint n, address[] a) {
-        require(requiredSignatures <= a.length);
+		require(n != 0);
+        require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
