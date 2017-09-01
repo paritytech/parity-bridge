@@ -138,13 +138,13 @@ contract KovanBridge {
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
-    uint requiredSignatures;
+    uint public requiredSignatures;
 
     /// Contract authorities.
-    address[] authorities;
+    address[] public authorities;
 
     /// Ether balances
-    mapping (address => uint) balances;
+    mapping (address => uint) public balances;
 
     /// Pending deposits and authorities who confirmed them
     mapping (bytes32 => address[]) deposits;
@@ -166,7 +166,8 @@ contract KovanBridge {
 
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
-        require(requiredSignatures <= a.length);
+		require(n != 0);
+        require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
     }

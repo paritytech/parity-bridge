@@ -48,6 +48,25 @@
         "constant": true,
         "inputs": [
             {
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "balances",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
                 "name": "hash",
                 "type": "bytes32"
             }
@@ -57,6 +76,25 @@
             {
                 "name": "",
                 "type": "bytes"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "authorities",
+        "outputs": [
+            {
+                "name": "",
+                "type": "address"
             }
         ],
         "payable": false,
@@ -79,6 +117,20 @@
         "outputs": [],
         "payable": false,
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "constant": true,
+        "inputs": [],
+        "name": "requiredSignatures",
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "payable": false,
+        "stateMutability": "view",
         "type": "function"
     },
     {
