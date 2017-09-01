@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.15;
 
 library Authorities {
     function contains (address[] self, address value) internal returns (bool) {
@@ -24,10 +24,10 @@ contract EthereumBridge {
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
-    uint requiredSignatures;
+    uint public requiredSignatures;
 
     /// Contract authorities.
-    address[] authorities;
+    address[] public authorities;
 
     /// Used kovan transaction hashes.
     mapping (bytes32 => bool) withdraws;
@@ -57,7 +57,8 @@ contract EthereumBridge {
 
     /// Constructor.
     function EthereumBridge (uint n, address[] a) {
-        require(requiredSignatures <= a.length);
+		require(n != 0);
+        require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
@@ -137,13 +138,13 @@ contract KovanBridge {
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
-    uint requiredSignatures;
+    uint public requiredSignatures;
 
     /// Contract authorities.
-    address[] authorities;
+    address[] public authorities;
 
     /// Ether balances
-    mapping (address => uint) balances;
+    mapping (address => uint) public balances;
 
     /// Pending deposits and authorities who confirmed them
     mapping (bytes32 => address[]) deposits;
@@ -165,7 +166,8 @@ contract KovanBridge {
 
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
-        require(requiredSignatures <= a.length);
+		require(n != 0);
+        require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
     }
@@ -181,7 +183,10 @@ contract KovanBridge {
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
-    function deposit (address recipient, uint value, bytes32 hash) onlyAuthority() {
+    function deposit (address recipient, uint value, bytes32 transactionHash) onlyAuthority() {
+		// Protection from misbehaing authority
+		var hash = sha3(recipient, value, transactionHash);
+
         // Duplicated deposits
         require(!deposits[hash].contains(msg.sender));
 
