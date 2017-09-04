@@ -21,7 +21,7 @@ library Authorities {
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
     function signer (bytes signature, bytes message) constant returns (address) {
-        return Signer.signer(message, signature);
+        return Signer.signer(signature, message);
     }
 }
 
@@ -44,7 +44,7 @@ library Utils {
 }
 
 library Signer {
-    function signer (bytes message, bytes signature) internal returns (address) {
+    function signer (bytes signature, bytes message) internal returns (address) {
         require(signature.length == 65);
         bytes32 r;
         bytes32 s;
@@ -236,7 +236,7 @@ contract KovanBridge {
     /// kovan transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature (bytes signature, bytes message) onlyAuthority() {
         // Validate submited signatures
-        require(Signer.signer(message, signature) == msg.sender);
+        require(Signer.signer(signature, message) == msg.sender);
 
         // Valid withdraw message must have 84 bytes
         require(message.length == 84);

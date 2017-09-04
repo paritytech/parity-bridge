@@ -192,4 +192,185 @@ contract('KovanBridge', function(accounts) {
       assert.equal(web3.toWei(0, "ether"), result[1]);
     })
   })
+
+  function sign(address, data) {
+    return new Promise(function(resolve, reject) {
+      web3.eth.sign(address, data, function(err, result) {
+        if (err !== null) {
+          return reject(err);
+        } else {
+          return resolve(normalizeSignature(result));
+          //return resolve(result);
+        }
+      })
+    })
+  }
+
+  // geth && testrpc has different output of eth_sign than parity
+  // https://github.com/ethereumjs/testrpc/issues/243#issuecomment-326750236
+  function normalizeSignature(signature) {
+    // strip 0x
+    signature = signature.substr(2);
+
+    // increase v by 27...
+    return "0x" + signature.substr(0, 128) + (parseInt(signature.substr(128), 16) + 27).toString(16);
+  }
+
+  it("should successfully submit signature and trigger CollectedSignatures event", function() {
+    var meta;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      return meta.submitSignature(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
+      assert.equal(authorities[0], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      return Promise.all([
+        meta.signature.call(result.logs[0].args.messageHash, 0),
+        meta.message(result.logs[0].args.messageHash),
+      ])
+    }).then(function(result) {
+      assert.equal(signature, result[0]);
+      assert.equal(message, result[1]);
+    })
+  })
+
+  it("should successfully submit signature but not trigger CollectedSignatures event", function() {
+    var meta;
+    var requiredSignatures = 2;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      return meta.submitSignature(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      assert.equal(0, result.logs.length, "No events should be created");
+    })
+  })
+
+  it("should be able to collect signatures for multiple events in parallel", function() {
+    var meta;
+    var signatures_for_message = [];
+    var signatures_for_message2 = [];
+    var requiredSignatures = 2;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return Promise.all([
+        sign(authorities[0], message),
+        sign(authorities[1], message),
+        sign(authorities[0], message2),
+        sign(authorities[1], message2),
+      ]);
+    }).then(function(result) {
+      signatures_for_message.push(result[0]);
+      signatures_for_message.push(result[1]);
+      signatures_for_message2.push(result[2]);
+      signatures_for_message2.push(result[3]);
+      return meta.submitSignature(signatures_for_message[0], message, { from: authorities[0] });
+    }).then(function(result) {
+      assert.equal(0, result.logs.length, "No events should be created");
+      return meta.submitSignature(signatures_for_message2[1], message2, { from: authorities[1] });
+    }).then(function(result) {
+      assert.equal(0, result.logs.length, "No events should be created");
+      return meta.submitSignature(signatures_for_message2[0], message2, { from: authorities[0] });
+    }).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
+      assert.equal(authorities[0], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      return Promise.all([
+        meta.signature.call(result.logs[0].args.messageHash, 0),
+        meta.signature.call(result.logs[0].args.messageHash, 1),
+        meta.message(result.logs[0].args.messageHash),
+      ])
+    }).then(function(result) {
+      assert.equal(signatures_for_message2[1], result[0]);
+      assert.equal(signatures_for_message2[0], result[1]);
+      assert.equal(message2, result[2]);
+      return meta.submitSignature(signatures_for_message[1], message, { from: authorities[1] });
+    }).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
+      assert.equal(authorities[1], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      return Promise.all([
+        meta.signature.call(result.logs[0].args.messageHash, 0),
+        meta.signature.call(result.logs[0].args.messageHash, 1),
+        meta.message(result.logs[0].args.messageHash),
+      ])
+    }).then(function(result) {
+      assert.equal(signatures_for_message[0], result[0]);
+      assert.equal(signatures_for_message[1], result[1]);
+      assert.equal(message, result[2]);
+    })
+  })
+
+  it("should not be possible to submit to short message", function() {
+    var meta;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      return meta.submitSignature(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      assert(false, "submitSignature should fail");
+    }, function (err) {
+      // nothing
+    })
+  })
+
+  it("should not be possible to submit different message then the signed one", function() {
+    var meta;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      return meta.submitSignature(result, message2, { from: authorities[0] });
+    }).then(function(result) {
+      assert(false, "submitSignature should fail");
+    }, function (err) {
+      // nothing
+    })
+  })
+
+  it("should not be possible to submit signature signed by different authority", function() {
+    var meta;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      return meta.submitSignature(result, message, { from: authorities[1] });
+    }).then(function(result) {
+      assert(false, "submitSignature should fail");
+    }, function (err) {
+      // nothing
+    })
+  })
+
 })
