@@ -85,7 +85,7 @@ contract('KovanBridge', function(accounts) {
     })
   })
 
-  it("should ignore misbehaving authority", function() {
+  it("should ignore misbehaving authority when confirming deposit", function() {
     var meta;
     var requiredSignatures = 2;
     var authorities = [accounts[0], accounts[1], accounts[2]];
@@ -112,6 +112,15 @@ contract('KovanBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(value, result, "Contract balance should change");
     })
+  })
+
+  it("should allow user to transfer value internally", function() {
+  })
+
+  it("should not allow user to transfer value", function() {
+  })
+
+  it("should allow user to trigger withdraw", function() {
   })
 
 })

@@ -18,6 +18,51 @@ library Authorities {
     }
 }
 
+/// Library used only to test Signer library via rpc calls
+library SignerTest {
+    function signer (bytes signature, bytes message) constant returns (address) {
+        return Signer.signer(message, signature);
+    }
+}
+
+library Utils {
+    function toString (uint256 v) internal returns (string str) {
+        // it is used only for small numbers
+        bytes memory reversed = new bytes(8);
+        uint i = 0;
+        while (v != 0) {
+            uint remainder = v % 10;
+            v = v / 10;
+            reversed[i++] = byte(48 + remainder);
+        }
+		bytes memory s = new bytes(i);
+		for (uint j = 0; j < i; j++) {
+			s[j] = reversed[i - j - 1];
+		}
+		str = string(s);
+    }
+}
+
+library Signer {
+    function signer (bytes message, bytes signature) internal returns (address) {
+        require(signature.length == 65);
+        bytes32 r;
+        bytes32 s;
+        bytes1 v;
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            v := mload(add(signature, 0x60))
+        }
+        return ecrecover(hash(message), uint8(v), r, s);
+    }
+
+    function hash (bytes message) internal returns (bytes32) {
+        bytes memory prefix = "\x19Ethereum Signed Message:\n";
+        return sha3(prefix, Utils.toString(message.length), message);
+    }
+}
+
 contract EthereumBridge {
     using Authorities for address[];
 
@@ -40,8 +85,7 @@ contract EthereumBridge {
 
     /// Multisig authority validation
     modifier allAuthorities (uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
-        bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        var hash = sha3(prefix, message.length, message);
+        var hash = Signer.hash(message);
         var used = new address[](requiredSignatures);
 
         require(requiredSignatures <= v.length);
@@ -79,9 +123,9 @@ contract EthereumBridge {
         uint value;
         bytes32 hash;
         assembly {
-            recipient := mload(message)
-            value := mload(add(message, 0x32))
-            hash := mload(add(message, 0x64))
+            recipient := mload(add(message, 0x20))
+            value := mload(add(message, 0x40))
+            hash := mload(add(message, 0x60))
         }
 
         // Duplicated withdraw
@@ -91,35 +135,6 @@ contract EthereumBridge {
         withdraws[hash] = true;
         recipient.transfer(value);
         Withdraw(recipient, value);
-    }
-
-    /// Used to elect new authorities.
-    ///
-    // message contains:
-    // new requiredSignatures (uint)
-    // new number of authorities (uint)
-    // new authorities (bytes20)
-    function reelect (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
-        uint newRequiredSignatures;
-        uint newAuthoritiesNumber;
-        address addressPtr;
-
-        assembly {
-            newRequiredSignatures := mload(message)
-            newAuthoritiesNumber := mload(add(message, 0x32))
-        }
-
-        require(newRequiredSignatures <= newAuthoritiesNumber);
-
-        authorities.truncate(newAuthoritiesNumber);
-
-        for (uint i = 0; i < newAuthoritiesNumber; i++) {
-            assembly {
-                let offset := add(0x64, mul(0x32, i))
-                addressPtr := mload(add(message, offset))
-            }
-            authorities[i] = addressPtr;
-        }
     }
 }
 
@@ -220,8 +235,9 @@ contract KovanBridge {
     /// withdrawal value (uint)
     /// kovan transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature (bytes signature, bytes message) onlyAuthority() {
-		// Valid signature must have 65 bytes
-		require(signature.length == 65);
+        // Validate submited signatures
+        require(Signer.signer(message, signature) == msg.sender);
+
 		// Valid withdraw message must have 84 bytes
 		require(message.length == 84);
         var hash = sha3(message);
