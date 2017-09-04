@@ -317,7 +317,6 @@ contract('KovanBridge', function(accounts) {
 
   it("should not be possible to submit to short message", function() {
     var meta;
-    var signature;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
@@ -325,7 +324,6 @@ contract('KovanBridge', function(accounts) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
-      signature = result;
       return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {
       assert(false, "submitSignature should fail");
@@ -336,7 +334,6 @@ contract('KovanBridge', function(accounts) {
 
   it("should not be possible to submit different message then the signed one", function() {
     var meta;
-    var signature;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
@@ -345,7 +342,6 @@ contract('KovanBridge', function(accounts) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
-      signature = result;
       return meta.submitSignature(result, message2, { from: authorities[0] });
     }).then(function(result) {
       assert(false, "submitSignature should fail");
@@ -356,7 +352,6 @@ contract('KovanBridge', function(accounts) {
 
   it("should not be possible to submit signature signed by different authority", function() {
     var meta;
-    var signature;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
@@ -364,8 +359,26 @@ contract('KovanBridge', function(accounts) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
-      signature = result;
       return meta.submitSignature(result, message, { from: authorities[1] });
+    }).then(function(result) {
+      assert(false, "submitSignature should fail");
+    }, function (err) {
+      // nothing
+    })
+  })
+
+  it("should not be possible to submit signature twice", function() {
+    var meta;
+    var requiredSignatures = 0;
+    var authorities = [accounts[0], accounts[1]];
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      return meta.submitSignature(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {
       assert(false, "submitSignature should fail");
     }, function (err) {
