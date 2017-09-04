@@ -35,11 +35,11 @@ library Utils {
             v = v / 10;
             reversed[i++] = byte(48 + remainder);
         }
-		bytes memory s = new bytes(i);
-		for (uint j = 0; j < i; j++) {
-			s[j] = reversed[i - j - 1];
-		}
-		str = string(s);
+        bytes memory s = new bytes(i);
+        for (uint j = 0; j < i; j++) {
+            s[j] = reversed[i - j - 1];
+        }
+        str = string(s);
     }
 }
 
@@ -101,7 +101,7 @@ contract EthereumBridge {
 
     /// Constructor.
     function EthereumBridge (uint n, address[] a) {
-		require(n != 0);
+        require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
@@ -181,7 +181,7 @@ contract KovanBridge {
 
     /// Constructor.
     function KovanBridge(uint n, address[] a) {
-		require(n != 0);
+        require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
@@ -199,8 +199,8 @@ contract KovanBridge {
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
     function deposit (address recipient, uint value, bytes32 transactionHash) onlyAuthority() {
-		// Protection from misbehaing authority
-		var hash = sha3(recipient, value, transactionHash);
+        // Protection from misbehaing authority
+        var hash = sha3(recipient, value, transactionHash);
 
         // Duplicated deposits
         require(!deposits[hash].contains(msg.sender));
@@ -238,8 +238,8 @@ contract KovanBridge {
         // Validate submited signatures
         require(Signer.signer(message, signature) == msg.sender);
 
-		// Valid withdraw message must have 84 bytes
-		require(message.length == 84);
+        // Valid withdraw message must have 84 bytes
+        require(message.length == 84);
         var hash = sha3(message);
 
         // Duplicated signatures
