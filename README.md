@@ -123,7 +123,15 @@ checked_withdraw_confirm = 121
 
 ### example run
 
-// TODO
+```
+./target/debug/bridge --config examples/config.toml --database db.toml
+```
+
+- example run requires a parity instance running
+- this parity instance can be started by running `examples/parity_start.sh`
+- it connects to this parity instance twice. one connection treats the node as `mainnet`, whereas the other as `testnet`
+- by default, parity tries to unlock account generates from seedphrase `this is sparta` - `0x006e27b6a72e1f34c626762f3c4761547aff1421`
+- this is just an example. the 'real world' bridge needs to connect to the two different parity instances
 
 ### deposit
 
