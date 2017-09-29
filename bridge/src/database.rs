@@ -62,7 +62,7 @@ mod tests {
 	use super::Database;
 
 	#[test]
-	fn databse_to_and_from_str() {
+	fn database_to_and_from_str() {
 		let toml =
 r#"mainnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
 testnet_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
