@@ -76,16 +76,16 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						};
 
 						let main_future = api::send_transaction_with_confirmation(
-							self.app.connections.mainnet.clone(), 
-							main_tx_request, 
-							self.app.config.mainnet.poll_interval, 
+							self.app.connections.mainnet.clone(),
+							main_tx_request,
+							self.app.config.mainnet.poll_interval,
 							self.app.config.mainnet.required_confirmations
 						);
 
 						let test_future = api::send_transaction_with_confirmation(
-							self.app.connections.testnet.clone(), 
-							test_tx_request, 
-							self.app.config.testnet.poll_interval, 
+							self.app.connections.testnet.clone(),
+							test_tx_request,
+							self.app.config.testnet.poll_interval,
 							self.app.config.testnet.required_confirmations
 						);
 

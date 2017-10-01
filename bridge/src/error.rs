@@ -3,7 +3,7 @@
 use std::io;
 use api::ApiCall;
 use tokio_timer::{TimerError, TimeoutError};
-use {web3, toml, ethabi};
+use {web3, toml, ethabi, rustc_hex};
 
 error_chain! {
 	types {
@@ -15,6 +15,7 @@ error_chain! {
 		Toml(toml::de::Error);
 		Ethabi(ethabi::Error);
 		Timer(TimerError);
+		Hex(rustc_hex::FromHexError);
 	}
 
 	errors {

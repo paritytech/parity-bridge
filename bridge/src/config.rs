@@ -2,6 +2,7 @@ use std::path::{PathBuf, Path};
 use std::fs;
 use std::io::Read;
 use std::time::Duration;
+use rustc_hex::FromHex;
 use web3::types::{Address, Bytes};
 use error::{ResultExt, Error};
 use {toml};
@@ -62,7 +63,12 @@ impl Node {
 		let result = Node {
 			account: node.account,
 			contract: ContractConfig {
-				bin: Bytes(fs::File::open(node.contract.bin)?.bytes().collect::<Result<_, _>>()?),
+				bin: {
+					let mut read = String::new();
+					let mut file = fs::File::open(node.contract.bin)?;
+					file.read_to_string(&mut read)?;
+					Bytes(read.from_hex()?)
+				}
 			},
 			ipc: node.ipc,
 			request_timeout: Duration::from_secs(node.request_timeout.unwrap_or(DEFAULT_TIMEOUT)),
@@ -182,6 +188,7 @@ mod load {
 #[cfg(test)]
 mod tests {
 	use std::time::Duration;
+	use rustc_hex::FromHex;
 	use super::{Config, Node, ContractConfig, Transactions, Authorities, TransactionConfig};
 
 	#[test]
@@ -221,7 +228,7 @@ mainnet_deploy = { gas = 20 }
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/mainnet.ipc".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
+					bin: include_str!("../../contracts/EthereumBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(2),
 				request_timeout: Duration::from_secs(5),
@@ -230,7 +237,7 @@ mainnet_deploy = { gas = 20 }
 			testnet: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				contract: ContractConfig {
-					bin: include_bytes!("../../contracts/KovanBridge.bin").to_vec().into(),
+					bin: include_str!("../../contracts/KovanBridge.bin").from_hex().unwrap().into(),
 				},
 				ipc: "/testnet.ipc".into(),
 				poll_interval: Duration::from_secs(1),
@@ -287,7 +294,7 @@ required_signatures = 2
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../../contracts/EthereumBridge.bin").to_vec().into(),
+					bin: include_str!("../../contracts/EthereumBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
@@ -297,7 +304,7 @@ required_signatures = 2
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_bytes!("../../contracts/KovanBridge.bin").to_vec().into(),
+					bin: include_str!("../../contracts/KovanBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),

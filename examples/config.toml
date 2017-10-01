@@ -17,11 +17,10 @@ bin = "contracts/KovanBridge.bin"
 [authorities]
 accounts = [
 	"0x006e27b6a72e1f34c626762f3c4761547aff1421",
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421",
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ]
-required_signatures = 2
+required_signatures = 1
 
 [transactions]
-mainnet_deploy = { gas = 500000 }
-testnet_deploy = { gas = 500000 }
+mainnet_deploy = { gas = 1000000 }
+testnet_deploy = { gas = 3000000 }
+deposit_relay = { gas = 100000 }
