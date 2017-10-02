@@ -29,13 +29,13 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[]"#;
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0x1012""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1006","limit":null,"toBlock":"0x1006","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1006","limit":null,"toBlock":"0x1006","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[]"#;
 	]
 }
@@ -64,7 +64,7 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[{"address":"0x0000000000000000000000000000000000000000","topics":["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],"data":"0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0","type":"","transactionHash":"0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"}]"#;
 	]
 }
@@ -97,7 +97,7 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[{"address":"0x0000000000000000000000000000000000000000","topics":["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],"data":"0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0","type":"","transactionHash":"0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"}]"#;
 		"eth_call" =>
 			req => r#"[{"data":"0x490a32c600000000000000000000000000000000000000000000000000000000000000f0","to":"0x0000000000000000000000000000000000000000"},"latest"]"#,
@@ -145,7 +145,7 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x0000000000000000000000000000000000000000"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[{"address":"0x0000000000000000000000000000000000000000","topics":["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],"data":"0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0","type":"","transactionHash":"0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"}]"#;
 		"eth_call" =>
 			req => r#"[{"data":"0x490a32c600000000000000000000000000000000000000000000000000000000000000f0","to":"0x0000000000000000000000000000000000000000"},"latest"]"#,
@@ -191,7 +191,7 @@ test_app_stream! {
 			req => r#"[]"#,
 			res => r#""0x1011""#;
 		"eth_getLogs" =>
-			req => r#"[{"address":["0x00000000000000000000000000000000000000ee"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],[],[],[]]}]"#,
+			req => r#"[{"address":["0x00000000000000000000000000000000000000ee"],"fromBlock":"0x1","limit":null,"toBlock":"0x1005","topics":[["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],null,null,null]}]"#,
 			res => r#"[{"address":"0x00000000000000000000000000000000000000ee","topics":["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c"],"data":"0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0","type":"","transactionHash":"0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"}]"#;
 		"eth_call" =>
 			req => r#"[{"data":"0x490a32c600000000000000000000000000000000000000000000000000000000000000f0","to":"0x00000000000000000000000000000000000000ee"},"latest"]"#,

@@ -76,7 +76,7 @@ testnet_deploy = { gas = 500000 }
 - `testnet.account` - authority address on the testnet (**required**)
 - `testnet.ipc` - path to testnet parity ipc handle (**required**)
 - `testnet.contract.bin` - path to the compiled bridge contract (**required**)
-- `testnet.required_confirmations` - number of confirmation required to consider transaction final on testnte (default: **12**)
+- `testnet.required_confirmations` - number of confirmation required to consider transaction final on testnet (default: **12**)
 - `testnet.poll_interval` - specify how often mainnet node should be polled for changes (in seconds, default: **1**)
 - `testnet.request_timeout` - specify request timeout (in seconds, default: **5**)
 

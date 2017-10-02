@@ -59,32 +59,6 @@
         "type": "function"
     },
     {
-        "constant": false,
-        "inputs": [
-            {
-                "name": "v",
-                "type": "uint8[]"
-            },
-            {
-                "name": "r",
-                "type": "bytes32[]"
-            },
-            {
-                "name": "s",
-                "type": "bytes32[]"
-            },
-            {
-                "name": "message",
-                "type": "bytes"
-            }
-        ],
-        "name": "reelect",
-        "outputs": [],
-        "payable": false,
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
         "inputs": [
             {
                 "name": "n",

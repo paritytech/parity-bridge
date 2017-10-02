@@ -3,7 +3,12 @@ use ethabi;
 
 fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
 	let t: Vec<ethabi::Hash> = topic.into();
-	Some(t.into_iter().map(|x| H256(x)).collect())
+	// parity does not conform to an ethereum spec
+	if t.is_empty() {
+		None
+	} else {
+		Some(t.into_iter().map(|x| H256(x)).collect())
+	}
 }
 
 pub fn web3_filter(filter: ethabi::TopicFilter, address: Address) -> FilterBuilder {
