@@ -264,7 +264,7 @@ mainnet_deploy = { gas = 20 }
 	}
 
 	#[test]
-	fn laod_minimal_setup_from_str() {
+	fn load_minimal_setup_from_str() {
 		let toml = r#"
 [mainnet]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
