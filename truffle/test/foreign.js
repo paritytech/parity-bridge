@@ -1,12 +1,12 @@
-var KovanBridge = artifacts.require("KovanBridge");
+var ForeignBridge = artifacts.require("ForeignBridge");
 
-contract('KovanBridge', function(accounts) {
+contract('ForeignBridge', function(accounts) {
   it("should deploy contract", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
 
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.requiredSignatures.call();
     }).then(function(result) {
@@ -19,7 +19,7 @@ contract('KovanBridge', function(accounts) {
 
   it("should fail to deploy contract with not enough required signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return KovanBridge.new(0, authorities).then(function(_) {
+    return ForeignBridge.new(0, authorities).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -28,7 +28,7 @@ contract('KovanBridge', function(accounts) {
 
   it("should fail to deploy contract with to many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return KovanBridge.new(3, authorities).then(function(_) {
+    return ForeignBridge.new(3, authorities).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -43,7 +43,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -65,7 +65,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -94,7 +94,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -123,7 +123,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(3, "ether");
     var value2 = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -153,7 +153,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(3, "ether");
     var value2 = web3.toWei(4, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -173,7 +173,7 @@ contract('KovanBridge', function(accounts) {
     var value = web3.toWei(3, "ether");
     var value2 = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -222,7 +222,7 @@ contract('KovanBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
@@ -247,7 +247,7 @@ contract('KovanBridge', function(accounts) {
     var requiredSignatures = 2;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
@@ -265,7 +265,7 @@ contract('KovanBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return Promise.all([
         sign(authorities[0], message),
@@ -320,7 +320,7 @@ contract('KovanBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
@@ -338,7 +338,7 @@ contract('KovanBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
@@ -355,7 +355,7 @@ contract('KovanBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {
@@ -372,7 +372,7 @@ contract('KovanBridge', function(accounts) {
     var requiredSignatures = 0;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return KovanBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return sign(authorities[0], message);
     }).then(function(result) {

@@ -8,23 +8,23 @@ use ethabi::RawLog;
 use api::{LogStream, self, ApiCall};
 use error::{Error, Result};
 use database::Database;
-use contracts::{mainnet, testnet};
+use contracts::{home, foreign};
 use util::web3_filter;
 use app::App;
 
-fn deposits_filter(mainnet: &mainnet::EthereumBridge, address: Address) -> FilterBuilder {
-	let filter = mainnet.events().deposit().create_filter();
+fn deposits_filter(home: &home::HomeBridge, address: Address) -> FilterBuilder {
+	let filter = home.events().deposit().create_filter();
 	web3_filter(filter, address)
 }
 
-fn deposit_relay_payload(mainnet: &mainnet::EthereumBridge, testnet: &testnet::KovanBridge, log: Log) -> Result<Bytes> {
+fn deposit_relay_payload(home: &home::HomeBridge, foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes> {
 	let raw_log = RawLog {
 		topics: log.topics.into_iter().map(|t| t.0).collect(),
 		data: log.data.0,
 	};
-	let deposit_log = mainnet.events().deposit().parse_log(raw_log)?;
+	let deposit_log = home.events().deposit().parse_log(raw_log)?;
 	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
-	let payload = testnet.functions().deposit().input(deposit_log.recipient, deposit_log.value, hash.0);
+	let payload = foreign.functions().deposit().input(deposit_log.recipient, deposit_log.value, hash.0);
 	Ok(payload.into())
 }
 
@@ -44,14 +44,14 @@ enum DepositRelayState<T: Transport> {
 pub fn create_deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Database) -> DepositRelay<T> {
 	let logs_init = api::LogStreamInit {
 		after: init.checked_deposit_relay,
-		request_timeout: app.config.mainnet.request_timeout,
-		poll_interval: app.config.mainnet.poll_interval,
-		confirmations: app.config.mainnet.required_confirmations,
-		filter: deposits_filter(&app.mainnet_bridge, init.mainnet_contract_address.clone()),
+		request_timeout: app.config.home.request_timeout,
+		poll_interval: app.config.home.poll_interval,
+		confirmations: app.config.home.required_confirmations,
+		filter: deposits_filter(&app.home_bridge, init.home_contract_address.clone()),
 	};
 	DepositRelay {
-		logs: api::log_stream(app.connections.mainnet.clone(), app.timer.clone(), logs_init),
-		testnet_contract: init.testnet_contract_address.clone(),
+		logs: api::log_stream(app.connections.home.clone(), app.timer.clone(), logs_init),
+		foreign_contract: init.foreign_contract_address.clone(),
 		state: DepositRelayState::Wait,
 		app,
 	}
@@ -61,7 +61,7 @@ pub struct DepositRelay<T: Transport> {
 	app: Arc<App<T>>,
 	logs: LogStream<T>,
 	state: DepositRelayState<T>,
-	testnet_contract: Address,
+	foreign_contract: Address,
 }
 
 impl<T: Transport> Stream for DepositRelay<T> {
@@ -75,12 +75,12 @@ impl<T: Transport> Stream for DepositRelay<T> {
 					let item = try_stream!(self.logs.poll());
 					let deposits = item.logs
 						.into_iter()
-						.map(|log| deposit_relay_payload(&self.app.mainnet_bridge, &self.app.testnet_bridge, log))
+						.map(|log| deposit_relay_payload(&self.app.home_bridge, &self.app.foreign_bridge, log))
 						.collect::<Result<Vec<_>>>()?
 						.into_iter()
 						.map(|payload| TransactionRequest {
-							from: self.app.config.testnet.account.clone(),
-							to: Some(self.testnet_contract.clone()),
+							from: self.app.config.foreign.account.clone(),
+							to: Some(self.foreign_contract.clone()),
 							gas: Some(self.app.config.txs.deposit_relay.gas.into()),
 							gas_price: Some(self.app.config.txs.deposit_relay.gas_price.into()),
 							value: None,
@@ -90,8 +90,8 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						})
 						.map(|request| {
 							self.app.timer.timeout(
-								api::send_transaction(&self.app.connections.testnet, request),
-								self.app.config.testnet.request_timeout)
+								api::send_transaction(&self.app.connections.foreign, request),
+								self.app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();
 
@@ -118,13 +118,13 @@ impl<T: Transport> Stream for DepositRelay<T> {
 mod tests {
 	use rustc_hex::FromHex;
 	use web3::types::{Log, Bytes};
-	use contracts::{mainnet, testnet};
+	use contracts::{home, foreign};
 	use super::deposit_relay_payload;
 
 	#[test]
 	fn test_deposit_relay_payload() {
-		let mainnet = mainnet::EthereumBridge::default();
-		let testnet = testnet::KovanBridge::default();
+		let home = home::HomeBridge::default();
+		let foreign = foreign::ForeignBridge::default();
 
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 		let log = Log {
@@ -134,7 +134,7 @@ mod tests {
 			..Default::default()
 		};
 
-		let payload = deposit_relay_payload(&mainnet, &testnet, log).unwrap();
+		let payload = deposit_relay_payload(&home, &foreign, log).unwrap();
 		let expected: Bytes = "26b3293f000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap().into();
 		assert_eq!(expected, payload);
 	}

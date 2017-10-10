@@ -1,17 +1,17 @@
-[mainnet]
+[home]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
 required_confirmations = 0
 
-[mainnet.contract]
+[home.contract]
 bin = "contracts/EthereumBridge.bin"
 
-[testnet]
+[foreign]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
 required_confirmations = 0
 
-[testnet.contract]
+[foreign.contract]
 bin = "contracts/KovanBridge.bin"
 
 [authorities]
@@ -21,6 +21,6 @@ accounts = [
 required_signatures = 1
 
 [transactions]
-mainnet_deploy = { gas = 1000000 }
-testnet_deploy = { gas = 3000000 }
+home_deploy = { gas = 1000000 }
+foreign_deploy = { gas = 3000000 }
 deposit_relay = { gas = 100000 }

@@ -78,14 +78,14 @@ macro_rules! test_app_stream {
 	(
 		name => $name: ident,
 		database => $db: expr,
-		mainnet => account => $mainnet_acc: expr, confirmations => $mainnet_conf: expr;
-		testnet => account => $testnet_acc: expr, confirmations => $testnet_conf: expr;
+		home => account => $home_acc: expr, confirmations => $home_conf: expr;
+		foreign => account => $foreign_acc: expr, confirmations => $foreign_conf: expr;
 		authorities => accounts => $authorities_accs: expr, signatures => $signatures: expr;
 		txs => $txs: expr,
 		init => $init_stream: expr,
 		expected => $expected: expr,
-		mainnet_transport => [$($mainnet_method: expr => req => $mainnet_req: expr, res => $mainnet_res: expr ;)*],
-		testnet_transport => [$($testnet_method: expr => req => $testnet_req: expr, res => $testnet_res: expr ;)*]
+		home_transport => [$($home_method: expr => req => $home_req: expr, res => $home_res: expr ;)*],
+		foreign_transport => [$($foreign_method: expr => req => $foreign_req: expr, res => $foreign_res: expr ;)*]
 	) => {
 		#[test]
 		#[allow(unused_imports)]
@@ -94,43 +94,43 @@ macro_rules! test_app_stream {
 			use self::std::time::Duration;
 			use self::futures::{Future, Stream};
 			use self::bridge::app::{App, Connections};
-			use self::bridge::contracts::{testnet, mainnet};
+			use self::bridge::contracts::{foreign, home};
 			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig};
 			use self::bridge::database::Database;
 
-			let mainnet = $crate::MockedTransport {
+			let home = $crate::MockedTransport {
 				requests: Default::default(),
-				expected_requests: vec![$($mainnet_method),*].into_iter().zip(vec![$($mainnet_req),*].into_iter()).map(Into::into).collect(),
-				mocked_responses: vec![$($mainnet_res),*],
+				expected_requests: vec![$($home_method),*].into_iter().zip(vec![$($home_req),*].into_iter()).map(Into::into).collect(),
+				mocked_responses: vec![$($home_res),*],
 			};
 
-			let testnet = $crate::MockedTransport {
+			let foreign = $crate::MockedTransport {
 				requests: Default::default(),
-				expected_requests: vec![$($testnet_method),*].into_iter().zip(vec![$($testnet_req),*].into_iter()).map(Into::into).collect(),
-				mocked_responses: vec![$($testnet_res),*],
+				expected_requests: vec![$($foreign_method),*].into_iter().zip(vec![$($foreign_req),*].into_iter()).map(Into::into).collect(),
+				mocked_responses: vec![$($foreign_res),*],
 			};
 
 			let config = Config {
 				txs: $txs,
-				mainnet: Node {
-					account: $mainnet_acc.parse().unwrap(),
+				home: Node {
+					account: $home_acc.parse().unwrap(),
 					ipc: "".into(),
 					contract: ContractConfig {
 						bin: Default::default(),
 					},
 					poll_interval: Duration::from_secs(0),
 					request_timeout: Duration::from_secs(5),
-					required_confirmations: $mainnet_conf,
+					required_confirmations: $home_conf,
 				},
-				testnet: Node {
-					account: $testnet_acc.parse().unwrap(),
+				foreign: Node {
+					account: $foreign_acc.parse().unwrap(),
 					ipc: "".into(),
 					contract: ContractConfig {
 						bin: Default::default(),
 					},
 					poll_interval: Duration::from_secs(0),
 					request_timeout: Duration::from_secs(5),
-					required_confirmations: $testnet_conf,
+					required_confirmations: $foreign_conf,
 				},
 				authorities: Authorities {
 					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
@@ -142,11 +142,11 @@ macro_rules! test_app_stream {
 				config,
 				database_path: "".into(),
 				connections: Connections {
-					mainnet: &mainnet,
-					testnet: &testnet,
+					home: &home,
+					foreign: &foreign,
 				},
-				mainnet_bridge: mainnet::EthereumBridge::default(),
-				testnet_bridge: testnet::KovanBridge::default(),
+				home_bridge: home::HomeBridge::default(),
+				foreign_bridge: foreign::ForeignBridge::default(),
 				timer: Default::default(),
 			};
 

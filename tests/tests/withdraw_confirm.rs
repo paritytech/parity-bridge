@@ -8,10 +8,10 @@ use bridge::bridge::create_withdraw_confirm;
 test_app_stream! {
 	name => withdraw_confirm_basic,
 	database => Database::default(),
-	mainnet =>
+	home =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
-	testnet =>
+	foreign =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
@@ -23,8 +23,8 @@ test_app_stream! {
 	txs => Transactions::default(),
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x1005, 0x1006],
-	mainnet_transport => [],
-	testnet_transport => [
+	home_transport => [],
+	foreign_transport => [
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0x1011""#;
@@ -46,10 +46,10 @@ test_app_stream! {
 		checked_withdraw_confirm: 0xf5,
 		..Database::default()
 	},
-	mainnet =>
+	home =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 1;
-	testnet =>
+	foreign =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
@@ -61,8 +61,8 @@ test_app_stream! {
 	txs => Transactions::default(),
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x1005, 0x1006],
-	mainnet_transport => [],
-	testnet_transport => [
+	home_transport => [],
+	foreign_transport => [
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0x0100""#;
@@ -85,14 +85,14 @@ test_app_stream! {
 	name => withdraw_confirm_contract_address,
 	database => Database {
 		checked_withdraw_confirm: 0x00F5,
-		mainnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		testnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 		..Database::default()
 	},
-	mainnet =>
+	home =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
-	testnet =>
+	foreign =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
@@ -104,8 +104,8 @@ test_app_stream! {
 	txs => Transactions::default(),
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x1005, 0x1006],
-	mainnet_transport => [],
-	testnet_transport => [
+	home_transport => [],
+	foreign_transport => [
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0x0100""#;
@@ -128,14 +128,14 @@ test_app_stream! {
 	name => withdraw_confirm_payload_gas,
 	database => Database {
 		checked_withdraw_confirm: 0x00F5,
-		mainnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		testnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 		..Database::default()
 	},
-	mainnet =>
+	home =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
-	testnet =>
+	foreign =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
@@ -153,8 +153,8 @@ test_app_stream! {
 	},
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x1005, 0x1006],
-	mainnet_transport => [],
-	testnet_transport => [
+	home_transport => [],
+	foreign_transport => [
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0x0100""#;
@@ -182,14 +182,14 @@ test_app_stream! {
 test_app_stream! {
 	name => withdraw_confirm_payload_multiple,
 	database => Database {
-		mainnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		testnet_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
+		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
 		..Database::default()
 	},
-	mainnet =>
+	home =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
-	testnet =>
+	foreign =>
 		account => "0x0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
@@ -207,8 +207,8 @@ test_app_stream! {
 	},
 	init => |app, db| create_withdraw_confirm(app, db).take(2),
 	expected => vec![0x2, 0x1006],
-	mainnet_transport => [],
-	testnet_transport => [
+	home_transport => [],
+	foreign_transport => [
 		"eth_blockNumber" =>
 			req => r#"[]"#,
 			res => r#""0xe""#;

@@ -14,8 +14,8 @@ const DEFAULT_TIMEOUT: u64 = 5;
 /// Application config.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
-	pub mainnet: Node,
-	pub testnet: Node,
+	pub home: Node,
+	pub foreign: Node,
 	pub authorities: Authorities,
 	pub txs: Transactions,
 }
@@ -35,8 +35,8 @@ impl Config {
 
 	fn from_load_struct(config: load::Config) -> Result<Config, Error> {
 		let result = Config {
-			mainnet: Node::from_load_struct(config.mainnet)?,
-			testnet: Node::from_load_struct(config.testnet)?,
+			home: Node::from_load_struct(config.home)?,
+			foreign: Node::from_load_struct(config.foreign)?,
 			authorities: Authorities {
 				accounts: config.authorities.accounts,
 				required_signatures: config.authorities.required_signatures,
@@ -82,8 +82,8 @@ impl Node {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transactions {
-	pub mainnet_deploy: TransactionConfig,
-	pub testnet_deploy: TransactionConfig,
+	pub home_deploy: TransactionConfig,
+	pub foreign_deploy: TransactionConfig,
 	pub deposit_relay: TransactionConfig,
 	pub withdraw_confirm: TransactionConfig,
 	pub withdraw_relay: TransactionConfig,
@@ -92,8 +92,8 @@ pub struct Transactions {
 impl Transactions {
 	fn from_load_struct(cfg: load::Transactions) -> Self {
 		Transactions {
-			mainnet_deploy: cfg.mainnet_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
-			testnet_deploy: cfg.testnet_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			home_deploy: cfg.home_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
+			foreign_deploy: cfg.foreign_deploy.map(TransactionConfig::from_load_struct).unwrap_or_default(),
 			deposit_relay: cfg.deposit_relay.map(TransactionConfig::from_load_struct).unwrap_or_default(),
 			withdraw_confirm: cfg.withdraw_confirm.map(TransactionConfig::from_load_struct).unwrap_or_default(),
 			withdraw_relay: cfg.withdraw_relay.map(TransactionConfig::from_load_struct).unwrap_or_default(),
@@ -137,8 +137,8 @@ mod load {
 	#[derive(Deserialize)]
 	#[serde(deny_unknown_fields)]
 	pub struct Config {
-		pub mainnet: Node,
-		pub testnet: Node,
+		pub home: Node,
+		pub foreign: Node,
 		pub authorities: Authorities,
 		pub transactions: Option<Transactions>,
 	}
@@ -157,8 +157,8 @@ mod load {
 	#[derive(Deserialize)]
 	#[serde(deny_unknown_fields)]
 	pub struct Transactions {
-		pub mainnet_deploy: Option<TransactionConfig>,
-		pub testnet_deploy: Option<TransactionConfig>,
+		pub home_deploy: Option<TransactionConfig>,
+		pub foreign_deploy: Option<TransactionConfig>,
 		pub deposit_relay: Option<TransactionConfig>,
 		pub withdraw_confirm: Option<TransactionConfig>,
 		pub withdraw_relay: Option<TransactionConfig>,
@@ -194,21 +194,21 @@ mod tests {
 	#[test]
 	fn load_full_setup_from_str() {
 		let toml = r#"
-[mainnet]
+[home]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
-ipc = "/mainnet.ipc"
+ipc = "/home.ipc"
 poll_interval = 2
 required_confirmations = 100
 
-[mainnet.contract]
-bin = "../contracts/EthereumBridge.bin"
+[home.contract]
+bin = "../contracts/HomeBridge.bin"
 
-[testnet]
+[foreign]
 account = "0x0000000000000000000000000000000000000001"
-ipc = "/testnet.ipc"
+ipc = "/foreign.ipc"
 
-[testnet.contract]
-bin = "../contracts/KovanBridge.bin"
+[foreign.contract]
+bin = "../contracts/ForeignBridge.bin"
 
 [authorities]
 accounts = [
@@ -219,27 +219,27 @@ accounts = [
 required_signatures = 2
 
 [transactions]
-mainnet_deploy = { gas = 20 }
+home_deploy = { gas = 20 }
 "#;
 
 		let mut expected = Config {
 			txs: Transactions::default(),
-			mainnet: Node {
+			home: Node {
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
-				ipc: "/mainnet.ipc".into(),
+				ipc: "/home.ipc".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/EthereumBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../contracts/HomeBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(2),
 				request_timeout: Duration::from_secs(5),
 				required_confirmations: 100,
 			},
-			testnet: Node {
+			foreign: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/KovanBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../contracts/ForeignBridge.bin").from_hex().unwrap().into(),
 				},
-				ipc: "/testnet.ipc".into(),
+				ipc: "/foreign.ipc".into(),
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
 				required_confirmations: 12,
@@ -254,7 +254,7 @@ mainnet_deploy = { gas = 20 }
 			}
 		};
 
-		expected.txs.mainnet_deploy = TransactionConfig {
+		expected.txs.home_deploy = TransactionConfig {
 			gas: 20,
 			gas_price: 0,
 		};
@@ -266,19 +266,19 @@ mainnet_deploy = { gas = 20 }
 	#[test]
 	fn load_minimal_setup_from_str() {
 		let toml = r#"
-[mainnet]
+[home]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = ""
 
-[mainnet.contract]
-bin = "../contracts/EthereumBridge.bin"
+[home.contract]
+bin = "../contracts/HomeBridge.bin"
 
-[testnet]
+[foreign]
 account = "0x0000000000000000000000000000000000000001"
 ipc = ""
 
-[testnet.contract]
-bin = "../contracts/KovanBridge.bin"
+[foreign.contract]
+bin = "../contracts/ForeignBridge.bin"
 
 [authorities]
 accounts = [
@@ -290,21 +290,21 @@ required_signatures = 2
 "#;
 		let expected = Config {
 			txs: Transactions::default(),
-			mainnet: Node {
+			home: Node {
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/EthereumBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../contracts/HomeBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
 				required_confirmations: 12,
 			},
-			testnet: Node {
+			foreign: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/KovanBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../contracts/ForeignBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
