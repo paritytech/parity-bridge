@@ -1,12 +1,12 @@
-var EthereumBridge = artifacts.require("EthereumBridge");
+var HomeBridge = artifacts.require("HomeBridge");
 
-contract('EthereumBridge', function(accounts) {
+contract('HomeBridge', function(accounts) {
   it("should deploy contract", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
 
-    return EthereumBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.requiredSignatures.call();
     }).then(function(result) {
@@ -19,7 +19,7 @@ contract('EthereumBridge', function(accounts) {
 
   it("should fail to deploy contract with not enough required signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return EthereumBridge.new(0, authorities).then(function(_) {
+    return HomeBridge.new(0, authorities).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -28,7 +28,7 @@ contract('EthereumBridge', function(accounts) {
 
   it("should fail to deploy contract with to many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return EthereumBridge.new(3, authorities).then(function(_) {
+    return HomeBridge.new(3, authorities).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -42,7 +42,7 @@ contract('EthereumBridge', function(accounts) {
     let user_account = accounts[2];
     let value = web3.toWei(1, "ether");
 
-    return EthereumBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return meta.sendTransaction({
         value: value,

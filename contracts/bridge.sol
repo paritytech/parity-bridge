@@ -63,7 +63,7 @@ library Signer {
     }
 }
 
-contract EthereumBridge {
+contract HomeBridge {
     using Authorities for address[];
 
     /// Number of authorities signatures required to withdraw the money.
@@ -74,7 +74,7 @@ contract EthereumBridge {
     /// Contract authorities.
     address[] public authorities;
 
-    /// Used kovan transaction hashes.
+    /// Used foreign transaction hashes.
     mapping (bytes32 => bool) withdraws;
 
     /// Event created on money deposit.
@@ -100,7 +100,7 @@ contract EthereumBridge {
     }
 
     /// Constructor.
-    function EthereumBridge (uint n, address[] a) {
+    function HomeBridge (uint n, address[] a) {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -117,7 +117,7 @@ contract EthereumBridge {
     /// message contains:
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
-    /// kovan transaction hash (bytes32) // to avoid transaction duplication
+    /// foreign transaction hash (bytes32) // to avoid transaction duplication
     function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
         address recipient;
         uint value;
@@ -138,7 +138,7 @@ contract EthereumBridge {
     }
 }
 
-contract KovanBridge {
+contract ForeignBridge {
     using Authorities for address[];
 
     struct SignaturesCollection {
@@ -176,11 +176,11 @@ contract KovanBridge {
     /// Event created on money transfer
     event Transfer(address from, address to, uint value);
 
-    /// Collected signatures which should be relayed to ethereum chain.
+    /// Collected signatures which should be relayed to home chain.
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function KovanBridge(uint n, address[] a) {
+    function ForeignBridge(uint n, address[] a) {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -233,7 +233,7 @@ contract KovanBridge {
     /// for withdraw message contains:
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
-    /// kovan transaction hash (bytes32) // to avoid transaction duplication
+    /// foreign transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature (bytes signature, bytes message) onlyAuthority() {
         // Validate submited signatures
         require(Signer.signer(signature, message) == msg.sender);

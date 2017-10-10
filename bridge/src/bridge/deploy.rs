@@ -42,22 +42,22 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 				DeployState::CheckIfNeeded => match Database::load(&self.app.database_path).map_err(ErrorKind::from) {
 					Ok(database) => return Ok(Deployed::Existing(database).into()),
 					Err(ErrorKind::MissingFile(_)) => {
-						let main_data = self.app.mainnet_bridge.constructor(
-							self.app.config.mainnet.contract.bin.clone().0,
+						let main_data = self.app.home_bridge.constructor(
+							self.app.config.home.contract.bin.clone().0,
 							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
 							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
 						);
-						let test_data = self.app.testnet_bridge.constructor(
-							self.app.config.testnet.contract.bin.clone().0,
+						let test_data = self.app.foreign_bridge.constructor(
+							self.app.config.foreign.contract.bin.clone().0,
 							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
 							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
 						);
 
 						let main_tx_request = TransactionRequest {
-							from: self.app.config.mainnet.account,
+							from: self.app.config.home.account,
 							to: None,
-							gas: Some(self.app.config.txs.mainnet_deploy.gas.into()),
-							gas_price: Some(self.app.config.txs.mainnet_deploy.gas_price.into()),
+							gas: Some(self.app.config.txs.home_deploy.gas.into()),
+							gas_price: Some(self.app.config.txs.home_deploy.gas_price.into()),
 							value: None,
 							data: Some(main_data.into()),
 							nonce: None,
@@ -65,10 +65,10 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						};
 
 						let test_tx_request = TransactionRequest {
-							from: self.app.config.testnet.account,
+							from: self.app.config.foreign.account,
 							to: None,
-							gas: Some(self.app.config.txs.testnet_deploy.gas.into()),
-							gas_price: Some(self.app.config.txs.testnet_deploy.gas_price.into()),
+							gas: Some(self.app.config.txs.foreign_deploy.gas.into()),
+							gas_price: Some(self.app.config.txs.foreign_deploy.gas_price.into()),
 							value: None,
 							data: Some(test_data.into()),
 							nonce: None,
@@ -76,17 +76,17 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						};
 
 						let main_future = api::send_transaction_with_confirmation(
-							self.app.connections.mainnet.clone(),
+							self.app.connections.home.clone(),
 							main_tx_request,
-							self.app.config.mainnet.poll_interval,
-							self.app.config.mainnet.required_confirmations
+							self.app.config.home.poll_interval,
+							self.app.config.home.required_confirmations
 						);
 
 						let test_future = api::send_transaction_with_confirmation(
-							self.app.connections.testnet.clone(),
+							self.app.connections.foreign.clone(),
 							test_tx_request,
-							self.app.config.testnet.poll_interval,
-							self.app.config.testnet.required_confirmations
+							self.app.config.foreign.poll_interval,
+							self.app.config.foreign.required_confirmations
 						);
 
 						DeployState::Deploying(main_future.join(test_future))
@@ -96,10 +96,10 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 				DeployState::Deploying(ref mut future) => {
 					let (main_receipt, test_receipt) = try_ready!(future.poll().map_err(ErrorKind::Web3));
 					let database = Database {
-						mainnet_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
-						testnet_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
-						mainnet_deploy: main_receipt.block_number.low_u64(),
-						testnet_deploy: test_receipt.block_number.low_u64(),
+						home_contract_address: main_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+						foreign_contract_address: test_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+						home_deploy: main_receipt.block_number.low_u64(),
+						foreign_deploy: test_receipt.block_number.low_u64(),
 						checked_deposit_relay: main_receipt.block_number.low_u64(),
 						checked_withdraw_relay: test_receipt.block_number.low_u64(),
 						checked_withdraw_confirm: test_receipt.block_number.low_u64(),

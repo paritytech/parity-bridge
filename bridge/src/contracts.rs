@@ -1,2 +1,2 @@
-use_contract!(mainnet, "EthereumBridge", "../contracts/EthereumBridge.abi");
-use_contract!(testnet, "KovanBridge", "../contracts/KovanBridge.abi");
+use_contract!(home, "HomeBridge", "../contracts/HomeBridge.abi");
+use_contract!(foreign, "ForeignBridge", "../contracts/ForeignBridge.abi");
