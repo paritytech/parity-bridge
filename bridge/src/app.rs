@@ -5,7 +5,7 @@ use web3::Transport;
 use web3::transports::ipc::Ipc;
 use error::{Error, ResultExt, ErrorKind};
 use config::Config;
-use contracts::{home, foreign};
+use contracts::{home, foreign, validator};
 
 pub struct App<T> where T: Transport {
 	pub config: Config,
@@ -13,6 +13,7 @@ pub struct App<T> where T: Transport {
 	pub connections: Connections<T>,
 	pub home_bridge: home::HomeBridge,
 	pub foreign_bridge: foreign::ForeignBridge,
+	pub validators: validator::ValidatorSet,
 	pub timer: Timer,
 }
 
@@ -58,6 +59,7 @@ impl App<Ipc> {
 			connections,
 			home_bridge: home::HomeBridge::default(),
 			foreign_bridge: foreign::ForeignBridge::default(),
+			validators: validator::ValidatorSet::default(),
 			timer: Timer::default(),
 		};
 		Ok(result)
@@ -72,6 +74,7 @@ impl<T: Transport> App<T> {
 			database_path: self.database_path.clone(),
 			home_bridge: home::HomeBridge::default(),
 			foreign_bridge: foreign::ForeignBridge::default(),
+			validators: validator::ValidatorSet::default(),
 			timer: self.timer.clone(),
 		}
 	}

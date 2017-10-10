@@ -24,8 +24,9 @@ mod macros;
 
 pub mod api;
 pub mod app;
-pub mod config;
+pub mod authorities;
 pub mod bridge;
+pub mod config;
 pub mod contracts;
 pub mod database;
 pub mod error;
