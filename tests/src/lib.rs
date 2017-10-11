@@ -94,8 +94,11 @@ macro_rules! test_app_stream {
 			use self::std::time::Duration;
 			use self::futures::{Future, Stream};
 			use self::bridge::app::{App, Connections};
-			use self::bridge::contracts::{foreign, home};
-			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig};
+			use self::bridge::contracts::{foreign, home, validator};
+			use self::bridge::config::{
+				Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig,
+				AuthoritiesSource
+			};
 			use self::bridge::database::Database;
 
 			let home = $crate::MockedTransport {
@@ -133,7 +136,7 @@ macro_rules! test_app_stream {
 					required_confirmations: $foreign_conf,
 				},
 				authorities: Authorities {
-					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
+					source: AuthoritiesSource::Accounts($authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect()),
 					required_signatures: $signatures,
 				}
 			};
@@ -147,6 +150,7 @@ macro_rules! test_app_stream {
 				},
 				home_bridge: home::HomeBridge::default(),
 				foreign_bridge: foreign::ForeignBridge::default(),
+				validators: validator::ValidatorSet::default(),
 				timer: Default::default(),
 			};
 
