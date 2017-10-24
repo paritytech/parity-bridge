@@ -216,6 +216,8 @@ contract ForeignBridge {
     /// Used to transfer money between accounts
     function transfer (address recipient, uint value, bool externalTransfer) {
         require(balances[msg.sender] >= value);
+        // fails if value == 0, or if there is an overflow
+        require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
         if (externalTransfer) {

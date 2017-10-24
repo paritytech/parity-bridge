@@ -164,6 +164,49 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
+  it("should fail to transfer 0 value", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var user_account = accounts[2];
+    var user_account2 = accounts[3];
+    var value = web3.toWei(3, "ether");
+    var value2 = web3.toWei(0, "ether");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return meta.deposit(user_account, value, hash, { from: authorities[0] });
+    }).then(function(result) {
+      return meta.transfer(user_account2, value2, false, { from: user_account });
+    }).then(function(result) {
+      assert(false, "Transfer of value 0 should fail");
+    }, function (err) {
+    })
+  })
+
+  it("should fail to transfer with value overflow", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var user_account = accounts[2];
+    var user_account2 = accounts[3];
+    var value = web3.toWei("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "wei");
+    var value2 = web3.toWei(1, "wei");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return Promise.all([
+        meta.deposit(user_account, value, hash, { from: authorities[0] }),
+        meta.deposit(user_account2, value2, hash, { from: authorities[0] }),
+      ])
+    }).then(function(result) {
+      return meta.transfer(user_account2, value, false, { from: user_account });
+    }).then(function(result) {
+      assert(false, "Transfer with overflow should fail");
+    }, function (err) {
+    })
+  })
+
   it("should allow user to trigger withdraw", function() {
     var meta;
     var requiredSignatures = 1;
@@ -385,5 +428,4 @@ contract('ForeignBridge', function(accounts) {
       // nothing
     })
   })
-
 })
