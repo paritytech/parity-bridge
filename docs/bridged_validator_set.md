@@ -78,12 +78,13 @@ of `old_validator_set` in the minutes following a change to the validator set.
 
 ### how does the relay happen?
 
-each bridge process responds to `ChangeFinalized(addresses)`
+each validator process responds to `ChangeFinalized(addresses)`
 events on the `foreign_chain.ValidatorSet` contract
-by calling `home_chain.SyncedValidatorSet.calledByBridgeOnChangeFinalized(addresses)`.
+by calling `home_chain.BridgedValidatorSet.calledByValidatorProcessOnChangeFinalized(addresses, blockNumber)`
+where `blockNumber` is the number of the block containing the `ChangeFinalized` event.
 
-see the implementation of `SyncedValidatorSet.calledByBridgeOnChangeFinalized`
-above for further details.
+see the implementation of
+[calledByValidatorProcessOnChangeFinalizedEvent](../contracts/bridged_validator_set.sol).
 
 ### how do we change the `requiredSignatureCount` in `BridgedValidatorSet`?
 
