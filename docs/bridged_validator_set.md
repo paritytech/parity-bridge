@@ -5,16 +5,17 @@ allow contracts to access a validator set on another chain
 ## context
 
 there are two chains `home_chain` and `foreign_chain`.
+the names are just to distinguish the chains and have no special meaning.
 
-a `ValidatorSet` contract is deployed to `foreign_chain`.
-for example: https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol.
+an implementation of the `ValidatorSet` contract interface is deployed to `foreign_chain`.
+the implementation could be [MajorityList](https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol) for example.
 
-n validator processes are running.
-each validator process is connected to a parity node that is
-connected to both 
-those addresses are `ValidatorSet.getValidators()`
+why is it deployed to the `foreign_chain`?
+well it can only be deployed to one chain
 
-each validator process has a 
+`n` validator processes are running.
+
+each validator process has a `validator_address` and the private key for it.
 
 each validator process is connected to the `home_chain` through
 a parity node that has that validators `validator_address` unlocked.
@@ -26,45 +27,35 @@ in order for the approach laid out in this document to work
 a validator process must use/unlock the same
 address on on both `home_chain` and `foreign_chain`.
 
-that shouldn't be a problem usually.
-if that isn't possible for some reason then a more complicated
+shouldn't usually be a problem.
+if using the same address isn't possible for some reason then a more complicated
+approach is needed.
+see [varying_home_and_foreign_addresses.md](varying_home_and_foreign_addresses.md)
+for some thoughts on that.
 
-thoughts on implementing 
-[varying_home_and_foreign_addresses.md]
+`ValidatorSet.getValidators() == validator_address for each validator that is considered trustworthy`
 
-`ValidatorSet.getValidators() == validator_address for each validator`
-
-[here]() are some thoughts on
-we assume that 
-
-that is more complicated though
-
-the 
-
-the addresses on the home and foreign chain are different
-
-each bridge process 
-connected and has the validator account unlocked.
-node that is connected to the foreign_chain
+## core problem
 
 **how do we make an always up to date version of `foreign_chain.ValidatorSet.getValidators()`
 available to contracts on the `home_chain`?**
 
-## who stores the synced validator set on `home_chain`?
+## solution space
+
+### who stores the synced validator set on `home_chain`?
 
 the relayed validator set could be stored directly in a contract using it
 (`HomeBridge` https://github.com/paritytech/parity-bridge/blob/master/contracts/bridge.sol for example).
-alternatively it could be stored in a seperate `SyncedValidatorSet` contract
-(alternative names: `ValidatorSetBridge`, `BridgedValdiatorSet`, ...).
+
+alternatively it could be stored in a seperate `BridgedValidatorSet` contract.
 the latter solution adds one more contract but keeps concerns seperate
 (doesn't clutter `HomeBridge` with validator set relay logic) and allows
 reuse of the bridged validator set by other contracts.
 i'd prefer a dedicated contract.
 
-here's a draft for such a `BridgedValidatorSet` contract:
-https://gist.github.com/snd/c3c9dba3b7f80678a09e1320697911b1
+[here's a draft for such a `BridgedValidatorSet` contract](./contracts/bridged_validator_set.sol)
 
-it requires no changes to the `ValidatorSet` deployed on `foreign_chain`.
+it requires no changes to the `ValidatorSet` deployed on `foreign_chain`!
 
 ### the addresses of the validator set on foreign and home are different
 
