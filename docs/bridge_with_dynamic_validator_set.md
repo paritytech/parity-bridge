@@ -1,3 +1,22 @@
+# modifications required to bridge in order to make it work with dynamic validator sets
+
+the parity-bridge currently (2017-11-16 / [740601530096c261695ba9216b5e9d5f871a229f](https://github.com/paritytech/parity-bridge/commit/740601530096c261695ba9216b5e9d5f871a229f))
+has a hardcoded list of authorities.
+
+we want to switch to a dynamic validator set represented on `foreign_chain` by
+a contract implementing the `ValidatorSet` interface.
+
+the approach laid out in this document depends on a `BridgedValidatorSet`,
+as described in [bridged_validator_set.md](bridged_validator_set.md),
+is present and synced on `home_chain`.
+
+this means that contracts on `home_chain` can call `home_chain.BridgedValidatorSet.getValidatorSet()`
+to obtain the newest synced version of `foreign_chain.ValidatorSet.getValidatorSet()`.
+
+## problem
+
+## how do we detect that the validator set has changed
+
 ## problem: validator set has changed while relay-transaction from foreign_chain to home_chain was in flight
 
 ### possible solution 1
