@@ -55,25 +55,6 @@ i'd prefer a dedicated contract.
 
 it requires no changes to the `ValidatorSet` deployed on `foreign_chain`!
 
-### the addresses of the validator set on foreign and home are different
-
-only the bridge-validator processes know both addresses.
-
-together with the validatorSet each bridge validator also sends its address on
-`calledByBridgeOnChangeFinalizedEvent`
-
-not that easy since we'd only get the addresses of the validators that
-have signed off on the change.
-
-the
-
-
-change to a new validator set can only happen if the whole validator set
-is able to relay the change.
-
-or should we modify the validator set contract on the foreign_chain?
-special validator set contract that makes bridging easier
-
 ### what triggers a relay of validator set changes?
 
 it would be a clean solution to have validator processes listen to `ChangeFinalized`
