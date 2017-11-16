@@ -20,7 +20,7 @@ contract BridgedValidatorSet {
         return validatorSet;
     }
 
-    function calledByBridgeOnChangeFinalizedEvent(address[] newValidatorSet, uint256 blockNumberOfChange) {
+    function calledByValidatorProcessOnChangeFinalizedEvent(address[] newValidatorSet, uint256 blockNumberOfChange) {
         // only senders that are currently validators can call this function
         require(validatorSet.contains(msg.sender));
         // ensure that we don't go back to a previous change if
