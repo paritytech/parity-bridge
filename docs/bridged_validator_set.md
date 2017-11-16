@@ -51,7 +51,7 @@ the latter solution adds one more contract but keeps concerns seperate
 reuse of the bridged validator set by other contracts.
 i'd prefer a dedicated contract.
 
-[here's a draft for such a `BridgedValidatorSet` contract](./contracts/bridged_validator_set.sol)
+[here's a draft for such a `BridgedValidatorSet` contract](../contracts/bridged_validator_set.sol)
 
 it requires no changes to the `ValidatorSet` deployed on `foreign_chain`!
 
