@@ -9,13 +9,6 @@ library Authorities {
         }
         return false;
     }
-
-    function truncate (address[] storage self, uint len) internal {
-        for (uint i = len; i < self.length; i++) {
-            delete self[i];
-        }
-        self.length = len;
-    }
 }
 
 /// Library used only to test Signer library via rpc calls
