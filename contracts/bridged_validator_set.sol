@@ -38,7 +38,7 @@ contract BridgedValidatorSet {
         // remember that this validator has signed off on the change
         changeRequests[changeHash].push(msg.sender);
 
-        if (changeRequests[changeHash].length == requiredSignatures) {
+        if (changeRequests[changeHash].length == requiredSignaturesCount) {
             // enough validators from current validator set
             // have signed off (called this function) on the exact
             // same (ensured by changeHash) new validator set
