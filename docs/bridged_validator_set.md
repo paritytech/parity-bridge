@@ -96,7 +96,7 @@ see the implementation of
 how do we prevent an older change from overwriting a newer that just
 happened to get mined later?
 
-**only accept changes in blocks that are >= to the block we last accepted a change from**
+**only accept changes in blocks that are >= the block we last accepted a change from**
 
 [see the implementation](../contracts/bridged_validator_set.sol)
 
