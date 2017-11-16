@@ -90,150 +90,33 @@ see the implementation of
 
 *future work*
 
-### what happens out of order
+### what happens if two transactions containing `ChangeFinalized` get mined in reverse order?
 
-nonce ensures that validator set never gets overwritten
-by previous version because of 
+how do we prevent an older change from overwriting a newer that just
+happened to get mined later?
 
-## edge cases
+**only accept changes in blocks that are >= to the block we last accepted a change from**
 
-### what if a rogue validator tampers with the validatorSet in transit
+[see the implementation](../contracts/bridged_validator_set.sol)
 
-prevented by hash
-only if 
+### what if a rogue validator tampers with the `newValidatorSet` in transit?
 
-checks the integrity of the actually transmitted validator set
+**prevented by hashing the validator set**
 
-only switch to new validator set if requiredSignatures from old validator set
-with identical validator set and nonce and nonce > lastCommitedNonce
+only switch to new validator set if `requiredSignaturesCount`
+validators from old validator set called `calledByValidatorProcessOnChangeFinalizedEvent`
+with the exact same pair of `newValidatorSet` and `blockNumber`.
 
+[see the implementation](../contracts/bridged_validator_set.sol)
 
-### what if a rogue validator is the last one to and the hash
+### what if one of the transactions containing call to `calledByValidatorProcessOnChangeFinalizedEvent` never gets mined on `home_chain`?
 
-### what if transaction never gets mined
+change might not be relayed in that case
 
-### garbage collection
+add some retry functionality into validator processes
 
-### transaction order
+*future work*
 
-the transaction
+### how do we prevent storage of `BridgedValidatorSet` from infinitely expanding?
 
-the second change gets more signatures later
-
-one could introduce a nonce
-
-nonce
-
-TODO flesh out this section
-
-----
-
-a change we could make is to only have validators that are both in the old and new
-validator set sign off on the 
-
-but that would leave open the possibility of some subset of validators
-colluding and 
-
-`ForeignBridgeContract` can check it as well
-
-`ForeignBridgeContract` and the validators working together
-can we make it that the 
-
-need to use both initialize change and commit change
-
-### possible solution 2
-
-make `foreign_chain` refresh validator set on every action
-and if it has changed make it update its internal validator set
-and make it initialize the relay to `home_chain`
-through an event that is listened to by the old and new validators.
-
-in what order to change validator set:
-
-start bridge process for new validators.
-change validator set.
-have the change get picked up by the new validator set.
-
-the relay must be consistent
-
-the only information about authority that the `HomeBridgeContract` has
-is the old validator set.
-
-have the old validator set cooperate to relay changes to itself.
-sounds risky.
-
-we trusted the old validator set.
-we still mostly trust it.
-
-`HomeBridgeContract` only trusts n signatures of it's current validator set.
-that means only n signatures of its current validator set can convince it to trust
-something else.
-
-without using that piece of information a set of fake validators
-could fabricate requests to HomeBridge and take over as validators.
-they could only take over on HomeBridge and not ForeignBridge.
-so relay-transactions would still fail since the sets would not match up.
-but they could DOS the bridge.
-
-**question: is this correct and safe?**
-
-
-## assumptions and definitions
-
-`relay-transaction` means a transaction from one chain to another chain.
-(*question: how do you call that?*)
-
-`in-flight` means beginning when 
-and ending when the 
-
-with 
-
-```
-HomeBridgeContract.()
--> Deposit event
-1->* bridges
-n->1 ForeignBridgeContract.deposit()
-```
-
-and `ForeignBridgeContract.deposit` is the final transaction.
-but only if n signatures were collected.
-
-`home_chain` is an ethereum blockchain.
-
-`foreign_chain` is an ethereum blockchain.
-
-`ValidatorSetContract` ([MajorityList](https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol)) is deployed to `foreign_chain`.
-`ForeignBridgeContract` is deployed to `foreign_chain`.
-
-`HomeBridgeContract` is deployed to `home_chain`.
-
-n bridge processes are running:
-
-each bridge process represents an authority / a validator with a signing key
-
-each bridge process is connected to a parity node that is
-connected and has the validator account unlocked.
-node that is connected to the foreign_chain
-
-the addresses are in the validator set.
-
-it starts out with the vali
-
-## problem: how to relay changes to foreign_chain.ValidatorSetContract.validatorsList to home_chain.HomeBridge and foreign_chain.ForeignBridge
-
-make bridges listen for `ValidatorSet.ChangeFinalized` events on the
-foreign_chain.
-
-there is the slight problem that
-
-if `ValidatorSet.ChangeFinalized` occurs the old-bridges all send the new validator
-set to `ForeignChainContract` and `HomeChainContract`.
-
-## invariants
-
-the only authority that HomeBridgeContract and ForeignBridgeContract
-are aware of is their current set of authority addresses.
-
-
-that the majority of the old validator set is still
-
+*future work*
