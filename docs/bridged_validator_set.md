@@ -60,8 +60,9 @@ it requires no changes to the `ValidatorSet` deployed on `foreign_chain`!
 it would be a clean solution to have validator processes listen to `ChangeFinalized`
 events (see https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol).
 
-`ChangeFinalized` currently (2017-11-14) doesn't exist in the `ValidatorSet` interface (https://github.com/paritytech/contracts/blob/111fe5c4ce1ddd10a0f1a68a02602697676a6ff7/validator_contracts/MajorityList.sol#L3 (https://github.com/paritytech/contracts/blob/111fe5c4ce1ddd10a0f1a68a02602697676a6ff7/validator_contracts/MajorityList.sol#L3).
-it only exists in the implementations https://github.com/paritytech/contracts/blob/111fe5c4ce1ddd10a0f1a68a02602697676a6ff7/validator_contracts/MajorityList.sol#L22.
+`ChangeFinalized` currently (2017-11-14) doesn't exist in the `ValidatorSet` interface: https://github.com/paritytech/contracts/blob/111fe5c4ce1ddd10a0f1a68a02602697676a6ff7/validator_contracts/MajorityList.sol#L3
+
+it only exists in the implementations: https://github.com/paritytech/contracts/blob/111fe5c4ce1ddd10a0f1a68a02602697676a6ff7/validator_contracts/MajorityList.sol#L22.
 it should probably get moved into `ValidatorSet`.
 
 ### who relays the validator set?
@@ -69,11 +70,11 @@ it should probably get moved into `ValidatorSet`.
 if the validator set on `foreign_chain` has changed from `old_validator_set`
 to `new_validator_set` we
 still have to rely on `old_validator_set` to relay the changes
-since `old_validator_set` is the only thing `SyncedValidatorSet` contract trusts at that point
+since `old_validator_set` is the only thing the `BridgedValidatorSet` contract trusts at that point
 in time.
 
 this should not be a problem if we are sure we can still trust the majority
-of the old validator set in the minutes following a change to the validator set.
+of `old_validator_set` in the minutes following a change to the validator set.
 
 ### how does the relay happen?
 
@@ -84,9 +85,9 @@ by calling `home_chain.SyncedValidatorSet.calledByBridgeOnChangeFinalized(addres
 see the implementation of `SyncedValidatorSet.calledByBridgeOnChangeFinalized`
 above for further details.
 
-### syncing required signatures
+### how do we change the `requiredSignatureCount` in `BridgedValidatorSet`?
 
-it might be required to change requiredSignatures
+*future work*
 
 ### what happens out of order
 
