@@ -9,7 +9,7 @@ contract BridgedValidatorSet {
     uint256 requiredSignatures;
     uint256 blockNumberOfLastSyncedChange;
 
-    function SyncedValidatorSet(address[] initialValidatorSet, uint256 requiredSignaturesCount) {
+    function BridgedValidatorSet(address[] initialValidatorSet, uint256 requiredSignaturesCount) {
         validatorSet = initialValidatorSet;
         requiredSignaturesCount = requiredSignaturesCount;
         // initially accept change from any block number
