@@ -1,17 +1,15 @@
 # keeping a validator set on one chain in sync with a validator set on another chain
 
-allow contracts to access a validator set on another chain
+in other words: how to allow contracts to access a validator set on another chain?
 
 ## context
 
 there are two chains `home_chain` and `foreign_chain`.
-the names are just to distinguish the chains and have no special meaning.
+the names are just to distinguish the chains below and have no special meaning
+for now.
 
 an implementation of the `ValidatorSet` contract interface is deployed to `foreign_chain`.
 the implementation could be [MajorityList](https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol) for example.
-
-why is it deployed to the `foreign_chain`?
-well it can only be deployed to one chain
 
 `n` validator processes are running.
 
@@ -23,7 +21,7 @@ a parity node that has that validators `validator_address` unlocked.
 each validator process is connected to the `foreign_chain` through
 a parity node that has that validators `validator_address` unlocked.
 
-in order for the approach laid out in this document to work
+in order for the approach laid out in this document to work,
 a validator process must use/unlock the same
 address on on both `home_chain` and `foreign_chain`.
 
