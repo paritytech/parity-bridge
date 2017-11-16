@@ -4,9 +4,10 @@ in other words: how to allow contracts to access a validator set on another chai
 
 ## context
 
-there are two chains `home_chain` and `foreign_chain`.
-the names are just to distinguish the chains below and have no special meaning
-for now.
+there are two chains named `home_chain` and `foreign_chain`.
+that naming is taken from parity-bridge.
+for this document the meaning of the names is irrelevant, meaning
+one could switch the names.
 
 an implementation of the `ValidatorSet` contract interface is deployed to `foreign_chain`.
 the implementation could be [MajorityList](https://github.com/paritytech/contracts/blob/master/validator_contracts/MajorityList.sol) for example.
