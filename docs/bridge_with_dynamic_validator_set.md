@@ -6,46 +6,69 @@ has a hardcoded list of authorities.
 we want to switch to a dynamic validator set represented on `foreign_chain` by
 a contract implementing the `ValidatorSet` interface.
 
-the approach laid out in this document depends on a `BridgedValidatorSet`,
+the approach laid out in this document depends on the fact that a `BridgedValidatorSet`,
+is present on `home_chain` and has validator processes running
 as described in [bridged_validator_set.md](bridged_validator_set.md),
-is present and synced on `home_chain`.
 
 this means that contracts on `home_chain` can call `home_chain.BridgedValidatorSet.getValidatorSet()`
-to obtain the newest synced version of `foreign_chain.ValidatorSet.getValidatorSet()`.
+to obtain the newest finalized version of `foreign_chain.ValidatorSet.getValidatorSet()`.
 
-## problem
+## naive approach
 
-## how do we detect that the validator set has changed
+say we naively modify `HomeBridge` and `ForeignBridge` (https://github.com/paritytech/parity-bridge/blob/master/contracts/bridge.sol)
+such that every time they would have previously accessed their
+`authorities` storage they now call `home_chain.BridgedValidatorSet.getValidatorSet()` (`HomeBridge`)
+and `foreign_chain.ValidatorSet.getValidatorSet()` (`ForeignBridge`).
 
-## problem: validator set has changed while relay-transaction from foreign_chain to home_chain was in flight
+## problematic edge case
 
-### possible solution 1
+if a
 
-`ForeignBridgeContract` and `HomeBridgeContract` keep a hash of the addresses
-of the current validator set.
-hash is either computed every time the validator set changes (to save gas)
-or computed every time it's needed.
-that hash is sent with every relay transaction (deposit, message).
+this won't work
 
-on the last operation that will settle the relay-operation on the target chain
-that hash is compared with the hash of the current validator set.
 
-if the hashes match then the relay-operation is completed.
-if the hashes differ then the relay-operation is retried.
 
-i'd prefer a hash.
-it uses more gas every time but it 
+transaction gets stuck.
 
-#### required decision on edge case
+## solution for bridge deposit
 
-it matters whether the 
+### detect whether validator set has changed during deposit
 
-## problem: how to retry relay-transaction of home_chain -> foreign_chain (deposit) relay-transaction
+send `validatorSetHash = sha3(home_chain.BridgedValidatorSet.getValidatorSet())`
+with the `home_chain.HomeBridge.Deposit` event.
 
-### possible solution 1
+bridge processes call `foreign_chain.ForeignBridge.deposit(..., validatorSetHash)`.
 
-to `ForeignBridgeContract.deposit()`
-add param `validatorSetHash`
+inside `foreign_chain.ForeignBridge.deposit`:
+
+obtain the newest validator set: `validatorSet = BridgedValidatorSet.getValidatorSet()`.
+
+if there are enough signatures only commit to the change (change balances) if
+`sha3(validatorSet) == validatorSetHash` i.e. validator set hasn't changed
+during transport.
+
+else retry.
+
+### retry if validator set has change during deposit
+
+`ForeignBridge` emits a
+`RetryDeposit(recipient, value, originalTransactionHash, validatorSetHash)`
+event with the intention of collecting signatures again from the newest
+`validatorSet` (`sha3(validatorSet) == validatorSetHash`).
+
+`RetryDeposit` is picked up by bridge processes.
+
+bridge processes trust `ForeignBridge`.
+
+bridge processes then call `ForeignBridge.deposit` again.
+
+`ForeignBridge.deposit` only modifies balance once enough signatures
+are collected and if the validator set still matches (see previous section).
+else it retries again.
+
+start a retry every time not enough signatures are collected.
+
+---
 
 remove modifier `onlyAuthority`
 instead just collect information about it
