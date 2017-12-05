@@ -148,6 +148,8 @@ contract ForeignBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
+    uint public withdrawRelayCostPerAuthority;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -173,11 +175,12 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) {
+    function ForeignBridge(uint n, address[] a, uint withdrawRelayCostPerAuthority) {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
+        withdrawRelayCostPerAuthority = withdrawRelayCostPerAuthority;
     }
 
     /// Multisig authority validation
