@@ -247,6 +247,42 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
+  it("should charge users for external transfers and distribute the cost to authorities", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var withdrawRelayGasCostPerAuthority = 100;
+    var truffleDefaultGasPrice = web3.toBigNumber(web3.toWei(100, "shannon"));
+    var withdrawRelayWeiCostPerAuthority = truffleDefaultGasPrice.times(withdrawRelayGasCostPerAuthority);
+    var authorities = [accounts[0], accounts[1]];
+    var user_account = accounts[2];
+    var user_account2 = accounts[3];
+    var value = web3.toWei(3, "ether");
+    var value2 = web3.toWei(1, "ether");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+    return ForeignBridge.new(requiredSignatures, authorities, withdrawRelayGasCostPerAuthority).then(function(instance) {
+      meta = instance;
+      return meta.deposit(user_account, value, hash, { from: authorities[0] });
+    }).then(function(result) {
+      return meta.transfer(user_account2, value2, true, { from: user_account });
+    }).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
+      assert.equal(user_account2, result.logs[0].args.recipient, "Event recipient should be equal to transaction recipient");
+      assert.equal(value2, result.logs[0].args.value, "Event value should match transaction value");
+      return Promise.all([
+        meta.balances.call(authorities[0]),
+        meta.balances.call(authorities[1]),
+        meta.balances.call(user_account),
+        meta.balances.call(user_account2)
+      ])
+    }).then(function(result) {
+      assert(withdrawRelayWeiCostPerAuthority.equals(result[0]));
+      assert(withdrawRelayWeiCostPerAuthority.equals(result[1]));
+      assert(web3.toBigNumber(web3.toWei(2, "ether")).minus(withdrawRelayWeiCostPerAuthority.times(2)).equals(result[2]));
+      assert(web3.toBigNumber(web3.toWei(0, "ether")).equals(result[3]));
+    })
+  })
+
   function sign(address, data) {
     return new Promise(function(resolve, reject) {
       web3.eth.sign(address, data, function(err, result) {
