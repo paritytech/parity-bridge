@@ -175,11 +175,15 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a, uint withdrawRelayGasCostPerAuthorityParam) {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function ForeignBridge(
+        uint requiredSignaturesParam,
+        address[] authoritiesParam,
+        uint withdrawRelayGasCostPerAuthorityParam
+      ) {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
         withdrawRelayGasCostPerAuthority = withdrawRelayGasCostPerAuthorityParam;
     }
 
