@@ -148,7 +148,7 @@ contract ForeignBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
-    uint public withdrawRelayCostPerAuthority;
+    uint public withdrawRelayGasCostPerAuthority;
 
     /// Contract authorities.
     address[] public authorities;
@@ -175,12 +175,12 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a, uint withdrawRelayCostPerAuthority) {
+    function ForeignBridge(uint n, address[] a, uint withdrawRelayGasCostPerAuthority) {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
         authorities = a;
-        withdrawRelayCostPerAuthority = withdrawRelayCostPerAuthority;
+        withdrawRelayGasCostPerAuthority = withdrawRelayGasCostPerAuthority;
     }
 
     /// Multisig authority validation
@@ -232,7 +232,13 @@ contract ForeignBridge {
     /// Used to transfer money to an account on the home chain.
     /// transfer will get relayed by authorities.
     function transferToHomeChain(address recipient, uint value) {
-        var totalRelayCost = withdrawRelayCostPerAuthority * authorities.length;
+        // note that this is higher than the actual relay cost.
+        // except when requiredSignatures = authorities.length.
+        // the actual relay cost is:
+        // withdrawRelayGasCostPerAuthority * requiredSignatures
+        // we can't use that though since we have and at this point there's no way
+        // of knowing which authorities will do the relay.
+        var totalRelayCost = withdrawRelayGasCostPerAuthority * authorities.length;
         var amountToWithdraw = value + totalRelayCost;
         require(balances[msg.sender] >= amountToWithdraw);
         // fails if value == 0, or if there is an overflow
@@ -240,7 +246,7 @@ contract ForeignBridge {
 
         balances[msg.sender] -= amountToWithdraw;
         for (uint i = 0; i < authorities.length; i++) {
-            balances[authorities[i]] += withdrawRelayCostPerAuthority;
+            balances[authorities[i]] += withdrawRelayGasCostPerAuthority;
         }
         Withdraw(recipient, value);
     }
