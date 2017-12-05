@@ -238,15 +238,16 @@ contract ForeignBridge {
         // withdrawRelayGasCostPerAuthority * requiredSignatures
         // we can't use that though since we have and at this point there's no way
         // of knowing which authorities will do the relay.
-        var totalRelayCost = withdrawRelayGasCostPerAuthority * authorities.length;
-        var amountToWithdraw = value + totalRelayCost;
+        var withdrawRelayWeiCostPerAuthority = withdrawRelayGasCostPerAuthority * tx.gasprice;
+        var totalRelayWeiCost = withdrawRelayWeiCostPerAuthority * authorities.length;
+        var amountToWithdraw = value + totalRelayWeiCost;
         require(balances[msg.sender] >= amountToWithdraw);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= amountToWithdraw;
         for (uint i = 0; i < authorities.length; i++) {
-            balances[authorities[i]] += withdrawRelayGasCostPerAuthority;
+            balances[authorities[i]] += withdrawRelayWeiCostPerAuthority;
         }
         Withdraw(recipient, value);
     }
