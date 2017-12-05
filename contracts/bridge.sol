@@ -208,17 +208,33 @@ contract ForeignBridge {
 
     /// Used to transfer money between accounts
     function transfer (address recipient, uint value, bool externalTransfer) {
+        if (externalTransfer) {
+            transferToHomeChain(recipient, value);
+        } else {
+            transferOnChain(recipient, value);
+        }
+    }
+
+    /// Used to transfer money to another account on the same chain
+    function transferOnChain(address recipient, uint value) {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
-        if (externalTransfer) {
-            Withdraw(recipient, value);
-        } else {
-            balances[recipient] += value;
-            Transfer(msg.sender, recipient, value);
-        }
+        balances[recipient] += value;
+        Transfer(msg.sender, recipient, value);
+    }
+
+    /// Used to transfer money to an account on the home chain.
+    /// transfer will get relayed by authorities.
+    function transferToHomeChain(address recipient, uint value) {
+        require(balances[msg.sender] >= value);
+        // fails if value == 0, or if there is an overflow
+        require(balances[recipient] + value > balances[recipient]);
+
+        balances[msg.sender] -= value;
+        Withdraw(recipient, value);
     }
 
     /// Should be used as sync tool
