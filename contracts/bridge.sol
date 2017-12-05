@@ -232,11 +232,16 @@ contract ForeignBridge {
     /// Used to transfer money to an account on the home chain.
     /// transfer will get relayed by authorities.
     function transferToHomeChain(address recipient, uint value) {
-        require(balances[msg.sender] >= value);
+        var totalRelayCost = withdrawRelayCostPerAuthority * authorities.length;
+        var amountToWithdraw = value + totalRelayCost;
+        require(balances[msg.sender] >= amountToWithdraw);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
-        balances[msg.sender] -= value;
+        balances[msg.sender] -= amountToWithdraw;
+        for (uint i = 0; i < authorities.length; i++) {
+            balances[authorities[i]] += withdrawRelayCostPerAuthority;
+        }
         Withdraw(recipient, value);
     }
 
