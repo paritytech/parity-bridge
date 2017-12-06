@@ -482,4 +482,22 @@ contract('ForeignBridge', function(accounts) {
       // nothing
     })
   })
+
+  it("should estimate gas cost of submitSignature", function() {
+    var foreignBridge;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var withdrawRelayGasCostPerAuthority = 0;
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+
+    return ForeignBridge.new(requiredSignatures, authorities, withdrawRelayGasCostPerAuthority).then(function(instance) {
+      foreignBridge = instance;
+      return sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      return foreignBridge.submitSignature.estimateGas(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.submitSignature =", result);
+    })
+  })
 })
