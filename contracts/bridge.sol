@@ -116,9 +116,9 @@ contract HomeBridge {
         uint value;
         bytes32 hash;
         assembly {
-            recipient := mload(add(message, 0x20))
-            value := mload(add(message, 0x40))
-            hash := mload(add(message, 0x60))
+            recipient := mload(add(message, 20))
+            value := mload(add(message, 52))
+            hash := mload(add(message, 84))
         }
 
         // Duplicated withdraw
