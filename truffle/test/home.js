@@ -171,7 +171,7 @@ contract('HomeBridge', function(accounts) {
         {from: authorities[0]}
       );
     }).then(function(result) {
-      console.log("estimated gas cost of HomeBridge.withdraw =", result);
+      console.log("estimated gas cost of HomeBridge.withdraw =", result, "wei");
 
       var vrs = signatureToVRS(signature);
       return homeBridge.withdraw(
