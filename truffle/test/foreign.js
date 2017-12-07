@@ -49,6 +49,10 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, withdrawRelayGasCostPerAuthority).then(function(instance) {
       meta = instance;
+      return meta.deposit.estimateGas(user_account, value, hash, { from: authorities[0] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.deposit =", result, "wei");
+
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
