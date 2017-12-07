@@ -269,7 +269,7 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       return meta.transfer.estimateGas(user_account2, value2, true, { from: user_account });
     }).then(function(result) {
-      console.log("estimated gas cost of ForeignBridge.transfer =", result, "wei");
+      console.log("estimated gas cost of ForeignBridge.transfer =", result);
       return meta.transfer(user_account2, value2, true, { from: user_account });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
