@@ -1,0 +1,5 @@
+estimated gas cost of ForeignBridge.deposit = 91231 wei
+estimated gas cost of ForeignBridge.transfer = 74428 wei
+estimated gas cost of ForeignBridge.submitSignature = 267855 wei
+estimated gas cost of HomeBridge fallback function = 22393 wei
+estimated gas cost of HomeBridge.withdraw = 71619 wei
