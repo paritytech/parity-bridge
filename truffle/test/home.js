@@ -91,15 +91,32 @@ contract('HomeBridge', function(accounts) {
     return input.substr(2);
   }
 
+  function bigNumberToHexString(num) {
+    web3._extend.utils.isBigNumber(num);
+    var quotient = num;
+    var result = "";
+    while (quotient > 0) {
+      var remainderDec = quotient.mod(16).toNumber();
+      assert(remainderDec < 16);
+      var remainderHexDigit = remainderDec.toString(16);
+      assert.equal(remainderHexDigit.length, 1)
+      result = remainderHexDigit + result;
+      quotient = quotient.dividedToIntegerBy(16);
+    }
+    return "0x" + result;
+  }
+
   function bigNumberToPaddedBytes32(num) {
-      var n = num.toString(16).replace(/^0x/, '');
-      while (n.length < 64) {
-          n = "0" + n;
-      }
-      return "0x" + n;
+    web3._extend.utils.isBigNumber(num);
+    var result = strip0x(bigNumberToHexString(num));
+    while (result.length < 64) {
+      result = "0" + result;
+    }
+    return "0x" + result;
   }
 
   function createMessage(recipient, value, transactionHash) {
+    web3._extend.utils.isBigNumber(value);
     recipient = strip0x(recipient);
     assert.equal(recipient.length, 20 * 2);
 
@@ -121,7 +138,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var user_account = accounts[2];
-    var value = web3.toWei(1, "ether");
+    var recipient_account = accounts[3];
+    var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       homeBridge = instance;
@@ -130,7 +148,7 @@ contract('HomeBridge', function(accounts) {
         from: user_account
       })
     }).then(function(result) {
-      message = createMessage(user_account, 1, result.tx);
+      message = createMessage(recipient_account, value, result.tx);
       return sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -155,11 +173,10 @@ contract('HomeBridge', function(accounts) {
         {from: authorities[0]}
       );
     }).then(function(result) {
-      result.logs.forEach(function(log) {
-        console.log(log);
-      });
-      console.log(result.logs[0].args.value.toString());
-      console.log("withdraw success");
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
+      assert.equal(recipient_account, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
     })
   })
 
