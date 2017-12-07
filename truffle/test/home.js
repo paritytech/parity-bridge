@@ -70,8 +70,7 @@ contract('HomeBridge', function(accounts) {
   }
 
   function signatureToVRS(signature) {
-    // strip 0x
-    signature = signature.substr(2);
+    signature = strip0x(signature);
     var v = parseInt(signature.substr(64 * 2), 16);
     var r = "0x" + signature.substr(0, 32 * 2);
     var s = "0x" + signature.substr(32 * 2, 32 * 2);
@@ -92,28 +91,6 @@ contract('HomeBridge', function(accounts) {
     return input.substr(2);
   }
 
-  function padLeft(input, padding, requestedLength) {
-      var output = input;
-      while (output.length < requestedLength) {
-          output = padding + output;
-      }
-      return output;
-  }
-
-  function padRight(input, padding, requestedLength) {
-      var output = input;
-      while (output.length < requestedLength) {
-          output = output + padding;
-      }
-      return output;
-  }
-
-  function hexToBytes(hex) {
-    for (var bytes = [], c = 0; c < hex.length; c+=2)
-      bytes.push(parseInt(hex.substr(c, 2), 16));
-    return bytes;
-  }
-
   function bigNumberToPaddedBytes32(num) {
       var n = num.toString(16).replace(/^0x/, '');
       while (n.length < 64) {
@@ -124,20 +101,15 @@ contract('HomeBridge', function(accounts) {
 
   function createMessage(recipient, value, transactionHash) {
     recipient = strip0x(recipient);
-    // console.log("recipient =", recipient);
     assert.equal(recipient.length, 20 * 2);
 
     transactionHash = strip0x(transactionHash);
-    // console.log("transactionHash =", transactionHash);
     assert.equal(transactionHash.length, 32 * 2);
 
     var value = strip0x(bigNumberToPaddedBytes32(value));
-    var value = padLeft("1", 0, 64);
-    console.log("value =", value);
     assert.equal(value.length, 64);
     var message = "0x" + recipient + value + transactionHash;
     var expectedMessageLength = (20 + 32 + 32) * 2 + 2;
-    console.log("expectedMessageLength =", expectedMessageLength);
     assert.equal(message.length, expectedMessageLength);
     return message;
   }
@@ -150,27 +122,15 @@ contract('HomeBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var user_account = accounts[2];
     var value = web3.toWei(1, "ether");
-    console.log("value.toString() =", value.toString());
-    var m1 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    console.log("m1.length =", m1.length);
 
     return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       homeBridge = instance;
-      return Promise.all([
-        web3.eth.getBalance(authorities[0]),
-        web3.eth.getBalance(authorities[1]),
-        web3.eth.getBalance(user_account)
-      ]);
-    }).then(function(result) {
-      console.log(result);
       return homeBridge.sendTransaction({
         value: value,
         from: user_account
       })
     }).then(function(result) {
-      console.log("recipient =", user_account);
-      console.log("hash =", result.tx);
-      message = createMessage(user_account, 100, result.tx);
+      message = createMessage(user_account, 1, result.tx);
       return sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
