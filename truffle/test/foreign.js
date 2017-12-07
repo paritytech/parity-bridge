@@ -501,7 +501,7 @@ contract('ForeignBridge', function(accounts) {
       signature = result;
       return foreignBridge.submitSignature.estimateGas(result, message, { from: authorities[0] });
     }).then(function(result) {
-      console.log("estimated gas cost of ForeignBridge.submitSignature =", result);
+      console.log("estimated gas cost of ForeignBridge.submitSignature =", result, "wei");
     })
   })
 })
