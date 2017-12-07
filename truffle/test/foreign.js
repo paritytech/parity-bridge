@@ -51,7 +51,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit.estimateGas(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      console.log("estimated gas cost of ForeignBridge.deposit =", result, "wei");
+      console.log("estimated gas cost of ForeignBridge.deposit =", result);
 
       return meta.deposit(user_account, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -504,7 +504,7 @@ contract('ForeignBridge', function(accounts) {
       signature = result;
       return foreignBridge.submitSignature.estimateGas(result, message, { from: authorities[0] });
     }).then(function(result) {
-      console.log("estimated gas cost of ForeignBridge.submitSignature =", result, "wei");
+      console.log("estimated gas cost of ForeignBridge.submitSignature =", result);
     })
   })
 })

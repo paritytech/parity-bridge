@@ -51,7 +51,7 @@ contract('HomeBridge', function(accounts) {
         from: user_account
       });
     }).then(function(result) {
-      console.log("estimated gas cost of HomeBridge fallback function =", result, "wei");
+      console.log("estimated gas cost of HomeBridge fallback function =", result);
 
       return meta.sendTransaction({
         value: value,
@@ -171,7 +171,7 @@ contract('HomeBridge', function(accounts) {
         {from: authorities[0]}
       );
     }).then(function(result) {
-      console.log("estimated gas cost of HomeBridge.withdraw =", result, "wei");
+      console.log("estimated gas cost of HomeBridge.withdraw =", result);
 
       var vrs = signatureToVRS(signature);
       return homeBridge.withdraw(
