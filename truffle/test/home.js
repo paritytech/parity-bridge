@@ -44,6 +44,15 @@ contract('HomeBridge', function(accounts) {
 
     return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
+      // estimate gas of fallback function
+      return web3.eth.estimateGas({
+        to: meta.address,
+        value: value,
+        from: user_account
+      });
+    }).then(function(result) {
+      console.log("estimated gas cost of HomeBridge fallback function =", result, "wei");
+
       return meta.sendTransaction({
         value: value,
         from: user_account
