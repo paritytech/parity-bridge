@@ -45,7 +45,9 @@ module.exports.strip0x = strip0x;
 // returns BigNumber `num` converted to a little endian hex string.
 // `num` must represent an unsigned integer
 function bigNumberToHexString(num) {
-  web3._extend.utils.isBigNumber(num);
+  assert(web3._extend.utils.isBigNumber(num));
+  assert(num.isInteger());
+  assert(!num.isNegative());
   var quotient = num;
   var result = "";
   while (quotient > 0) {
@@ -64,7 +66,6 @@ module.exports.bigNumberToHexString = bigNumberToHexString;
 // that is exactly 32 bytes long.
 // `num` must represent an unsigned integer
 function bigNumberToPaddedBytes32(num) {
-  web3._extend.utils.isBigNumber(num);
   var result = strip0x(bigNumberToHexString(num));
   while (result.length < 64) {
     result = "0" + result;
