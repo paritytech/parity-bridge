@@ -303,7 +303,10 @@ contract('ForeignBridge', function(accounts) {
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
-      return meta.submitSignature(result, message, { from: authorities[0] });
+      return meta.submitSignature.estimateGas(signature, message, { from: authorities[0] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.submitSignature (triggering CollectedSignatures event) =", result);
+      return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
@@ -320,6 +323,7 @@ contract('ForeignBridge', function(accounts) {
 
   it("should successfully submit signature but not trigger CollectedSignatures event", function() {
     var meta;
+    var signature;
     var requiredSignatures = 2;
     var authorities = [accounts[0], accounts[1]];
     var withdrawRelayGasCostPerAuthority = 0;
@@ -328,7 +332,11 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
-      return meta.submitSignature(result, message, { from: authorities[0] });
+      signature = result
+      return meta.submitSignature.estimateGas(signature, message, { from: authorities[0] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.submitSignature (not triggering CollectedSignatures event) =", result);
+      return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "No events should be created");
     })
@@ -465,24 +473,6 @@ contract('ForeignBridge', function(accounts) {
       assert(false, "submitSignature should fail");
     }, function (err) {
       // nothing
-    })
-  })
-
-  it("should estimate gas cost of submitSignature", function() {
-    var foreignBridge;
-    var requiredSignatures = 1;
-    var authorities = [accounts[0], accounts[1]];
-    var withdrawRelayGasCostPerAuthority = 0;
-    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-
-    return ForeignBridge.new(requiredSignatures, authorities, withdrawRelayGasCostPerAuthority).then(function(instance) {
-      foreignBridge = instance;
-      return helpers.sign(authorities[0], message);
-    }).then(function(result) {
-      signature = result;
-      return foreignBridge.submitSignature.estimateGas(result, message, { from: authorities[0] });
-    }).then(function(result) {
-      console.log("estimated gas cost of ForeignBridge.submitSignature =", result);
     })
   })
 })
