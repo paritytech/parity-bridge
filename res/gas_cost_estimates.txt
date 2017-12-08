@@ -1,0 +1,6 @@
+estimated gas cost of ForeignBridge.deposit = 91231
+estimated gas cost of ForeignBridge.transfer = 74428
+estimated gas cost of ForeignBridge.submitSignature (triggering CollectedSignatures event) = 267855
+estimated gas cost of ForeignBridge.submitSignature (not triggering CollectedSignatures event) = 266489
+estimated gas cost of HomeBridge fallback function = 22393
+estimated gas cost of HomeBridge.withdraw = 71683

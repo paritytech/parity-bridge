@@ -105,20 +105,38 @@ contract HomeBridge {
         Deposit(msg.sender, msg.value);
     }
 
-    /// Used to withdrawn money from the contract.
+    /// Used to withdraw money from the contract.
     ///
     /// message contains:
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
     function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
+        require(message.length == 84);
         address recipient;
         uint value;
         bytes32 hash;
         assembly {
-            recipient := mload(add(message, 0x20))
-            value := mload(add(message, 0x40))
-            hash := mload(add(message, 0x60))
+            // layout of message :: bytes:
+            // offset  0: 32 bytes :: uint (little endian) - message length
+            // offset 32: 20 bytes :: address - recipient address
+            // offset 52: 32 bytes :: uint (little endian) - value
+            // offset 84: 32 bytes :: bytes32 - transaction hash
+
+            // we require above that message length == 84.
+            // bytes 1 to 32 are 0 because message length is stored as little endian.
+            // mload always reads 32 bytes.
+            // so we can and have to start reading recipient at offset 20 instead of 32.
+            // if we were to read at 32 the address would contain part of value and be corrupted.
+            // when reading from offset 20 mload will read 12 zero bytes followed
+            // by the 20 recipient address bytes and correctly convert it into an address.
+            // this saves some storage/gas over the alternative solution
+            // which is padding address to 32 bytes and reading recipient at offset 32.
+            // for more details see discussion in:
+            // https://github.com/paritytech/parity-bridge/issues/61
+            recipient := mload(add(message, 20))
+            value := mload(add(message, 52))
+            hash := mload(add(message, 84))
         }
 
         // Duplicated withdraw
@@ -148,6 +166,8 @@ contract ForeignBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
+    uint public withdrawRelayGasCostPerAuthority;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -173,11 +193,16 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function ForeignBridge(
+        uint requiredSignaturesParam,
+        address[] authoritiesParam,
+        uint withdrawRelayGasCostPerAuthorityParam
+      ) {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
+        withdrawRelayGasCostPerAuthority = withdrawRelayGasCostPerAuthorityParam;
     }
 
     /// Multisig authority validation
@@ -208,17 +233,45 @@ contract ForeignBridge {
 
     /// Used to transfer money between accounts
     function transfer (address recipient, uint value, bool externalTransfer) {
+        if (externalTransfer) {
+            transferToHomeChain(recipient, value);
+        } else {
+            transferOnChain(recipient, value);
+        }
+    }
+
+    /// Used to transfer money to another account on the same chain
+    function transferOnChain(address recipient, uint value) {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
-        if (externalTransfer) {
-            Withdraw(recipient, value);
-        } else {
-            balances[recipient] += value;
-            Transfer(msg.sender, recipient, value);
+        balances[recipient] += value;
+        Transfer(msg.sender, recipient, value);
+    }
+
+    /// Used to transfer money to an account on the home chain.
+    /// transfer will get relayed by authorities.
+    function transferToHomeChain(address recipient, uint value) {
+        // note that this is higher than the actual relay cost.
+        // except when requiredSignatures = authorities.length.
+        // the actual relay cost is:
+        // withdrawRelayGasCostPerAuthority * requiredSignatures
+        // we can't use that though since we have and at this point there's no way
+        // of knowing which authorities will do the relay.
+        var withdrawRelayWeiCostPerAuthority = withdrawRelayGasCostPerAuthority * tx.gasprice;
+        var totalRelayWeiCost = withdrawRelayWeiCostPerAuthority * authorities.length;
+        var amountToWithdraw = value + totalRelayWeiCost;
+        require(balances[msg.sender] >= amountToWithdraw);
+        // fails if value == 0, or if there is an overflow
+        require(balances[recipient] + value > balances[recipient]);
+
+        balances[msg.sender] -= amountToWithdraw;
+        for (uint i = 0; i < authorities.length; i++) {
+            balances[authorities[i]] += withdrawRelayWeiCostPerAuthority;
         }
+        Withdraw(recipient, value);
     }
 
     /// Should be used as sync tool
