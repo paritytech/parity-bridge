@@ -73,3 +73,14 @@ function bigNumberToPaddedBytes32(num) {
   return "0x" + result;
 }
 module.exports.bigNumberToPaddedBytes32 = bigNumberToPaddedBytes32;
+
+// repeatedly add `padding` to the left of `input` while `input`
+// is smaller than `requestedLength`
+function padLeft(input, padding, requestedLength) {
+    var output = input;
+    while (output.length < requestedLength) {
+        output = padding + output;
+    }
+    return output;
+}
+module.exports.padLeft = padLeft;
