@@ -31,9 +31,9 @@ function signatureToVRS(signature) {
 }
 module.exports.signatureToVRS = signatureToVRS;
 
-// strips leading "0x"
+// strips leading "0x" if present
 function strip0x(input) {
-  return input.substr(2);
+  return input.replace(/^0x/, "");
 }
 module.exports.strip0x = strip0x;
 
