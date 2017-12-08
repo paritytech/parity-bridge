@@ -1,3 +1,5 @@
+// returns a Promise that resolves with a hex string that is the signature of
+// `data` signed with the key of `address`
 function sign(address, data) {
   return new Promise(function(resolve, reject) {
     web3.eth.sign(address, data, function(err, result) {
@@ -40,6 +42,8 @@ function strip0x(input) {
 }
 module.exports.strip0x = strip0x;
 
+// returns BigNumber `num` converted to a little endian hex string.
+// `num` must represent an unsigned integer
 function bigNumberToHexString(num) {
   web3._extend.utils.isBigNumber(num);
   var quotient = num;
@@ -56,6 +60,9 @@ function bigNumberToHexString(num) {
 }
 module.exports.bigNumberToHexString = bigNumberToHexString;
 
+// returns BigNumber `num` converted to a little endian hex string
+// that is exactly 32 bytes long.
+// `num` must represent an unsigned integer
 function bigNumberToPaddedBytes32(num) {
   web3._extend.utils.isBigNumber(num);
   var result = strip0x(bigNumberToHexString(num));
