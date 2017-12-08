@@ -117,6 +117,22 @@ contract HomeBridge {
         uint value;
         bytes32 hash;
         assembly {
+            // layout of message :: bytes:
+            // offset  0: 32 bytes :: uint (little endian) - message length
+            // offset 32: 20 bytes :: address - recipient address
+            // offset 52: 32 bytes :: uint (little endian) - value
+            // offset 84: 32 bytes :: bytes32 - transaction hash
+
+            // we require above that message length == 84.
+            // bytes 1 to 32 are 0 because message length is stored as little endian.
+            // mload always reads 32 bytes.
+            // so we can start reading recipient at offset 20.
+            // mload will then read 12 zero bytes followed by the 20 recipient
+            // address bytes and correctly convert it into an address.
+            // this saves some storage/gas over the alternative solution
+            // which is padding address to 32 bytes and reading at offset 32.
+            // for more details see discussion in:
+            // https://github.com/paritytech/parity-bridge/issues/61
             recipient := mload(add(message, 20))
             value := mload(add(message, 52))
             hash := mload(add(message, 84))
