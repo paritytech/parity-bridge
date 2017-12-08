@@ -126,11 +126,12 @@ contract HomeBridge {
             // we require above that message length == 84.
             // bytes 1 to 32 are 0 because message length is stored as little endian.
             // mload always reads 32 bytes.
-            // so we can start reading recipient at offset 20.
-            // mload will then read 12 zero bytes followed by the 20 recipient
-            // address bytes and correctly convert it into an address.
+            // so we can and have to start reading recipient at offset 20 instead of 32.
+            // if we were to read at 32 the address would contain part of value and be corrupted.
+            // when reading from offset 20 mload will read 12 zero bytes followed
+            // by the 20 recipient address bytes and correctly convert it into an address.
             // this saves some storage/gas over the alternative solution
-            // which is padding address to 32 bytes and reading at offset 32.
+            // which is padding address to 32 bytes and reading recipient at offset 32.
             // for more details see discussion in:
             // https://github.com/paritytech/parity-bridge/issues/61
             recipient := mload(add(message, 20))
