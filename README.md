@@ -91,7 +91,7 @@ foreign_deploy = { gas = 500000 }
 - `transaction.home_deploy.gas` - specify how much gas should be consumed by home contract deploy
 - `transaction.home_deploy.gas_price` - specify gas price for home contract deploy
 - `transaction.foreign_deploy.gas` - specify how much gas should be consumed by foreign contract deploy
-- `transaction.foreign_deploy.gas_price` - specify gas price for home contract deploy
+- `transaction.foreign_deploy.gas_price` - specify gas price for foreign contract deploy
 - `transaction.deposit_relay.gas` - specify how much gas should be consumed by deposit relay
 - `transaction.deposit_relay.gas_price` - specify gas price for deposit relay
 - `transaction.withdraw_confirm.gas` - specify how much gas should be consumed by withdraw confirm
