@@ -124,7 +124,7 @@ checked_withdraw_confirm = 121
 ### example run
 
 ```
-./target/debug/bridge --config examples/config.toml --database db.toml
+./target/release/bridge --config examples/config.toml --database db.toml
 ```
 
 - example run requires a parity instance running
