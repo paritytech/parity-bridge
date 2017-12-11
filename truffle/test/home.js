@@ -27,7 +27,7 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
-  it("should fail to deploy contract with to many signatures", function() {
+  it("should fail to deploy contract with too many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
     return HomeBridge.new(3, authorities).then(function(_) {
       assert(false, "Contract should fail to deploy");
