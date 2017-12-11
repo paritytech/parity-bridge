@@ -41,3 +41,23 @@ function signatureToVRS(signature) {
   return {v: v, r: r, s: s};
 }
 module.exports.signatureToVRS = signatureToVRS;
+
+// returns BigNumber `num` converted to a little endian hex string.
+// `num` must represent an unsigned integer
+function bigNumberToHexString(num) {
+  assert(web3._extend.utils.isBigNumber(num));
+  assert(num.isInteger());
+  assert(!num.isNegative());
+  var quotient = num;
+  var result = "";
+  while (quotient > 0) {
+    var remainderDec = quotient.mod(16).toNumber();
+    assert(remainderDec < 16);
+    var remainderHexDigit = remainderDec.toString(16);
+    assert.equal(remainderHexDigit.length, 1)
+    result = remainderHexDigit + result;
+    quotient = quotient.dividedToIntegerBy(16);
+  }
+  return "0x" + result;
+}
+module.exports.bigNumberToHexString = bigNumberToHexString;
