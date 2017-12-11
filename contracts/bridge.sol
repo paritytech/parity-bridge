@@ -105,7 +105,7 @@ contract HomeBridge {
         Deposit(msg.sender, msg.value);
     }
 
-    /// Used to withdrawn money from the contract.
+    /// Used to withdraw money from the contract.
     ///
     /// message contains:
     /// withdrawal recipient (bytes20)
