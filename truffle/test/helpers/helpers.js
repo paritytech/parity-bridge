@@ -61,3 +61,15 @@ function bigNumberToHexString(num) {
   return "0x" + result;
 }
 module.exports.bigNumberToHexString = bigNumberToHexString;
+
+// returns BigNumber `num` converted to a little endian hex string
+// that is exactly 32 bytes long.
+// `num` must represent an unsigned integer
+function bigNumberToPaddedBytes32(num) {
+  var result = strip0x(bigNumberToHexString(num));
+  while (result.length < 64) {
+    result = "0" + result;
+  }
+  return "0x" + result;
+}
+module.exports.bigNumberToPaddedBytes32 = bigNumberToPaddedBytes32;
