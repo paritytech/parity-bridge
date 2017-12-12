@@ -85,6 +85,7 @@ contract('HomeBridge', function(accounts) {
 
     return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
       homeBridge = instance;
+      // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value,
         from: user_account
