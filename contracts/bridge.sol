@@ -261,7 +261,7 @@ contract ForeignBridge {
         signatures[hash].signed.push(msg.sender);
         signatures[hash].signatures.push(signature);
 
-        // TODO: this may cause troubles if requriedSignatures len is changed
+        // TODO: this may cause troubles if requiredSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
             CollectedSignatures(msg.sender, hash);
         }
