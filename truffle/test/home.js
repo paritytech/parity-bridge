@@ -122,4 +122,35 @@ contract('HomeBridge', function(accounts) {
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
     })
   })
+
+  it("withdraw without funds on HomeBridge should fail", function() {
+    var homeBridge;
+    var signature;
+    var message;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var user_account = accounts[2];
+    var recipient_account = accounts[3];
+    var value = web3.toBigNumber(web3.toWei(1, "ether"));
+
+    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+      homeBridge = instance;
+      message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      return helpers.sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      var vrs = helpers.signatureToVRS(signature);
+      return homeBridge.withdraw(
+        [vrs.v],
+        [vrs.r],
+        [vrs.s],
+        message.substr(0, 83),
+        {from: authorities[0]}
+      );
+    }).then(function(result) {
+      assert(false, "should fail");
+    }, function (err) {
+      // nothing
+    })
+  })
 })
