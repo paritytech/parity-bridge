@@ -91,7 +91,7 @@ contract('HomeBridge', function(accounts) {
         from: user_account
       })
     }).then(function(result) {
-      message = createMessage(recipient_account, value, result.tx);
+      message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
