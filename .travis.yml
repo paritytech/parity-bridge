@@ -5,21 +5,21 @@ branches:
 
 matrix:
   include:
-    # - language: rust
-    #   rust: stable
-    #   fast_finish: false
-    #   script:
-    #     - cargo test --all
-    # - language: rust
-    #   rust: beta
-    #   fast_finish: false
-    #   script:
-    #     - cargo test --all
-    # - language: rust
-    #   rust: nightly
-    #   fast_finish: false
-    #   script:
-    #     - cargo test --all
+    - language: rust
+      rust: stable
+      fast_finish: false
+      script:
+        - cargo test --all
+    - language: rust
+      rust: beta
+      fast_finish: false
+      script:
+        - cargo test --all
+    - language: rust
+      rust: nightly
+      fast_finish: false
+      script:
+        - cargo test --all
     - language: node_js
       node_js: node
       before_script: cd truffle
