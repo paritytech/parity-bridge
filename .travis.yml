@@ -22,13 +22,14 @@ matrix:
         - cargo test --all
     - language: node_js
       node_js: node
+      cache: yarn
       before_script:
         - cd truffle
-        - npm install
+        - yarn install
       script:
-        - npm run ci
+        - yarn run ci
       after_script:
-        - cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
+        - cat coverage/lcov.info | yarn run coveralls
 
 env:
   global:
