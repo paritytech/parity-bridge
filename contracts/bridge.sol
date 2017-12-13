@@ -46,6 +46,7 @@ library Signer {
         bytes32 r;
         bytes32 s;
         bytes1 v;
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             r := mload(add(signature, 0x20))
             s := mload(add(signature, 0x40))
@@ -124,6 +125,7 @@ contract HomeBridge {
         address recipient;
         uint value;
         bytes32 hash;
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             // layout of message :: bytes:
             // offset  0: 32 bytes :: uint (little endian) - message length
