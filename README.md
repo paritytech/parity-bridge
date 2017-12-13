@@ -1,7 +1,7 @@
 # bridge
 
 [![Build Status][travis-image]][travis-url]
-[![Coverage Status][coveralls-image]][coveralls-url]
+[![Solidity Coverage Status][coveralls-image]][coveralls-url] (contracts only)
 
 [travis-image]: https://travis-ci.org/paritytech/parity-bridge.svg?branch=master
 [travis-url]: https://travis-ci.org/paritytech/parity-bridge
