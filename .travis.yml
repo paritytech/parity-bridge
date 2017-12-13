@@ -7,16 +7,19 @@ matrix:
   include:
     - language: rust
       rust: stable
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
     - language: rust
       rust: beta
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
     - language: rust
       rust: nightly
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
