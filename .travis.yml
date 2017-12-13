@@ -22,7 +22,9 @@ matrix:
         - cargo test --all
     - language: node_js
       node_js: node
-      before_script: cd truffle
+      before_script:
+        - cd truffle
+        - npm install
       script:
         - npm run ci
       after_script:
