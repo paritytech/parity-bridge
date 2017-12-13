@@ -23,7 +23,7 @@
   "dependencies": {},
   "scripts": {
     "ci": "concurrently \"npm run truffle-with-rpc\" \"npm run solidity-coverage\"",
-    "ganache": "ganache-cli -p 8547",
+    "ganache": "ganache-cli -p 8545",
     "solidity-coverage": "solidity-coverage",
     "test": "npm run truffle-with-rpc",
     "truffle": "truffle test",
