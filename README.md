@@ -1,9 +1,10 @@
 # bridge
 
 [![Build Status][travis-image]][travis-url]
+[![Coverage Status][coveralls-image]][coveralls-url]
+
 [travis-image]: https://travis-ci.org/paritytech/parity-bridge.svg?branch=master
 [travis-url]: https://travis-ci.org/paritytech/parity-bridge
-[![Coverage Status][coveralls-image]][coveralls-url]
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
