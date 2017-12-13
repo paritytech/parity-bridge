@@ -234,7 +234,7 @@ contract ForeignBridge {
     }
 
     /// Used to transfer money between accounts
-    function transfer (address recipient, uint value, bool externalTransfer) {
+    function transfer (address recipient, uint value, bool externalTransfer) public {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
@@ -256,7 +256,7 @@ contract ForeignBridge {
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
-    function submitSignature (bytes signature, bytes message) onlyAuthority() {
+    function submitSignature (bytes signature, bytes message) public onlyAuthority() {
         // Validate submited signatures
         require(Signer.signer(signature, message) == msg.sender);
 
