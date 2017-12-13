@@ -2,6 +2,7 @@
   "name": "parity-bridge",
   "version": "1.0.0",
   "description": "Bridge between any two ethereum-based networks",
+  "license": "GPL-3.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/paritytech/parity-bridge.git"
