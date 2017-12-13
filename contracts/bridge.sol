@@ -15,7 +15,7 @@ library Authorities {
 
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
-    function signer (bytes signature, bytes message) constant returns (address) {
+    function signer (bytes signature, bytes message) public constant returns (address) {
         return Signer.signer(signature, message);
     }
 }
@@ -98,7 +98,7 @@ contract HomeBridge {
     }
 
     /// Constructor.
-    function HomeBridge (uint n, address[] a) {
+    function HomeBridge (uint n, address[] a) public {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -106,7 +106,7 @@ contract HomeBridge {
     }
 
     /// Should be used to deposit money.
-    function () payable {
+    function () public payable {
         Deposit(msg.sender, msg.value);
     }
 
@@ -119,7 +119,7 @@ contract HomeBridge {
     ///
     /// NOTE that anyone can call withdraw provided they have the
     /// message and required signatures!
-    function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
+    function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
         address recipient;
         uint value;
@@ -200,7 +200,7 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) {
+    function ForeignBridge(uint n, address[] a) public {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -218,7 +218,7 @@ contract ForeignBridge {
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
-    function deposit (address recipient, uint value, bytes32 transactionHash) onlyAuthority() {
+    function deposit (address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
         // Protection from misbehaing authority
         var hash = sha3(recipient, value, transactionHash);
 
@@ -277,12 +277,12 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature (bytes32 hash, uint index) constant returns (bytes) {
+    function signature (bytes32 hash, uint index) public constant returns (bytes) {
         return signatures[hash].signatures[index];
     }
 
     /// Get message
-    function message (bytes32 hash) constant returns (bytes) {
+    function message (bytes32 hash) public constant returns (bytes) {
         return signatures[hash].message;
     }
 }
