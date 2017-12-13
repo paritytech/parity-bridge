@@ -24,8 +24,7 @@ matrix:
       node_js: node
       before_script: cd truffle
       script:
-        - npm install concurrently truffle ganache-cli
-        - concurrently --success first --kill-others "ganache-cli" "truffle test"
+        - npm run ci
 
 env:
   global:
