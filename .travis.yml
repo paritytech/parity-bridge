@@ -25,6 +25,8 @@ matrix:
       before_script: cd truffle
       script:
         - npm run ci
+      after_script:
+        - cat coverage/lcov.info | npm run coveralls
 
 env:
   global:
