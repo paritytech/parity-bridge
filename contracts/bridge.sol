@@ -1,5 +1,6 @@
 pragma solidity ^0.4.15;
 
+
 library Authorities {
     function contains (address[] self, address value) internal returns (bool) {
         for (uint i = 0; i < self.length; i++) {
@@ -11,12 +12,14 @@ library Authorities {
     }
 }
 
+
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
     function signer (bytes signature, bytes message) constant returns (address) {
         return Signer.signer(signature, message);
     }
 }
+
 
 library Utils {
     function toString (uint256 v) internal returns (string str) {
@@ -35,6 +38,7 @@ library Utils {
         str = string(s);
     }
 }
+
 
 library Signer {
     function signer (bytes signature, bytes message) internal returns (address) {
@@ -55,6 +59,7 @@ library Signer {
         return sha3(prefix, Utils.toString(message.length), message);
     }
 }
+
 
 contract HomeBridge {
     using Authorities for address[];
@@ -151,6 +156,7 @@ contract HomeBridge {
         Withdraw(recipient, value);
     }
 }
+
 
 contract ForeignBridge {
     using Authorities for address[];
