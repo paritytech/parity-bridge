@@ -20,11 +20,11 @@
   },
   "dependencies": {},
   "scripts": {
-    "ci": "concurrently \"npm run truffle-with-rpc\" \"npm run solidity-coverage\"",
+    "ci": "concurrently \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
     "ganache": "ganache-cli -p 8545",
     "solidity-coverage": "solidity-coverage",
-    "test": "npm run truffle-with-rpc",
+    "test": "yarn run truffle-with-rpc",
     "truffle": "truffle test",
-    "truffle-with-rpc": "concurrently --success first --kill-others \"npm run ganache\" \"npm run truffle\""
+    "truffle-with-rpc": "concurrently --success first --kill-others \"yarn run ganache\" \"yarn run truffle\""
   }
 }
