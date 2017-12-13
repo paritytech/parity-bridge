@@ -56,7 +56,7 @@ library Signer {
 
     function hash (bytes message) internal returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        return sha3(prefix, Utils.toString(message.length), message);
+        return keccak256(prefix, Utils.toString(message.length), message);
     }
 }
 
@@ -220,7 +220,7 @@ contract ForeignBridge {
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
     function deposit (address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
         // Protection from misbehaing authority
-        var hash = sha3(recipient, value, transactionHash);
+        var hash = keccak256(recipient, value, transactionHash);
 
         // Duplicated deposits
         require(!deposits[hash].contains(msg.sender));
@@ -262,7 +262,7 @@ contract ForeignBridge {
 
         // Valid withdraw message must have 84 bytes
         require(message.length == 84);
-        var hash = sha3(message);
+        var hash = keccak256(message);
 
         // Duplicated signatures
         require(!signatures[hash].signed.contains(msg.sender));
