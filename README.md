@@ -91,7 +91,7 @@ foreign_deploy = { gas = 500000 }
 - `transaction.home_deploy.gas` - specify how much gas should be consumed by home contract deploy
 - `transaction.home_deploy.gas_price` - specify gas price for home contract deploy
 - `transaction.foreign_deploy.gas` - specify how much gas should be consumed by foreign contract deploy
-- `transaction.foreign_deploy.gas_price` - specify gas price for home contract deploy
+- `transaction.foreign_deploy.gas_price` - specify gas price for foreign contract deploy
 - `transaction.deposit_relay.gas` - specify how much gas should be consumed by deposit relay
 - `transaction.deposit_relay.gas_price` - specify gas price for deposit relay
 - `transaction.withdraw_confirm.gas` - specify how much gas should be consumed by withdraw confirm
@@ -124,7 +124,7 @@ checked_withdraw_confirm = 121
 ### example run
 
 ```
-./target/debug/bridge --config examples/config.toml --database db.toml
+./target/release/bridge --config examples/config.toml --database db.toml
 ```
 
 - example run requires a parity instance running
