@@ -111,6 +111,9 @@ contract HomeBridge {
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
+    ///
+    /// NOTE that anyone can call withdraw provided they have the
+    /// message and required signatures!
     function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
         require(message.length == 84);
         address recipient;
