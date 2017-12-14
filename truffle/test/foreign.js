@@ -1,4 +1,5 @@
 var ForeignBridge = artifacts.require("ForeignBridge");
+var helpers = require("./helpers/helpers");
 
 contract('ForeignBridge', function(accounts) {
   it("should deploy contract", function() {
@@ -236,29 +237,6 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
-  function sign(address, data) {
-    return new Promise(function(resolve, reject) {
-      web3.eth.sign(address, data, function(err, result) {
-        if (err !== null) {
-          return reject(err);
-        } else {
-          return resolve(normalizeSignature(result));
-          //return resolve(result);
-        }
-      })
-    })
-  }
-
-  // geth && testrpc has different output of eth_sign than parity
-  // https://github.com/ethereumjs/testrpc/issues/243#issuecomment-326750236
-  function normalizeSignature(signature) {
-    // strip 0x
-    signature = signature.substr(2);
-
-    // increase v by 27...
-    return "0x" + signature.substr(0, 128) + (parseInt(signature.substr(128), 16) + 27).toString(16);
-  }
-
   it("should successfully submit signature and trigger CollectedSignatures event", function() {
     var meta;
     var signature;
@@ -267,7 +245,7 @@ contract('ForeignBridge', function(accounts) {
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
       return meta.submitSignature(result, message, { from: authorities[0] });
@@ -292,7 +270,7 @@ contract('ForeignBridge', function(accounts) {
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {
@@ -311,10 +289,10 @@ contract('ForeignBridge', function(accounts) {
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return Promise.all([
-        sign(authorities[0], message),
-        sign(authorities[1], message),
-        sign(authorities[0], message2),
-        sign(authorities[1], message2),
+        helpers.sign(authorities[0], message),
+        helpers.sign(authorities[1], message),
+        helpers.sign(authorities[0], message2),
+        helpers.sign(authorities[1], message2),
       ]);
     }).then(function(result) {
       signatures_for_message.push(result[0]);
@@ -365,7 +343,7 @@ contract('ForeignBridge', function(accounts) {
     var message = "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {
@@ -383,7 +361,7 @@ contract('ForeignBridge', function(accounts) {
     var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       return meta.submitSignature(result, message2, { from: authorities[0] });
     }).then(function(result) {
@@ -400,7 +378,7 @@ contract('ForeignBridge', function(accounts) {
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       return meta.submitSignature(result, message, { from: authorities[1] });
     }).then(function(result) {
@@ -417,7 +395,7 @@ contract('ForeignBridge', function(accounts) {
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return sign(authorities[0], message);
+      return helpers.sign(authorities[0], message);
     }).then(function(result) {
       return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {

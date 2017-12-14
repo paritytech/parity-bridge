@@ -143,3 +143,25 @@ checked_withdraw_confirm = 121
 ### withdraw
 
 ![withdraw](./res/withdraw.png)
+
+### truffle tests
+
+#### install
+
+```
+npm install -g truffle
+npm install -g ganache-cli
+```
+
+#### run
+
+start testing ethereum rpc client in one shell:
+```
+ganache-cli
+```
+
+run tests in another shell:
+```
+cd truffle
+truffle test
+```
