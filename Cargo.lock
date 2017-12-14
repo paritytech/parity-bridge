@@ -2127,7 +2127,7 @@ dependencies = [
 [[package]]
 name = "solaris"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/sol-rs?branch=td-solc#f14055da3c4f1dd512202865ca0b56ebc501cd4b"
+source = "git+https://github.com/paritytech/sol-rs?branch=td-fixes#5fc6ecaed0e1ea058b10e0679c2d3f1ac237ee26"
 dependencies = [
  "ethabi 4.1.0 (git+https://github.com/tomusdrw/ethabi.git)",
  "ethcore 1.9.0 (git+https://github.com/paritytech/parity.git?branch=td-evm)",
@@ -2148,14 +2148,14 @@ dependencies = [
  "ethabi-derive 4.1.0 (git+https://github.com/tomusdrw/ethabi.git)",
  "ethereum-types 0.1.0 (git+https://github.com/paritytech/primitives.git)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "solaris 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-solc)",
- "solc 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-solc)",
+ "solaris 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-fixes)",
+ "solc 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-fixes)",
 ]
 
 [[package]]
 name = "solc"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/sol-rs?branch=td-solc#f14055da3c4f1dd512202865ca0b56ebc501cd4b"
+source = "git+https://github.com/paritytech/sol-rs?branch=td-fixes#5fc6ecaed0e1ea058b10e0679c2d3f1ac237ee26"
 
 [[package]]
 name = "spmc"
@@ -2863,8 +2863,8 @@ dependencies = [
 "checksum smallvec 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "44db0ecb22921ef790d17ae13a3f6d15784183ff5f2a01aa32098c7498d2b4b9"
 "checksum snappy 0.1.0 (git+https://github.com/paritytech/parity.git?branch=td-evm)" = "<none>"
 "checksum snappy-sys 0.1.0 (git+https://github.com/paritytech/rust-snappy)" = "<none>"
-"checksum solaris 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-solc)" = "<none>"
-"checksum solc 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-solc)" = "<none>"
+"checksum solaris 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-fixes)" = "<none>"
+"checksum solc 0.1.0 (git+https://github.com/paritytech/sol-rs?branch=td-fixes)" = "<none>"
 "checksum spmc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "cd1f11d1fb5fd41834e55ce0b85a186efbf2f2afd9fdb09e2c8d72f9bff1ad1a"
 "checksum stable_deref_trait 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "15132e0e364248108c5e2c02e3ab539be8d6f5d52a01ca9bbf27ed657316f02b"
 "checksum stats 0.1.0 (git+https://github.com/paritytech/parity.git?branch=td-evm)" = "<none>"

@@ -12,8 +12,8 @@ rustc-hex = "1.0"
 
 [dependencies.solaris]
 git = "https://github.com/paritytech/sol-rs"
-branch = "td-solc"
+branch = "td-fixes"
 
 [build-dependencies.solc]
 git = "https://github.com/paritytech/sol-rs"
-branch = "td-solc"
+branch = "td-fixes"
