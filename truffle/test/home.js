@@ -178,7 +178,7 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
-  it("should not allow second withdraw with same transactionHash but different recipient and value", function() {
+  it("should not allow second withdraw (replay attack) with same transactionHash but different recipient and value", function() {
     var homeBridge;
     var message1;
     var message2;
