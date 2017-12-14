@@ -58,14 +58,17 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
     let result = fns
         .deposit()
-        .transact(user_address, value, transaction_hash, &mut evm)
+        .transact(
+            user_address,
+            value,
+            transaction_hash,
+            evm.with_gas(4_000_000.into())
+        )
         .unwrap();
 
     // let result = evm
     //     .with_sender(authority_addresses[0].clone())
-    //     .with_gas_price(0.into())
-    //     .with_gas(1000000.into())
-    //     .ensure_funds()
+    //     .with_gas(4_000_000.into())
     //     .call(fns.deposit().input(user_address, value, transaction_hash));
 
     println!("result = {:?}", result);
