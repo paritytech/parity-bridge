@@ -16,6 +16,7 @@
     "coveralls": "^3.0.0",
     "ganache-cli": "^6.0.3",
     "solidity-coverage": "^0.4.2",
+    "solium": "^1.0.11",
     "truffle": "^4.0.1"
   },
   "dependencies": {},
@@ -23,6 +24,7 @@
     "ci": "concurrently \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
     "ganache": "ganache-cli -p 8545",
     "solidity-coverage": "solidity-coverage",
+    "solium": "solium --dir contracts/",
     "test": "yarn run truffle-with-rpc",
     "truffle": "truffle test",
     "truffle-with-rpc": "concurrently --success first --kill-others \"yarn run ganache\" \"yarn run truffle\""
