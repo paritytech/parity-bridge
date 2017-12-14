@@ -1,0 +1,19 @@
+[package]
+name = "solaris-testing"
+version = "0.1.0"
+authors = ["Maximilian Krüger <kruemaxi@gmail.com>"]
+
+[dependencies]
+ethabi = { git = "https://github.com/tomusdrw/ethabi.git" }
+ethabi-derive = { git = "https://github.com/tomusdrw/ethabi.git"}
+ethabi-contract = { git = "https://github.com/tomusdrw/ethabi.git"}
+ethereum-types = { git = "https://github.com/paritytech/primitives.git" }
+rustc-hex = "1.0"
+
+[dependencies.solaris]
+git = "https://github.com/paritytech/sol-rs"
+branch = "td-solc"
+
+[build-dependencies.solc]
+git = "https://github.com/paritytech/sol-rs"
+branch = "td-solc"
