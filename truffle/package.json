@@ -21,7 +21,7 @@
   },
   "dependencies": {},
   "scripts": {
-    "ci": "concurrently \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
+    "ci": "concurrently \"yarn run solium\" \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
     "ganache": "ganache-cli -p 8545",
     "solidity-coverage": "solidity-coverage",
     "solium": "solium --dir contracts/",
