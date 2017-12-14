@@ -113,7 +113,8 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message,
-        {from: authorities[0]}
+        // anyone can call withdraw (provided they have the message and required signatures)
+        {from: user_account}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
