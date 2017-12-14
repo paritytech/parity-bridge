@@ -7,25 +7,32 @@ matrix:
   include:
     - language: rust
       rust: stable
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
     - language: rust
       rust: beta
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
     - language: rust
       rust: nightly
+      cache: cargo
       fast_finish: false
       script:
         - cargo test --all
     - language: node_js
       node_js: node
-      before_script: cd truffle
+      cache: yarn
+      before_script:
+        - cd truffle
+        - yarn install
       script:
-        - npm install concurrently truffle ganache-cli
-        - concurrently --success first --kill-others "ganache-cli" "truffle test"
+        - yarn run ci
+      after_script:
+        - cat coverage/lcov.info | yarn run coveralls
 
 env:
   global:

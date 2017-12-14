@@ -1,0 +1,30 @@
+{
+  "name": "parity-bridge",
+  "version": "1.0.0",
+  "description": "Bridge between any two ethereum-based networks",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paritytech/parity-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/paritytech/parity-bridge/issues"
+  },
+  "homepage": "https://github.com/paritytech/parity-bridge",
+  "devDependencies": {
+    "concurrently": "^3.5.1",
+    "coveralls": "^3.0.0",
+    "ganache-cli": "^6.0.3",
+    "solidity-coverage": "^0.4.2",
+    "truffle": "^4.0.1"
+  },
+  "dependencies": {},
+  "scripts": {
+    "ci": "concurrently \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
+    "ganache": "ganache-cli -p 8545",
+    "solidity-coverage": "solidity-coverage",
+    "test": "yarn run truffle-with-rpc",
+    "truffle": "truffle test",
+    "truffle-with-rpc": "concurrently --success first --kill-others \"yarn run ganache\" \"yarn run truffle\""
+  }
+}

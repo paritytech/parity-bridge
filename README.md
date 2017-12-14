@@ -1,9 +1,12 @@
 # bridge
 
 [![Build Status][travis-image]][travis-url]
+[![Solidity Coverage Status][coveralls-image]][coveralls-url] (contracts only)
 
 [travis-image]: https://travis-ci.org/paritytech/parity-bridge.svg?branch=master
 [travis-url]: https://travis-ci.org/paritytech/parity-bridge
+[coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
 Simple bridge between ValidatorSet-based parity chain (foreign) with any other Parity chain (home).
 

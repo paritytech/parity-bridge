@@ -18,3 +18,5 @@
 
 # truffle stuff
 truffle/build
+
+node_modules
