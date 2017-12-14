@@ -48,6 +48,7 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
         .with_sender(contract_owner_address)
         // .with_gas_price(0.into())
         // .with_gas(500000.into())
+        .with_gas(4_000_000.into())
         // .ensure_funds()
         .deploy(&constructor_result)
         .unwrap();
