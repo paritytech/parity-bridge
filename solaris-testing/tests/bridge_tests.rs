@@ -46,10 +46,12 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
     let contract_address = evm
         .with_sender(contract_owner_address)
-        .with_gas_price(0.into())
-        .with_gas(500000.into())
+        // .with_gas_price(0.into())
+        // .with_gas(500000.into())
         // .ensure_funds()
-        .deploy(&constructor_result);
+        .deploy(&constructor_result)
+        .unwrap();
+    println!("deploy complete. contract_address = {:?}", contract_address);
 
     let fns = contract.functions();
 

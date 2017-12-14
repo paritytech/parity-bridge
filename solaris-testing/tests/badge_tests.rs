@@ -17,7 +17,8 @@ fn setup() -> (solaris::evm::Evm, badgereg::BadgeReg) {
     let mut evm = solaris::evm();
 
     let owner = 3.into();
-    let _address = evm.with_sender(owner).deploy(&code.from_hex().unwrap());
+    let address = evm.with_sender(owner).deploy(&code.from_hex().unwrap());
+    println!("deploy complete. contract_address = {:?}", address);
 
     (evm, contract)
 }
