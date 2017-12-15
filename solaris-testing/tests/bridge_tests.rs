@@ -62,7 +62,9 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
             user_address,
             value,
             transaction_hash,
-            evm.with_gas(4_000_000.into())
+            evm
+                .with_sender(authority_addresses[0].clone())
+                .with_gas(4_000_000.into())
         )
         .unwrap();
 
@@ -73,10 +75,15 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
     println!("result = {:?}", result);
 
-	let filter = contract.events().deposit().create_filter();
+	let filter = foreign_bridge::events::Deposit::default().create_filter();
+    assert_eq!(
+        evm.logs(filter).len(),
+        1,
+        "exactly one deposit event should be created");
 
+	let filter = foreign_bridge::events::Deposit::default().create_filter();
     for log in evm.logs(filter) {
-        println!("{:?}", log);
+        println!("log entry = {:?}", log);
     }
 
     // assert_eq!(
