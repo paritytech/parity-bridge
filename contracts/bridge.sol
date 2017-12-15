@@ -2,7 +2,7 @@ pragma solidity ^0.4.15;
 
 
 library Authorities {
-    function contains (address[] self, address value) internal returns (bool) {
+    function contains (address[] self, address value) internal pure returns (bool) {
         for (uint i = 0; i < self.length; i++) {
             if (self[i] == value) {
                 return true;
@@ -15,14 +15,14 @@ library Authorities {
 
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
-    function signer (bytes signature, bytes message) public constant returns (address) {
+    function signer (bytes signature, bytes message) public pure returns (address) {
         return Signer.signer(signature, message);
     }
 }
 
 
 library Utils {
-    function toString (uint256 v) internal returns (string str) {
+    function toString (uint256 v) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
         uint i = 0;
@@ -41,7 +41,7 @@ library Utils {
 
 
 library Signer {
-    function signer (bytes signature, bytes message) internal returns (address) {
+    function signer (bytes signature, bytes message) internal pure returns (address) {
         require(signature.length == 65);
         bytes32 r;
         bytes32 s;
@@ -55,7 +55,7 @@ library Signer {
         return ecrecover(hash(message), uint8(v), r, s);
     }
 
-    function hash (bytes message) internal returns (bytes32) {
+    function hash (bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
         return keccak256(prefix, Utils.toString(message.length), message);
     }
