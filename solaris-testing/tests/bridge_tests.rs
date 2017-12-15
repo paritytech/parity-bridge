@@ -56,22 +56,10 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
     let fns = contract.functions();
 
-    let result = fns
-        .deposit()
-        .transact(
-            user_address,
-            value,
-            transaction_hash,
-            evm
-                .with_sender(authority_addresses[0].clone())
-                .with_gas(4_000_000.into())
-        )
-        .unwrap();
-
-    // let result = evm
-    //     .with_sender(authority_addresses[0].clone())
-    //     .with_gas(4_000_000.into())
-    //     .call(fns.deposit().input(user_address, value, transaction_hash));
+    let result = evm
+        .with_sender(authority_addresses[0].clone())
+        .with_gas(4_000_000.into())
+        .transact(fns.deposit().input(user_address, value, transaction_hash));
 
     println!("result = {:?}", result);
 
