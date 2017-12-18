@@ -95,6 +95,7 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
 	assert_eq!(
 		value,
-		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap())
+		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap()),
+		"balance has now changed to `value`"
 	);
 }
