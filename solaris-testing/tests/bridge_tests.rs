@@ -59,20 +59,20 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	let _contract_address = evm
 		.with_sender(contract_owner_address)
 		.deploy(&constructor_result)
-		.unwrap();
+		.expect("contract deployment should succeed");
 
 	let fns = contract.functions();
 
 	assert_eq!(
 		U256::from(0),
 		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap()),
-		"initial balance is 0"
+		"initial balance should be 0"
 	);
 
 	evm
 		.with_sender(authority_addresses[0].clone())
 		.transact(fns.deposit().input(user_address, value, transaction_hash))
-		.unwrap();
+		.expect("the call to deposit should succeed");
 
 	assert_eq!(
 		evm.logs(None).len(),
@@ -98,6 +98,6 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	assert_eq!(
 		value,
 		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap()),
-		"balance has now changed to `value`"
+		"balance should have changed to `value`"
 	);
 }
