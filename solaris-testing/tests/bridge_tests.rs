@@ -9,7 +9,6 @@ extern crate solaris;
 extern crate ethcore;
 
 use rustc_hex::FromHex;
-use solaris::unit;
 use solaris::sol;
 use ethabi::Caller;
 use types::{U256, H256, Address};
