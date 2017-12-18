@@ -13,8 +13,8 @@ ethcore = { git = "https://github.com/paritytech/parity.git", branch = "td-evm" 
 
 [dependencies.solaris]
 git = "https://github.com/paritytech/sol-rs"
-branch = "td-fixes"
+branch = "snd-logs"
 
 [build-dependencies.solc]
 git = "https://github.com/paritytech/sol-rs"
-branch = "td-fixes"
+branch = "snd-logs"

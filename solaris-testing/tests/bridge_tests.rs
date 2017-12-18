@@ -32,7 +32,6 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
     let authority_addresses = vec![
         sol::address(10),
         sol::address(11),
-        // sol::address(12),
     ];
 
     let required_signatures: U256 = 1.into();
@@ -52,13 +51,9 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
     let contract_address = evm
         .with_sender(contract_owner_address)
-        // .with_gas_price(0.into())
-        // .with_gas(500000.into())
         .with_gas(4_000_000.into())
-        // .ensure_funds()
         .deploy(&constructor_result)
         .unwrap();
-    println!("deploy complete. contract_address = {:?}", contract_address);
 
     let fns = contract.functions();
 
@@ -67,9 +62,6 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
         .with_gas(4_000_000.into())
         .transact(fns.deposit().input(user_address, value, transaction_hash));
 
-    println!("result = {:?}", result);
-
-	let filter = foreign_bridge::events::Deposit::default().create_filter();
     assert_eq!(
         evm.logs(filter).len(),
         1,
