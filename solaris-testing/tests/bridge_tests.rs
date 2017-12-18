@@ -15,6 +15,20 @@ use types::{U256, H256, Address};
 
 use_contract!(foreign_bridge, "ForeignBridge", "contracts/bridge_sol_ForeignBridge.abi");
 
+enum Unit {
+	Wei,
+	Ether
+}
+
+impl Unit {
+	pub fn to_wei(&self, value_in_unit: U256) -> U256 {
+		match *self {
+			Unit::Wei => value_in_unit,
+			Unit::Ether => value_in_unit * 1000000000000000000u64.into(),
+		}
+	}
+}
+
 fn log_entry_to_raw_log(log_entry: &ethcore::log_entry::LogEntry) -> ethabi::RawLog {
 	let topics: Vec<ethabi::Hash> = log_entry.topics.iter().map(|x| x.0).collect();
 	ethabi::RawLog::from((topics, log_entry.data.clone()))
@@ -45,8 +59,7 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	);
 
 	let transaction_hash: H256 = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408".into();
-	// TODO ether to wei
-	let value: U256 = 1.into();
+	let value: U256 = Unit::Ether.to_wei(1.into());
 
 	let contract_address = evm
 		.with_sender(contract_owner_address)
