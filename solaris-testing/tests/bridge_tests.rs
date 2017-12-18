@@ -80,13 +80,22 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 		.unwrap();
 
 	assert_eq!(
-		evm.logs().len(),
+		evm.logs(None).len(),
 		1,
 		"exactly one event should be created");
 
-	let log_entry = &evm.logs()[0];
-	let raw_log = log_entry_to_raw_log(log_entry);
-	let deposit_log = contract.events().deposit().parse_log(raw_log)
+	assert_eq!(
+		evm.logs(contract.events().deposit().create_filter()).len(),
+		1,
+		"exactly one deposit event should be created");
+
+	assert_eq!(
+		evm.logs(contract.events().withdraw().create_filter()).len(),
+		0,
+		"no withdraw event should be created");
+
+	let log = evm.logs(None).pop().expect("there must be at least 1 event");
+	let deposit_log = contract.events().deposit().parse_log(log)
 		.expect("the event should be a deposit event");
 	assert_eq!(Address::from(deposit_log.recipient), user_address);
 	assert_eq!(U256::from(deposit_log.value), value);
