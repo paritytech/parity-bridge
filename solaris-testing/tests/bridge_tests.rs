@@ -61,7 +61,7 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	let transaction_hash: H256 = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408".into();
 	let value: U256 = Unit::Ether.to_wei(1.into());
 
-	let contract_address = evm
+	let _contract_address = evm
 		.with_sender(contract_owner_address)
 		.with_gas(4_000_000.into())
 		.deploy(&constructor_result)
