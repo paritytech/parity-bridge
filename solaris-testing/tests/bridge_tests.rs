@@ -29,11 +29,6 @@ impl Unit {
 	}
 }
 
-fn log_entry_to_raw_log(log_entry: &ethcore::log_entry::LogEntry) -> ethabi::RawLog {
-	let topics: Vec<ethabi::Hash> = log_entry.topics.iter().map(|x| x.0).collect();
-	ethabi::RawLog::from((topics, log_entry.data.clone()))
-}
-
 #[test]
 fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	let contract = foreign_bridge::ForeignBridge::default();
