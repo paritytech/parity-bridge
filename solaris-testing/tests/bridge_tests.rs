@@ -69,6 +69,12 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
 	let fns = contract.functions();
 
+	assert_eq!(
+		U256::from(0),
+		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap()),
+		"initial balance is 0"
+	);
+
 	evm
 		.with_sender(authority_addresses[0].clone())
 		.with_gas(4_000_000.into())
@@ -86,4 +92,9 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 		.expect("the event should be a deposit event");
 	assert_eq!(Address::from(deposit_log.recipient), user_address);
 	assert_eq!(U256::from(deposit_log.value), value);
+
+	assert_eq!(
+		value,
+		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap())
+	);
 }
