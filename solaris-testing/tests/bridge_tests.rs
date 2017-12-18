@@ -69,10 +69,11 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
 	let fns = contract.functions();
 
-	let result = evm
+	evm
 		.with_sender(authority_addresses[0].clone())
 		.with_gas(4_000_000.into())
-		.transact(fns.deposit().input(user_address, value, transaction_hash));
+		.transact(fns.deposit().input(user_address, value, transaction_hash))
+		.unwrap();
 
 	assert_eq!(
 		evm.logs().len(),
