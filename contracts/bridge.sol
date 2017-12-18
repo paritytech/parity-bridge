@@ -1,7 +1,8 @@
 pragma solidity ^0.4.15;
 
+
 library Authorities {
-    function contains (address[] self, address value) internal returns (bool) {
+    function contains (address[] self, address value) internal pure returns (bool) {
         for (uint i = 0; i < self.length; i++) {
             if (self[i] == value) {
                 return true;
@@ -11,15 +12,17 @@ library Authorities {
     }
 }
 
+
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
-    function signer (bytes signature, bytes message) constant returns (address) {
+    function signer (bytes signature, bytes message) public pure returns (address) {
         return Signer.signer(signature, message);
     }
 }
 
+
 library Utils {
-    function toString (uint256 v) internal returns (string str) {
+    function toString (uint256 v) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
         uint i = 0;
@@ -36,12 +39,14 @@ library Utils {
     }
 }
 
+
 library Signer {
-    function signer (bytes signature, bytes message) internal returns (address) {
+    function signer (bytes signature, bytes message) internal pure returns (address) {
         require(signature.length == 65);
         bytes32 r;
         bytes32 s;
         bytes1 v;
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             r := mload(add(signature, 0x20))
             s := mload(add(signature, 0x40))
@@ -50,11 +55,12 @@ library Signer {
         return ecrecover(hash(message), uint8(v), r, s);
     }
 
-    function hash (bytes message) internal returns (bytes32) {
+    function hash (bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        return sha3(prefix, Utils.toString(message.length), message);
+        return keccak256(prefix, Utils.toString(message.length), message);
     }
 }
+
 
 contract HomeBridge {
     using Authorities for address[];
@@ -93,7 +99,7 @@ contract HomeBridge {
     }
 
     /// Constructor.
-    function HomeBridge (uint n, address[] a) {
+    function HomeBridge (uint n, address[] a) public {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -101,7 +107,7 @@ contract HomeBridge {
     }
 
     /// Should be used to deposit money.
-    function () payable {
+    function () public payable {
         Deposit(msg.sender, msg.value);
     }
 
@@ -114,11 +120,12 @@ contract HomeBridge {
     ///
     /// NOTE that anyone can call withdraw provided they have the
     /// message and required signatures!
-    function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) allAuthorities(v, r, s, message) {
+    function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
         address recipient;
         uint value;
         bytes32 hash;
+        // solium-disable-next-line security/no-inline-assembly
         assembly {
             // layout of message :: bytes:
             // offset  0: 32 bytes :: uint (little endian) - message length
@@ -151,6 +158,7 @@ contract HomeBridge {
         Withdraw(recipient, value);
     }
 }
+
 
 contract ForeignBridge {
     using Authorities for address[];
@@ -194,7 +202,7 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) {
+    function ForeignBridge(uint n, address[] a) public {
         require(n != 0);
         require(n <= a.length);
         requiredSignatures = n;
@@ -212,9 +220,9 @@ contract ForeignBridge {
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
-    function deposit (address recipient, uint value, bytes32 transactionHash) onlyAuthority() {
+    function deposit (address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
         // Protection from misbehaing authority
-        var hash = sha3(recipient, value, transactionHash);
+        var hash = keccak256(recipient, value, transactionHash);
 
         // Duplicated deposits
         require(!deposits[hash].contains(msg.sender));
@@ -228,7 +236,7 @@ contract ForeignBridge {
     }
 
     /// Used to transfer money between accounts
-    function transfer (address recipient, uint value, bool externalTransfer) {
+    function transfer (address recipient, uint value, bool externalTransfer) public {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
@@ -250,13 +258,13 @@ contract ForeignBridge {
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
-    function submitSignature (bytes signature, bytes message) onlyAuthority() {
+    function submitSignature (bytes signature, bytes message) public onlyAuthority() {
         // Validate submited signatures
         require(Signer.signer(signature, message) == msg.sender);
 
         // Valid withdraw message must have 84 bytes
         require(message.length == 84);
-        var hash = sha3(message);
+        var hash = keccak256(message);
 
         // Duplicated signatures
         require(!signatures[hash].signed.contains(msg.sender));
@@ -271,12 +279,12 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature (bytes32 hash, uint index) constant returns (bytes) {
+    function signature (bytes32 hash, uint index) public constant returns (bytes) {
         return signatures[hash].signatures[index];
     }
 
     /// Get message
-    function message (bytes32 hash) constant returns (bytes) {
+    function message (bytes32 hash) public constant returns (bytes) {
         return signatures[hash].message;
     }
 }
