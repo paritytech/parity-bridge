@@ -6,6 +6,13 @@ before_install:
   - nvm install 8
   - npm install -g solc
 
+addons:
+  apt:
+    packages:
+      - libudev-dev
+      - libssl-dev
+      - pkg-config
+
 matrix:
   include:
     - language: rust
