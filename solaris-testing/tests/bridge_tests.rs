@@ -6,6 +6,7 @@ extern crate ethabi_contract;
 extern crate ethereum_types as types;
 extern crate rustc_hex;
 extern crate solaris;
+extern crate ethcore;
 
 use rustc_hex::FromHex;
 use solaris::unit;
@@ -14,6 +15,11 @@ use ethabi::Caller;
 use types::{U256, H256, Address};
 
 use_contract!(foreign_bridge, "ForeignBridge", "contracts/bridge_sol_ForeignBridge.abi");
+
+fn log_entry_to_raw_log(log_entry: &ethcore::log_entry::LogEntry) -> ethabi::RawLog {
+    let topics: Vec<ethabi::Hash> = log_entry.topics.iter().map(|x| x.0).collect();
+    ethabi::RawLog::from((topics, log_entry.data.clone()))
+}
 
 #[test]
 fn should_allow_a_single_authority_to_confirm_a_deposit() {
