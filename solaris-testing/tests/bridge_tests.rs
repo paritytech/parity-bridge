@@ -63,7 +63,6 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
 	let _contract_address = evm
 		.with_sender(contract_owner_address)
-		.with_gas(4_000_000.into())
 		.deploy(&constructor_result)
 		.unwrap();
 
@@ -77,7 +76,6 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 
 	evm
 		.with_sender(authority_addresses[0].clone())
-		.with_gas(4_000_000.into())
 		.transact(fns.deposit().input(user_address, value, transaction_hash))
 		.unwrap();
 
