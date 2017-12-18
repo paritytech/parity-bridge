@@ -9,6 +9,7 @@ ethabi-derive = { git = "https://github.com/tomusdrw/ethabi.git"}
 ethabi-contract = { git = "https://github.com/tomusdrw/ethabi.git"}
 ethereum-types = { git = "https://github.com/paritytech/primitives.git" }
 rustc-hex = "1.0"
+ethcore = { git = "https://github.com/paritytech/parity.git", branch = "td-evm" }
 
 [dependencies.solaris]
 git = "https://github.com/paritytech/sol-rs"
