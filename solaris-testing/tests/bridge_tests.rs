@@ -7,27 +7,13 @@ extern crate ethereum_types as types;
 extern crate rustc_hex;
 extern crate solaris;
 extern crate ethcore;
+extern crate ethkey;
 
 use rustc_hex::FromHex;
-use solaris::sol;
 use ethabi::Caller;
 use types::{U256, H256, Address};
 
 use_contract!(foreign_bridge, "ForeignBridge", "contracts/bridge_sol_ForeignBridge.abi");
-
-enum Unit {
-	Wei,
-	Ether
-}
-
-impl Unit {
-	pub fn to_wei(&self, value_in_unit: U256) -> U256 {
-		match *self {
-			Unit::Wei => value_in_unit,
-			Unit::Ether => value_in_unit * 1000000000000000000u64.into(),
-		}
-	}
-}
 
 #[test]
 fn should_allow_a_single_authority_to_confirm_a_deposit() {
@@ -38,8 +24,8 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	let mut evm = solaris::evm();
 
 	let authority_addresses = vec![
-		sol::address(10),
-		sol::address(11),
+		Address::from(10),
+		Address::from(11),
 	];
 
 	let required_signatures: U256 = 1.into();
@@ -54,7 +40,7 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 	);
 
 	let transaction_hash: H256 = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408".into();
-	let value: U256 = Unit::Ether.to_wei(1.into());
+	let value: U256 = solaris::wei::from_ether(1);
 
 	let _contract_address = evm
 		.with_sender(contract_owner_address)
