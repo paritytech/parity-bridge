@@ -142,6 +142,14 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 	let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
 	println!("signature = {}", signature);
 
+	let signature_bytes = signature_to_bytes(&signature);
+	assert_eq!(signature_bytes.len(), 65);
+
+	assert_eq!(
+		ethkey::recover(&signature, &message_bytes_to_message(&message)).unwrap(),
+		*authority_keypairs[0].public()
+	);
+
 	let constructor_result = contract.constructor(
 		code_bytes,
 		required_signatures,
@@ -159,6 +167,6 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	evm
 		.with_sender(authority_addresses[0].clone())
-		.transact(fns.submit_signature().input(signature_to_bytes(&signature), message))
+		.transact(fns.submit_signature().input(signature_bytes, message))
 		.expect("the call to submit_signature should succeed");
 }
