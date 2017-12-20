@@ -4,6 +4,7 @@ use web3::Transport;
 use web3::confirm::SendTransactionWithConfirmation;
 use web3::types::{TransactionRequest};
 use app::App;
+use authorities::{fetch_authorities, FetchAuthorities};
 use database::Database;
 use error::{Error, ErrorKind};
 use {api, ethabi};
@@ -17,6 +18,7 @@ pub enum Deployed {
 
 enum DeployState<T: Transport + Clone> {
 	CheckIfNeeded,
+	FetchAuthorities(FetchAuthorities<T>),
 	Deploying(future::Join<SendTransactionWithConfirmation<T>, SendTransactionWithConfirmation<T>>),
 }
 
@@ -41,57 +43,59 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 			let next_state = match self.state {
 				DeployState::CheckIfNeeded => match Database::load(&self.app.database_path).map_err(ErrorKind::from) {
 					Ok(database) => return Ok(Deployed::Existing(database).into()),
-					Err(ErrorKind::MissingFile(_)) => {
-						let main_data = self.app.home_bridge.constructor(
-							self.app.config.home.contract.bin.clone().0,
-							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
-						);
-						let test_data = self.app.foreign_bridge.constructor(
-							self.app.config.foreign.contract.bin.clone().0,
-							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
-						);
-
-						let main_tx_request = TransactionRequest {
-							from: self.app.config.home.account,
-							to: None,
-							gas: Some(self.app.config.txs.home_deploy.gas.into()),
-							gas_price: Some(self.app.config.txs.home_deploy.gas_price.into()),
-							value: None,
-							data: Some(main_data.into()),
-							nonce: None,
-							condition: None,
-						};
-
-						let test_tx_request = TransactionRequest {
-							from: self.app.config.foreign.account,
-							to: None,
-							gas: Some(self.app.config.txs.foreign_deploy.gas.into()),
-							gas_price: Some(self.app.config.txs.foreign_deploy.gas_price.into()),
-							value: None,
-							data: Some(test_data.into()),
-							nonce: None,
-							condition: None,
-						};
-
-						let main_future = api::send_transaction_with_confirmation(
-							self.app.connections.home.clone(),
-							main_tx_request,
-							self.app.config.home.poll_interval,
-							self.app.config.home.required_confirmations
-						);
-
-						let test_future = api::send_transaction_with_confirmation(
-							self.app.connections.foreign.clone(),
-							test_tx_request,
-							self.app.config.foreign.poll_interval,
-							self.app.config.foreign.required_confirmations
-						);
-
-						DeployState::Deploying(main_future.join(test_future))
-					},
+					Err(ErrorKind::MissingFile(_)) => DeployState::FetchAuthorities(fetch_authorities(self.app.clone())),
 					Err(err) => return Err(err.into()),
+				},
+				DeployState::FetchAuthorities(ref mut future) => {
+					let authorities = try_ready!(future.poll());
+					let main_data = self.app.home_bridge.constructor(
+						self.app.config.home.contract.bin.clone().0,
+						ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+						authorities.clone().into_iter().map(|a| a.0).collect::<Vec<_>>(),
+					);
+					let test_data = self.app.foreign_bridge.constructor(
+						self.app.config.foreign.contract.bin.clone().0,
+						ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+						authorities.into_iter().map(|a| a.0).collect::<Vec<_>>(),
+					);
+
+					let main_tx_request = TransactionRequest {
+						from: self.app.config.home.account,
+						to: None,
+						gas: Some(self.app.config.txs.home_deploy.gas.into()),
+						gas_price: Some(self.app.config.txs.home_deploy.gas_price.into()),
+						value: None,
+						data: Some(main_data.into()),
+						nonce: None,
+						condition: None,
+					};
+
+					let test_tx_request = TransactionRequest {
+						from: self.app.config.foreign.account,
+						to: None,
+						gas: Some(self.app.config.txs.foreign_deploy.gas.into()),
+						gas_price: Some(self.app.config.txs.foreign_deploy.gas_price.into()),
+						value: None,
+						data: Some(test_data.into()),
+						nonce: None,
+						condition: None,
+					};
+
+					let main_future = api::send_transaction_with_confirmation(
+						self.app.connections.home.clone(),
+						main_tx_request,
+						self.app.config.home.poll_interval,
+						self.app.config.home.required_confirmations
+					);
+
+					let test_future = api::send_transaction_with_confirmation(
+						self.app.connections.foreign.clone(),
+						test_tx_request,
+						self.app.config.foreign.poll_interval,
+						self.app.config.foreign.required_confirmations
+					);
+
+					DeployState::Deploying(main_future.join(test_future))
 				},
 				DeployState::Deploying(ref mut future) => {
 					let (main_receipt, test_receipt) = try_ready!(future.poll().map_err(ErrorKind::Web3));

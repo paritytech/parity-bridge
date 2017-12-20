@@ -38,7 +38,7 @@ impl Config {
 			home: Node::from_load_struct(config.home)?,
 			foreign: Node::from_load_struct(config.foreign)?,
 			authorities: Authorities {
-				accounts: config.authorities.accounts,
+				source: AuthoritiesSource::from_load_struct(config.authorities.source),
 				required_signatures: config.authorities.required_signatures,
 			},
 			txs: config.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
@@ -123,8 +123,27 @@ pub struct ContractConfig {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Authorities {
-	pub accounts: Vec<Address>,
+	pub source: AuthoritiesSource,
 	pub required_signatures: u32,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum AuthoritiesSource {
+	/// Authorities source defined as a list of accounts.
+	Accounts(Vec<Address>),
+	/// Address of the `ValidatorSet` contract used to fetch authorities.
+	///
+	/// https://github.com/paritytech/parity/wiki/Validator-Set
+	ValidatorSet(Address),
+}
+
+impl AuthoritiesSource {
+	fn from_load_struct(cfg: load::AuthoritiesSource) -> Self {
+		match cfg {
+			load::AuthoritiesSource::Accounts(accounts) => AuthoritiesSource::Accounts(accounts),
+			load::AuthoritiesSource::ValidatorSet(address) => AuthoritiesSource::ValidatorSet(address),
+		}
+	}
 }
 
 /// Some config values may not be defined in `toml` file, but they should be specified at runtime.
@@ -180,8 +199,18 @@ mod load {
 	#[derive(Deserialize)]
 	#[serde(deny_unknown_fields)]
 	pub struct Authorities {
-		pub accounts: Vec<Address>,
+		pub source: AuthoritiesSource,
 		pub required_signatures: u32,
+	}
+
+	#[derive(Deserialize)]
+	#[serde(deny_unknown_fields)]
+	#[serde(tag = "type", content = "value")]
+	pub enum AuthoritiesSource {
+		#[serde(rename = "accounts")]
+		Accounts(Vec<Address>),
+		#[serde(rename = "validator_set")]
+		ValidatorSet(Address),
 	}
 }
 
@@ -189,7 +218,7 @@ mod load {
 mod tests {
 	use std::time::Duration;
 	use rustc_hex::FromHex;
-	use super::{Config, Node, ContractConfig, Transactions, Authorities, TransactionConfig};
+	use super::{Config, Node, ContractConfig, Transactions, Authorities, TransactionConfig, AuthoritiesSource};
 
 	#[test]
 	fn load_full_setup_from_str() {
@@ -211,12 +240,15 @@ ipc = "/foreign.ipc"
 bin = "../contracts/ForeignBridge.bin"
 
 [authorities]
-accounts = [
+required_signatures = 2
+
+[authorities.source]
+type = "accounts"
+value = [
 	"0x0000000000000000000000000000000000000001",
 	"0x0000000000000000000000000000000000000002",
 	"0x0000000000000000000000000000000000000003"
 ]
-required_signatures = 2
 
 [transactions]
 home_deploy = { gas = 20 }
@@ -245,11 +277,11 @@ home_deploy = { gas = 20 }
 				required_confirmations: 12,
 			},
 			authorities: Authorities {
-				accounts: vec![
+				source: AuthoritiesSource::Accounts(vec![
 					"0x0000000000000000000000000000000000000001".parse().unwrap(),
 					"0x0000000000000000000000000000000000000002".parse().unwrap(),
 					"0x0000000000000000000000000000000000000003".parse().unwrap(),
-				],
+				]),
 				required_signatures: 2,
 			}
 		};
@@ -281,12 +313,15 @@ ipc = ""
 bin = "../contracts/ForeignBridge.bin"
 
 [authorities]
-accounts = [
+required_signatures = 2
+
+[authorities.source]
+type = "accounts"
+value = [
 	"0x0000000000000000000000000000000000000001",
 	"0x0000000000000000000000000000000000000002",
 	"0x0000000000000000000000000000000000000003"
 ]
-required_signatures = 2
 "#;
 		let expected = Config {
 			txs: Transactions::default(),
@@ -311,11 +346,11 @@ required_signatures = 2
 				required_confirmations: 12,
 			},
 			authorities: Authorities {
-				accounts: vec![
+				source: AuthoritiesSource::Accounts(vec![
 					"0x0000000000000000000000000000000000000001".parse().unwrap(),
 					"0x0000000000000000000000000000000000000002".parse().unwrap(),
 					"0x0000000000000000000000000000000000000003".parse().unwrap(),
-				],
+				]),
 				required_signatures: 2,
 			}
 		};
