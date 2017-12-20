@@ -8,10 +8,13 @@ extern crate rustc_hex;
 extern crate solaris;
 extern crate ethcore;
 extern crate ethkey;
+extern crate sha3;
 
 use rustc_hex::FromHex;
 use ethabi::Caller;
 use types::{U256, H256, Address};
+use ethkey::Generator;
+use sha3::{Digest, Sha3_256};
 
 use_contract!(foreign_bridge, "ForeignBridge", "contracts/bridge_sol_ForeignBridge.abi");
 
@@ -86,4 +89,76 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 		U256::from(&*evm.call(fns.balances().input(user_address)).unwrap()),
 		"balance should have changed to `value`"
 	);
+}
+
+// TODO [snd] better name
+fn message_bytes_to_message(message_bytes: &[u8]) -> ethkey::Message {
+	let mut hasher = Sha3_256::default();
+	let prefix = "\u{0019}Ethereum Signed Message:\n";
+	hasher.input(prefix.as_bytes());
+	hasher.input(message_bytes.len().to_string().as_bytes());
+	hasher.input(message_bytes);
+	let result = hasher.result();
+	(&*result).into()
+}
+
+fn sign(
+	secret: &ethkey::Secret,
+	message_bytes: &[u8]
+) -> Result<ethkey::Signature, ethkey::Error> {
+	ethkey::sign(secret, &message_bytes_to_message(message_bytes))
+}
+
+fn signature_to_bytes(signature: ethkey::Signature) -> Vec<u8> {
+	let signature: [u8; 65] = signature.into();
+	let mut result = Vec::new();
+	result.extend_from_slice(&signature[..]);
+	result
+}
+
+#[test]
+fn should_successfully_submit_signature_and_trigger_collected_signatures_event() {
+	let contract = foreign_bridge::ForeignBridge::default();
+	let code_hex = include_str!("../contracts/bridge_sol_ForeignBridge.bin");
+	let code_bytes = code_hex.from_hex().unwrap();
+
+	let mut evm = solaris::evm();
+
+	let authority_keypairs = vec![
+		ethkey::Random.generate().unwrap(),
+		ethkey::Random.generate().unwrap(),
+	];
+
+	let authority_addresses: Vec<Address> = authority_keypairs
+		.iter()
+		.map(|keypair| keypair.address().0.into())
+		.collect();
+
+	let required_signatures: U256 = 1.into();
+
+	let message = "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111".from_hex().unwrap();
+	assert_eq!(message.len(), 84);
+
+	let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
+	println!("signature = {}", signature);
+
+	let constructor_result = contract.constructor(
+		code_bytes,
+		required_signatures,
+		authority_addresses.iter().cloned()
+	);
+
+	let contract_owner_address: Address = 3.into();
+
+	let _contract_address = evm
+		.with_sender(contract_owner_address)
+		.deploy(&constructor_result)
+		.expect("contract deployment should succeed");
+
+	let fns = contract.functions();
+
+	evm
+		.with_sender(authority_addresses[0].clone())
+		.transact(fns.submit_signature().input(signature_to_bytes(signature), message))
+		.expect("the call to submit_signature should succeed");
 }
