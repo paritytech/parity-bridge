@@ -109,10 +109,10 @@ fn sign(
 	ethkey::sign(secret, &message_bytes_to_message(message_bytes))
 }
 
-fn signature_to_bytes(signature: ethkey::Signature) -> Vec<u8> {
-	let signature: [u8; 65] = signature.into();
+fn signature_to_bytes(signature: &ethkey::Signature) -> Vec<u8> {
+	let signature: &[u8; 65] = &*signature;
 	let mut result = Vec::new();
-	result.extend_from_slice(&signature[..]);
+	result.extend_from_slice(signature);
 	result
 }
 
@@ -159,6 +159,6 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	evm
 		.with_sender(authority_addresses[0].clone())
-		.transact(fns.submit_signature().input(signature_to_bytes(signature), message))
+		.transact(fns.submit_signature().input(signature_to_bytes(&signature), message))
 		.expect("the call to submit_signature should succeed");
 }
