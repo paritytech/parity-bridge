@@ -10,6 +10,8 @@ ethabi-contract = { git = "https://github.com/tomusdrw/ethabi.git"}
 ethereum-types = { git = "https://github.com/paritytech/primitives.git" }
 rustc-hex = "1.0"
 ethcore = { git = "https://github.com/paritytech/parity.git", branch = "td-evm" }
+ethkey = { git = "https://github.com/paritytech/parity.git", branch = "td-evm" }
+sha3 = "0.7.2"
 
 [dependencies.solaris]
 git = "https://github.com/paritytech/sol-rs"
