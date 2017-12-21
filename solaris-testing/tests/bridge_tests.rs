@@ -154,11 +154,11 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 	assert_eq!(message.len(), 84);
 
 	// let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
-	let signature = ethkey::Signature::from_str("b53a26fd5e03fa450bd065809702a5655660de5046390e460fa3ac578a915ac7381a31c53237aedb438cbb37c3c5c32b715ad1e9c13ffbe08f06a5692951145f1b").unwrap();
-	println!("signature = {}", signature);
+	let truffle_signature = ethkey::Signature::from_str("b53a26fd5e03fa450bd065809702a5655660de5046390e460fa3ac578a915ac7381a31c53237aedb438cbb37c3c5c32b715ad1e9c13ffbe08f06a5692951145f1b").unwrap();
+	println!("truffle_signature = {}", truffle_signature);
 
-	let signature_bytes = signature_to_bytes(&signature);
-	assert_eq!(signature_bytes.len(), 65);
+	let truffle_signature_bytes = signature_to_bytes(&truffle_signature);
+	assert_eq!(truffle_signature_bytes.len(), 65);
 
 	// assert_eq!(
 	// 	ethkey::recover(&signature, &message_bytes_to_message(&message)).unwrap(),
@@ -182,7 +182,7 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	let signer = evm
 		.with_sender(authority_address.clone())
-		.call(fns.get_signer().input(signature_bytes.clone(), message.clone()))
+		.call(fns.get_signer().input(truffle_signature_bytes.clone(), message.clone()))
 		.unwrap();
 
     let signer_address: Address = signer.as_slice()[12..].into();
@@ -194,6 +194,6 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	evm
 		.with_sender(authority_address.clone())
-		.transact(fns.submit_signature().input(signature_bytes, message))
+		.transact(fns.submit_signature().input(truffle_signature_bytes, message))
 		.expect("the call to submit_signature should succeed");
 }
