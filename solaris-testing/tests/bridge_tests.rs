@@ -15,6 +15,7 @@ use ethabi::Caller;
 use types::{U256, H256, Address};
 use ethkey::Generator;
 use sha3::{Digest, Sha3_256};
+use std::str::FromStr;
 
 use_contract!(foreign_bridge, "ForeignBridge", "contracts/bridge_sol_ForeignBridge.abi");
 
@@ -94,8 +95,11 @@ fn should_allow_a_single_authority_to_confirm_a_deposit() {
 // TODO [snd] better name
 fn message_bytes_to_message(message_bytes: &[u8]) -> ethkey::Message {
 	let mut hasher = Sha3_256::default();
-	let prefix = "\u{0019}Ethereum Signed Message:\n";
+	let prefix = "\x19Ethereum Signed Message:\n";
 	hasher.input(prefix.as_bytes());
+	println!("message_bytes: `{}`, `{:?}`",
+		message_bytes.len().to_string(),
+		message_bytes.len().to_string().as_bytes());
 	hasher.input(message_bytes.len().to_string().as_bytes());
 	hasher.input(message_bytes);
 	let result = hasher.result();
@@ -116,6 +120,10 @@ fn signature_to_bytes(signature: &ethkey::Signature) -> Vec<u8> {
 	result
 }
 
+fn convert_address(legacy: ethkey::Address) -> Address {
+	legacy.0.into()
+}
+
 #[test]
 fn should_successfully_submit_signature_and_trigger_collected_signatures_event() {
 	let contract = foreign_bridge::ForeignBridge::default();
@@ -123,6 +131,12 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 	let code_bytes = code_hex.from_hex().unwrap();
 
 	let mut evm = solaris::evm();
+
+	let secret = ethkey::Secret::from_str("f4145b06f5f808c2e5ac86f435692ac4e4bdee06b3ec2030b8b66a25cea2e786").unwrap();
+	secret.check_validity().unwrap();
+
+	let keypair = ethkey::KeyPair::from_secret(secret).unwrap();
+	let authority_address = convert_address(keypair.address());
 
 	let authority_keypairs = vec![
 		ethkey::Random.generate().unwrap(),
@@ -139,16 +153,17 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 	let message = "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111".from_hex().unwrap();
 	assert_eq!(message.len(), 84);
 
-	let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
+	// let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
+	let signature = ethkey::Signature::from_str("b53a26fd5e03fa450bd065809702a5655660de5046390e460fa3ac578a915ac7381a31c53237aedb438cbb37c3c5c32b715ad1e9c13ffbe08f06a5692951145f1b").unwrap();
 	println!("signature = {}", signature);
 
 	let signature_bytes = signature_to_bytes(&signature);
 	assert_eq!(signature_bytes.len(), 65);
 
-	assert_eq!(
-		ethkey::recover(&signature, &message_bytes_to_message(&message)).unwrap(),
-		*authority_keypairs[0].public()
-	);
+	// assert_eq!(
+	// 	ethkey::recover(&signature, &message_bytes_to_message(&message)).unwrap(),
+	// 	*authority_keypairs[0].public()
+	// );
 
 	let constructor_result = contract.constructor(
 		code_bytes,
@@ -165,8 +180,20 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	let fns = contract.functions();
 
+	let signer = evm
+		.with_sender(authority_address.clone())
+		.call(fns.get_signer().input(signature_bytes.clone(), message.clone()))
+		.unwrap();
+
+    let signer_address: Address = signer.as_slice()[12..].into();
+
+	println!("authority_address = {:?}", authority_address);
+	println!("signer = {:?}", signer_address);
+
+	assert_eq!(authority_address, signer_address);
+
 	evm
-		.with_sender(authority_addresses[0].clone())
+		.with_sender(authority_address.clone())
 		.transact(fns.submit_signature().input(signature_bytes, message))
 		.expect("the call to submit_signature should succeed");
 }
