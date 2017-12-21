@@ -168,7 +168,7 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 	let constructor_result = contract.constructor(
 		code_bytes,
 		required_signatures,
-		authority_addresses.iter().cloned()
+		vec![authority_address.clone()]
 	);
 
 	let contract_owner_address: Address = 3.into();
