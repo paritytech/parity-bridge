@@ -155,6 +155,7 @@ fn should_successfully_submit_signature_and_trigger_collected_signatures_event()
 
 	// let signature = sign(&authority_keypairs[0].secret(), &message).unwrap();
 	let truffle_signature = ethkey::Signature::from_str("b53a26fd5e03fa450bd065809702a5655660de5046390e460fa3ac578a915ac7381a31c53237aedb438cbb37c3c5c32b715ad1e9c13ffbe08f06a5692951145f1b").unwrap();
+	assert!(truffle_signature.is_valid());
 	println!("truffle_signature = {}", truffle_signature);
 
 	let truffle_signature_bytes = signature_to_bytes(&truffle_signature);
