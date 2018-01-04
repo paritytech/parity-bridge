@@ -146,22 +146,9 @@ checked_withdraw_confirm = 121
 
 ### truffle tests
 
-#### install
+[requires yarn to be installed](https://yarnpkg.com/lang/en/docs/install/)
 
-```
-npm install -g truffle
-npm install -g ganache-cli
-```
-
-#### run
-
-start testing ethereum rpc client in one shell:
-```
-ganache-cli
-```
-
-run tests in another shell:
 ```
 cd truffle
-truffle test
+yarn test
 ```
