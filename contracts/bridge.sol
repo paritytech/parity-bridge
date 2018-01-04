@@ -205,11 +205,14 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) public {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function ForeignBridge(
+        uint requiredSignaturesParam,
+        address[] authoritiesParam
+    ) public {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
     }
 
     /// Multisig authority validation
