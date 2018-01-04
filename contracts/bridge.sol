@@ -110,7 +110,8 @@ contract HomeBridge {
         uint requiredSignaturesParam,
         address[] authoritiesParam,
         uint estimatedGasCostOfWithdrawParam
-    ) public {
+    ) public
+    {
         require(requiredSignaturesParam != 0);
         require(requiredSignaturesParam <= authoritiesParam.length);
         requiredSignatures = requiredSignaturesParam;
@@ -216,7 +217,8 @@ contract ForeignBridge {
     function ForeignBridge(
         uint requiredSignaturesParam,
         address[] authoritiesParam
-    ) public {
+    ) public
+    {
         require(requiredSignaturesParam != 0);
         require(requiredSignaturesParam <= authoritiesParam.length);
         requiredSignatures = requiredSignaturesParam;
