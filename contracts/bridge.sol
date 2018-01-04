@@ -155,7 +155,7 @@ contract HomeBridge {
         // Duplicated withdraw
         require(!withdraws[hash]);
 
-        // Order of operations below is critical to avoid TheDAO-like bug
+        // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
         recipient.transfer(value);
         Withdraw(recipient, value);
