@@ -70,6 +70,13 @@ contract HomeBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
+    /// The gas cost of calling `HomeBridge.withdraw`.
+    ///
+    /// Is subtracted from `value` on withdraw.
+    /// recipient pays the relaying authority for withdraw.
+    /// this shuts down attacks that exhaust authorities funds on home chain.
+    uint public estimatedGasCostOfWithdraw;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -101,12 +108,14 @@ contract HomeBridge {
     /// Constructor.
     function HomeBridge (
         uint requiredSignaturesParam,
-        address[] authoritiesParam
+        address[] authoritiesParam,
+        uint estimatedGasCostOfWithdrawParam
     ) public {
         require(requiredSignaturesParam != 0);
         require(requiredSignaturesParam <= authoritiesParam.length);
         requiredSignatures = requiredSignaturesParam;
         authorities = authoritiesParam;
+        estimatedGasCostOfWithdraw = estimatedGasCostOfWithdraw;
     }
 
     /// Should be used to deposit money.
