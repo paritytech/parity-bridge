@@ -6,8 +6,13 @@ contract('HomeBridge', function(accounts) {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       meta = instance;
       return meta.requiredSignatures.call();
     }).then(function(result) {
@@ -29,7 +34,7 @@ contract('HomeBridge', function(accounts) {
 
   it("should fail to deploy contract with too many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return HomeBridge.new(3, authorities).then(function(_) {
+    return HomeBridge.new(3, authorities, 0).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -40,10 +45,15 @@ contract('HomeBridge', function(accounts) {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
     let user_account = accounts[2];
     let value = web3.toWei(1, "ether");
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       meta = instance;
       return meta.sendTransaction({
         value: value,
@@ -79,11 +89,16 @@ contract('HomeBridge', function(accounts) {
     var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
     var user_account = accounts[2];
     var recipient_account = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       homeBridge = instance;
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
@@ -130,11 +145,16 @@ contract('HomeBridge', function(accounts) {
     var message2;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    let estimatedGasCostOfWithdraw = 0;
     var user_account = accounts[2];
     var recipient_account = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       homeBridge = instance;
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
@@ -184,11 +204,16 @@ contract('HomeBridge', function(accounts) {
     var message2;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
     var user_account = accounts[2];
     var recipient_account = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       homeBridge = instance;
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
@@ -237,11 +262,16 @@ contract('HomeBridge', function(accounts) {
     var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
     var user_account = accounts[2];
     var recipient_account = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       homeBridge = instance;
       message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
@@ -268,11 +298,16 @@ contract('HomeBridge', function(accounts) {
     var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
     var user_account = accounts[2];
     var recipient_account = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
-    return HomeBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
       homeBridge = instance;
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
