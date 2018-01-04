@@ -46,7 +46,7 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
-    let user_account = accounts[2];
+    let userAccount = accounts[2];
     let value = web3.toWei(1, "ether");
 
     return HomeBridge.new(
@@ -57,12 +57,12 @@ contract('HomeBridge', function(accounts) {
       meta = instance;
       return meta.sendTransaction({
         value: value,
-        from: user_account
+        from: userAccount
       })
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should have been created");
       assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
-      assert.equal(user_account, result.logs[0].args.recipient, "Event recipient should be transaction sender");
+      assert.equal(userAccount, result.logs[0].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[0].args.value, "Event value should match deposited ether");
     })
   })
@@ -90,8 +90,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
-    var user_account = accounts[2];
-    var recipient_account = accounts[3];
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(
@@ -100,13 +100,14 @@ contract('HomeBridge', function(accounts) {
       estimatedGasCostOfWithdraw
     ).then(function(instance) {
       homeBridge = instance;
+
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value,
-        from: user_account
+        from: userAccount
       })
     }).then(function(result) {
-      message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -129,12 +130,12 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {from: user_account}
+        {from: userAccount}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(recipient_account, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
     })
   })
@@ -146,8 +147,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     let estimatedGasCostOfWithdraw = 0;
-    var user_account = accounts[2];
-    var recipient_account = accounts[3];
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(
@@ -159,10 +160,10 @@ contract('HomeBridge', function(accounts) {
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value.times(2),
-        from: user_account
+        from: userAccount
       })
     }).then(function(result) {
-      message1 = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message1);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -176,10 +177,10 @@ contract('HomeBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(recipient_account, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
 
-      message2 = createMessage(recipient_account, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
+      message2 = createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
       return helpers.sign(authorities[0], message2);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -193,7 +194,7 @@ contract('HomeBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(recipient_account, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
     })
   })
@@ -205,8 +206,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
-    var user_account = accounts[2];
-    var recipient_account = accounts[3];
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(
@@ -218,10 +219,10 @@ contract('HomeBridge', function(accounts) {
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value.times(2),
-        from: user_account
+        from: userAccount
       })
     }).then(function(result) {
-      message1 = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message1);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -235,10 +236,10 @@ contract('HomeBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(recipient_account, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
 
-      message2 = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message2 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message2);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -263,8 +264,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
-    var user_account = accounts[2];
-    var recipient_account = accounts[3];
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(
@@ -273,7 +274,7 @@ contract('HomeBridge', function(accounts) {
       estimatedGasCostOfWithdraw
     ).then(function(instance) {
       homeBridge = instance;
-      message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -299,8 +300,8 @@ contract('HomeBridge', function(accounts) {
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
-    var user_account = accounts[2];
-    var recipient_account = accounts[3];
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
 
     return HomeBridge.new(
@@ -312,10 +313,10 @@ contract('HomeBridge', function(accounts) {
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value,
-        from: user_account
+        from: userAccount
       })
     }).then(function(result) {
-      message = createMessage(recipient_account, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
