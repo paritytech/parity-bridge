@@ -116,7 +116,7 @@ contract HomeBridge {
         require(requiredSignaturesParam <= authoritiesParam.length);
         requiredSignatures = requiredSignaturesParam;
         authorities = authoritiesParam;
-        estimatedGasCostOfWithdraw = estimatedGasCostOfWithdraw;
+        estimatedGasCostOfWithdraw = estimatedGasCostOfWithdrawParam;
     }
 
     /// Should be used to deposit money.
