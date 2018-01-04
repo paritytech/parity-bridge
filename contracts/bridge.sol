@@ -161,13 +161,29 @@ contract HomeBridge {
             hash := mload(add(message, 84))
         }
 
-        // Duplicated withdraw
+        // The following two statements guard against reentry into this function.
+        // Duplicated withdraw or reentry.
         require(!withdraws[hash]);
-
         // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
-        recipient.transfer(value);
-        Withdraw(recipient, value);
+
+        uint estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * tx.gasprice;
+
+        // this fails if `value` is not even enough to cover the relay cost.
+        // Authorities simply IGNORE withdraws where `value` can’t relay cost.
+        // Think of it as `value` getting burned entirely on the relay with no value left to pay out the recipient.
+        require(value > estimatedWeiCostOfWithdraw);
+
+        // charge recipient for relay cost
+        uint valueRemainingAfterSubtractingCost = value - estimatedWeiCostOfWithdraw;
+
+        // pay out recipient
+        recipient.transfer(valueRemainingAfterSubtractingCost);
+
+        // refund relay cost to relaying authority
+        msg.sender.transfer(estimatedWeiCostOfWithdraw);
+
+        Withdraw(recipient, valueRemainingAfterSubtractingCost);
     }
 }
 
