@@ -56,3 +56,18 @@ function bigNumberToPaddedBytes32(num) {
   return "0x" + result;
 }
 module.exports.bigNumberToPaddedBytes32 = bigNumberToPaddedBytes32;
+
+// returns an promise that resolves to an object
+// that maps `addresses` to their current balances
+function getBalances(addresses) {
+  return Promise.all(addresses.map(function(address) {
+    return web3.eth.getBalance(address);
+  })).then(function(balancesArray) {
+    let addressToBalance = {};
+    addresses.forEach(function(address, index) {
+      addressToBalance[address] = balancesArray[index];
+    });
+    return addressToBalance;
+  })
+}
+module.exports.getBalances = getBalances;
