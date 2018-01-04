@@ -99,11 +99,14 @@ contract HomeBridge {
     }
 
     /// Constructor.
-    function HomeBridge (uint n, address[] a) public {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function HomeBridge (
+        uint requiredSignaturesParam,
+        address[] authoritiesParam
+    ) public {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
     }
 
     /// Should be used to deposit money.
