@@ -149,9 +149,9 @@ contract('HomeBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
     var actualGasCostOfWithdraw;
-    let gasPrice = web3.toBigNumber(1000000000);
-    // let gasPrice = web3.eth.gasPrice;
-    let relayCost = gasPrice.times(estimatedGasCostOfWithdraw);
+    var gasPrice;
+    var transactionResult;
+    var relayCost;
     var relayerAccount = accounts[2];
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
@@ -167,6 +167,7 @@ contract('HomeBridge', function(accounts) {
       return helpers.getBalances(accounts);
     }).then(function(result) {
       initialBalances = result;
+      console.log(initialBalances);
 
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
@@ -188,19 +189,24 @@ contract('HomeBridge', function(accounts) {
         // anyone can call withdraw (provided they have the message and required signatures)
         {
           from: relayerAccount,
-          gasPrice: gasPrice,
+          // gasPrice: gasPrice,
         }
       );
     }).then(function(result) {
-      console.log(result);
+      transactionResult = result;
       actualGasCostOfWithdraw = web3.toBigNumber(result.receipt.gasUsed);
-      assert.equal(1, result.logs.length, "Exactly one event should be created");
-      assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
+      return web3.eth.getTransaction(result.tx);
+    }).then(function(tx) {
+      gasPrice = tx.gasPrice;
+      relayCost = gasPrice.times(estimatedGasCostOfWithdraw);
+
+      assert.equal(1, transactionResult.logs.length, "Exactly one event should be created");
+      assert.equal("Withdraw", transactionResult.logs[0].event, "Event name should be Withdraw");
+      assert.equal(recipientAccount, transactionResult.logs[0].args.recipient, "Event recipient should match recipient in message");
       console.log("relayCost =", relayCost.toString());
-      console.log("event value =", result.logs[0].args.value.toString());
+      console.log("event value =", transactionResult.logs[0].args.value.toString());
       console.log("value.minus(relayCost)", value.minus(relayCost).toString());
-      // assert(value.minus(relayCost).equals(result.logs[0].args.value), "Event value should match value in message minus relay cost");
+      assert(value.minus(relayCost).equals(transactionResult.logs[0].args.value), "Event value should match value in message minus relay cost");
 
       return helpers.getBalances(accounts);
     }).then(function(balances) {
