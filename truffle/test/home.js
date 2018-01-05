@@ -186,10 +186,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {
-          from: relayerAccount,
-          // gasPrice: gasPrice,
-        }
+        { from: relayerAccount }
       );
     }).then(function(result) {
       transactionResult = result;
@@ -221,6 +218,57 @@ contract('HomeBridge', function(accounts) {
             .minus(actualWeiCostOfWithdraw)
             .plus(relayCost)),
         "Relayer received relay cost");
+    })
+  })
+
+  it("should revert withdraw if value <= estimatedWeiCostOfWithdraw", function() {
+    var homeBridge;
+    var initialBalances;
+    var signature;
+    var message;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
+    var relayerAccount = accounts[2];
+    var recipientAccount = accounts[3];
+    var chargerAccount = accounts[4];
+    var value = estimatedGasCostOfWithdraw;
+
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
+      homeBridge = instance;
+
+      return helpers.getBalances(accounts);
+    }).then(function(result) {
+      initialBalances = result;
+
+      // "charge" HomeBridge so we can withdraw later
+      return homeBridge.sendTransaction({
+        value: value,
+        from: chargerAccount,
+      })
+    }).then(function(result) {
+      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+      return helpers.sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      var vrs = helpers.signatureToVRS(signature);
+
+      return homeBridge.withdraw(
+        [vrs.v],
+        [vrs.r],
+        [vrs.s],
+        message,
+        // anyone can call withdraw (provided they have the message and required signatures)
+        { from: relayerAccount }
+      );
+    }).then(function(result) {
+      assert(false, "withdraw if value <= estimatedGasCostOfWithdraw should fail");
+    }, function (err) {
+      // nothing
     })
   })
 
