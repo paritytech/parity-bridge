@@ -167,7 +167,6 @@ contract('HomeBridge', function(accounts) {
       return helpers.getBalances(accounts);
     }).then(function(result) {
       initialBalances = result;
-      console.log(initialBalances);
 
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
@@ -203,17 +202,11 @@ contract('HomeBridge', function(accounts) {
       assert.equal(1, transactionResult.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", transactionResult.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, transactionResult.logs[0].args.recipient, "Event recipient should match recipient in message");
-      console.log("relayCost =", relayCost.toString());
-      console.log("event value =", transactionResult.logs[0].args.value.toString());
-      console.log("value.minus(relayCost)", value.minus(relayCost).toString());
       assert(value.minus(relayCost).equals(transactionResult.logs[0].args.value), "Event value should match value in message minus relay cost");
 
       return helpers.getBalances(accounts);
     }).then(function(balances) {
       let actualWeiCostOfWithdraw = actualGasCostOfWithdraw.times(gasPrice);
-      console.log("gasPrice", gasPrice.toString());
-      console.log("actualGasCostOfWithdraw", actualGasCostOfWithdraw.toString());
-      console.log("actualWeiCostOfWithdraw", actualWeiCostOfWithdraw.toString());
       assert(
         balances[recipientAccount].equals(
           initialBalances[recipientAccount].plus(value.minus(relayCost))),
