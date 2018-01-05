@@ -149,7 +149,8 @@ contract('HomeBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
     var actualGasCostOfWithdraw;
-    let gasPrice = web3.toBigNumber(100000000000);
+    // let gasPrice = web3.toBigNumber(100000000000);
+    let gasPrice = web3.eth.gasPrice;
     let relayCost = gasPrice.times(estimatedGasCostOfWithdraw);
     var relayerAccount = accounts[2];
     var recipientAccount = accounts[3];
@@ -185,20 +186,28 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {from: relayerAccount}
+        {
+          from: relayerAccount,
+          gasPrice: web3.eth.gasPrice
+        }
       );
     }).then(function(result) {
+      console.log(result);
       actualGasCostOfWithdraw = web3.toBigNumber(result.receipt.gasUsed);
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
-      console.log(relayCost.toString());
-      console.log(result.logs[0].args.value.toString());
+      console.log("relayCost =", relayCost.toString());
+      console.log("event value =", result.logs[0].args.value.toString());
+      console.log("value.minus(relayCost)", value.minus(relayCost).toString());
       // assert(value.minus(relayCost).equals(result.logs[0].args.value), "Event value should match value in message minus relay cost");
 
       return helpers.getBalances(accounts);
     }).then(function(balances) {
       let actualWeiCostOfWithdraw = actualGasCostOfWithdraw.times(gasPrice);
+      console.log("gasPrice", gasPrice.toString());
+      console.log("actualGasCostOfWithdraw", actualGasCostOfWithdraw.toString());
+      console.log("actualWeiCostOfWithdraw", actualWeiCostOfWithdraw.toString());
       assert(
         actualGasCostOfWithdraw.lessThan(estimatedGasCostOfWithdraw),
         "Actual gas cost <= estimated gas cost");
