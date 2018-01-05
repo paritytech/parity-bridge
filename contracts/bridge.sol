@@ -201,12 +201,12 @@ contract HomeBridge {
         // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
 
-        uint estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * tx.gasprice;
-
         // this fails if `value` is not even enough to cover the relay cost.
         // Authorities simply IGNORE withdraws where `value` can’t relay cost.
         // Think of it as `value` getting burned entirely on the relay with no value left to pay out the recipient.
-        require(value > estimatedWeiCostOfWithdraw);
+        require(messageValueSufficientToCoverRelay(message));
+
+        uint estimatedWeiCostOfWithdraw = getWithdrawRelayCost();
 
         // charge recipient for relay cost
         uint valueRemainingAfterSubtractingCost = value - estimatedWeiCostOfWithdraw;
