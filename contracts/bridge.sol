@@ -169,6 +169,13 @@ contract HomeBridge {
         return hash;
     }
 
+    /// to be called by authorities to check
+    /// whether they withdraw message should be relayed or whether it
+    /// is too low to cover the cost of calling withdraw and can be ignored
+    function messageValueSufficientToCoverRelay(bytes message) public view returns (bool) {
+        return getValueFromMessage(message) > getWithdrawRelayCost();
+    }
+
     /// an upper bound to the cost of relaying a withdraw by calling HomeBridge.withdraw
     function getWithdrawRelayCost() public view returns (uint) {
         return estimatedGasCostOfWithdraw * tx.gasprice;
