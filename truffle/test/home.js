@@ -149,8 +149,8 @@ contract('HomeBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
     var actualGasCostOfWithdraw;
-    // let gasPrice = web3.toBigNumber(100000000000);
-    let gasPrice = web3.eth.gasPrice;
+    let gasPrice = web3.toBigNumber(1000000000);
+    // let gasPrice = web3.eth.gasPrice;
     let relayCost = gasPrice.times(estimatedGasCostOfWithdraw);
     var relayerAccount = accounts[2];
     var recipientAccount = accounts[3];
@@ -188,7 +188,7 @@ contract('HomeBridge', function(accounts) {
         // anyone can call withdraw (provided they have the message and required signatures)
         {
           from: relayerAccount,
-          gasPrice: web3.eth.gasPrice
+          gasPrice: gasPrice,
         }
       );
     }).then(function(result) {
