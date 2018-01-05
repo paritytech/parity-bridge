@@ -22,13 +22,14 @@ library SignerTest {
 
 
 library Utils {
-    function toString (uint256 v) internal pure returns (string str) {
+    function toString (uint256 inputValue) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
+        uint workingValue = inputValue;
         uint i = 0;
-        while (v != 0) {
-            uint remainder = v % 10;
-            v = v / 10;
+        while (workingValue != 0) {
+            uint remainder = workingValue % 10;
+            workingValue = workingValue / 10;
             reversed[i++] = byte(48 + remainder);
         }
         bytes memory s = new bytes(i);
