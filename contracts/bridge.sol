@@ -169,6 +169,11 @@ contract HomeBridge {
         return hash;
     }
 
+    /// an upper bound to the cost of relaying a withdraw by calling HomeBridge.withdraw
+    function getWithdrawRelayCost() public view returns (uint) {
+        return estimatedGasCostOfWithdraw * tx.gasprice;
+    }
+
     /// Used to withdraw money from the contract.
     ///
     /// message contains:
