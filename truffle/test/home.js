@@ -215,9 +215,6 @@ contract('HomeBridge', function(accounts) {
       console.log("actualGasCostOfWithdraw", actualGasCostOfWithdraw.toString());
       console.log("actualWeiCostOfWithdraw", actualWeiCostOfWithdraw.toString());
       assert(
-        actualGasCostOfWithdraw.lessThan(estimatedGasCostOfWithdraw),
-        "Actual gas cost <= estimated gas cost");
-      assert(
         balances[recipientAccount].equals(
           initialBalances[recipientAccount].plus(value.minus(relayCost))),
         "Recipient received value minus relay cost");
