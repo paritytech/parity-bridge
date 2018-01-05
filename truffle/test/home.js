@@ -196,6 +196,10 @@ contract('HomeBridge', function(accounts) {
       actualGasCostOfWithdraw = web3.toBigNumber(result.receipt.gasUsed);
       return web3.eth.getTransaction(result.tx);
     }).then(function(tx) {
+      // getting the gas price dynamically instead of hardcoding it
+      // (which would require less code)
+      // is required because solidity-coverage sets it to 1
+      // and the usual default is 100000000000
       gasPrice = tx.gasPrice;
       relayCost = gasPrice.times(estimatedGasCostOfWithdraw);
 
