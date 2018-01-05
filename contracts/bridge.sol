@@ -125,6 +125,50 @@ contract HomeBridge {
         Deposit(msg.sender, msg.value);
     }
 
+    // layout of message :: bytes:
+    // offset  0: 32 bytes :: uint (little endian) - message length
+    // offset 32: 20 bytes :: address - recipient address
+    // offset 52: 32 bytes :: uint (little endian) - value
+    // offset 84: 32 bytes :: bytes32 - transaction hash
+
+    // bytes 1 to 32 are 0 because message length is stored as little endian.
+    // mload always reads 32 bytes.
+    // so we can and have to start reading recipient at offset 20 instead of 32.
+    // if we were to read at 32 the address would contain part of value and be corrupted.
+    // when reading from offset 20 mload will read 12 zero bytes followed
+    // by the 20 recipient address bytes and correctly convert it into an address.
+    // this saves some storage/gas over the alternative solution
+    // which is padding address to 32 bytes and reading recipient at offset 32.
+    // for more details see discussion in:
+    // https://github.com/paritytech/parity-bridge/issues/61
+
+    function getRecipientFromMessage(bytes message) public pure returns (address) {
+        address recipient;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            recipient := mload(add(message, 20))
+        }
+        return recipient;
+    }
+
+    function getValueFromMessage(bytes message) public pure returns (uint) {
+        uint value;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            value := mload(add(message, 52))
+        }
+        return value;
+    }
+
+    function getTransactionHashFromMessage(bytes message) public pure returns (bytes32) {
+        bytes32 hash;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            hash := mload(add(message, 84))
+        }
+        return hash;
+    }
+
     /// Used to withdraw money from the contract.
     ///
     /// message contains:
@@ -135,32 +179,9 @@ contract HomeBridge {
     /// NOTE that anyone can call withdraw provided they have the message and required signatures!
     function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
-        address recipient;
-        uint value;
-        bytes32 hash;
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            // layout of message :: bytes:
-            // offset  0: 32 bytes :: uint (little endian) - message length
-            // offset 32: 20 bytes :: address - recipient address
-            // offset 52: 32 bytes :: uint (little endian) - value
-            // offset 84: 32 bytes :: bytes32 - transaction hash
-
-            // we require above that message length == 84.
-            // bytes 1 to 32 are 0 because message length is stored as little endian.
-            // mload always reads 32 bytes.
-            // so we can and have to start reading recipient at offset 20 instead of 32.
-            // if we were to read at 32 the address would contain part of value and be corrupted.
-            // when reading from offset 20 mload will read 12 zero bytes followed
-            // by the 20 recipient address bytes and correctly convert it into an address.
-            // this saves some storage/gas over the alternative solution
-            // which is padding address to 32 bytes and reading recipient at offset 32.
-            // for more details see discussion in:
-            // https://github.com/paritytech/parity-bridge/issues/61
-            recipient := mload(add(message, 20))
-            value := mload(add(message, 52))
-            hash := mload(add(message, 84))
-        }
+        address recipient = getRecipientFromMessage(message);
+        uint value = getValueFromMessage(message);
+        bytes32 hash = getTransactionHashFromMessage(message);
 
         // The following two statements guard against reentry into this function.
         // Duplicated withdraw or reentry.
