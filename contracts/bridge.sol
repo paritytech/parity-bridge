@@ -345,12 +345,12 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature (bytes32 hash, uint index) public constant returns (bytes) {
+    function signature (bytes32 hash, uint index) public view returns (bytes) {
         return signatures[hash].signatures[index];
     }
 
     /// Get message
-    function message (bytes32 hash) public constant returns (bytes) {
+    function message (bytes32 hash) public view returns (bytes) {
         return signatures[hash].message;
     }
 }
