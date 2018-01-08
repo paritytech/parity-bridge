@@ -5,8 +5,11 @@ extern crate tests;
 
 use bridge::bridge::create_withdraw_relay;
 
+// 1 signature required. relay polled twice.
+// no CollectedSignatures on ForeignBridge.
+// no relay.
 test_app_stream! {
-	name => withdraw_relay_basic,
+	name => withdraw_relay_no_log_no_relay,
 	database => Database::default(),
 	home =>
 		account => "0x0000000000000000000000000000000000000001",
