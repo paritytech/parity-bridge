@@ -12,11 +12,15 @@ use util::web3_filter;
 use database::Database;
 use error::{self, Error};
 
+/// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
 	let filter = foreign.events().collected_signatures().create_filter();
 	web3_filter(filter, address)
 }
 
+/// a message and signatures (v, r, s) which were collected on `ForeignBridge` and
+/// which the withdraw relay process should relay to `HomeBridge`
+/// by calling `HomeBridge.withdraw(v, r, s, message)`
 #[derive(Debug, PartialEq)]
 struct RelayAssignment {
 	signature_payloads: Vec<Bytes>,
