@@ -158,6 +158,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.map(|calls| join_all(calls))
 						.collect::<Vec<_>>();
 
+					// wait for fetching of messages and signatures to complete
 					WithdrawRelayState::FetchMessagesSignatures {
 						future: join_all(message_calls).join(join_all(signature_calls)),
 						block: item.to,
@@ -187,6 +188,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								app.config.home.request_timeout)
 						})
 						.collect::<Vec<_>>();
+					// wait for relays to complete
 					WithdrawRelayState::RelayWithdraws {
 						future: join_all(relays),
 						block,
