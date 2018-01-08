@@ -74,6 +74,7 @@ fn withdraw_relay_payload(home: &home::HomeBridge, signatures: Vec<Bytes>, messa
 	home.functions().withdraw().input(v_vec, r_vec, s_vec, message.0).into()
 }
 
+/// state of the withdraw relay state machine
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
 	FetchMessagesSignatures {
