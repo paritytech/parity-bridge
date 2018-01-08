@@ -179,8 +179,10 @@ test_app_stream! {
 	]
 }
 
+// like `withdraw_relay_single_log_sufficient_value_relay`
+// but with explicit gas
 test_app_stream! {
-	name => withdraw_relay_check_gas,
+	name => withdraw_relay_explicit_gas,
 	database => Database::default(),
 	home =>
 		account => "0x0000000000000000000000000000000000000001",
