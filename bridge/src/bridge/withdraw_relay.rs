@@ -18,8 +18,9 @@ fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Addres
 	web3_filter(filter, address)
 }
 
-/// a message and signatures (v, r, s) which were collected on `ForeignBridge` and
-/// which the withdraw relay process should relay to `HomeBridge`
+/// payloads for calls to `ForeignBridge.signature` and `ForeignBridge.message`
+/// to retrieve the signatures (v, r, s) and messages
+/// which the withdraw relay process should later relay to `HomeBridge`
 /// by calling `HomeBridge.withdraw(v, r, s, message)`
 #[derive(Debug, PartialEq)]
 struct RelayAssignment {
