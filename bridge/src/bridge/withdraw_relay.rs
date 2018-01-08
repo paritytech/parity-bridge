@@ -68,7 +68,7 @@ fn withdraw_relay_payload(home: &home::HomeBridge, signatures: Vec<Bytes>, messa
 
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
-	Fetch {
+	FetchMessagesSignatures {
 		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
 		block: u64,
 	},
@@ -149,12 +149,12 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.map(|calls| join_all(calls))
 						.collect::<Vec<_>>();
 
-					WithdrawRelayState::Fetch {
+					WithdrawRelayState::FetchMessagesSignatures {
 						future: join_all(message_calls).join(join_all(signature_calls)),
 						block: item.to,
 					}
 				},
-				WithdrawRelayState::Fetch { ref mut future, block } => {
+				WithdrawRelayState::FetchMessagesSignatures { ref mut future, block } => {
 					let (messages, signatures) = try_ready!(future.poll());
 					assert_eq!(messages.len(), signatures.len());
 					let app = &self.app;
