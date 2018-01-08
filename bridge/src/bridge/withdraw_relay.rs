@@ -62,7 +62,7 @@ fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) ->
 		.input(message.0.clone()).into()
 }
 
-fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &Vec<Bytes>, message: &Bytes) -> Bytes {
+fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
 	assert_eq!(message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
 	let mut v_vec = Vec::new();
 	let mut r_vec = Vec::new();
