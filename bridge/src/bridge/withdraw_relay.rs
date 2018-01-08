@@ -89,6 +89,12 @@ pub enum WithdrawRelayState<T: Transport> {
 		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
 		block: u64,
 	},
+	FetchMessageValueSufficient {
+		future: JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
+		messages: Vec<Bytes>,
+		signatures: Vec<Vec<Bytes>>,
+		block: u64,
+	},
 	RelayWithdraws {
 		future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
 		block: u64,
