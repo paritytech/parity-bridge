@@ -43,8 +43,12 @@ test_app_stream! {
 	]
 }
 
+// 2 signatures required. relay polled twice.
+// single CollectedSignatures log present. message value covers relay cost.
+// authority not responsible.
+// message is ignored.
 test_app_stream! {
-	name => withdraw_relay_single_log_no_relay,
+	name => withdraw_relay_single_log_authority_not_responsible_no_relay
 	database => Database::default(),
 	home =>
 		account => "0x0000000000000000000000000000000000000001",
