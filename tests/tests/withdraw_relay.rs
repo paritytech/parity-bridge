@@ -240,7 +240,7 @@ test_app_stream! {
 // like `withdraw_relay_single_log_sufficient_value_relay`
 // but with explicit contract addresses
 test_app_stream! {
-	name => withdraw_relay_single_contract_addresses,
+	name => withdraw_relay_single_explicit_contract_addresses,
 	database => Database {
 		home_contract_address: "0x00000000000000000000000000000000000000dd".parse().unwrap(),
 		foreign_contract_address: "0x00000000000000000000000000000000000000ee".parse().unwrap(),
