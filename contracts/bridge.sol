@@ -172,7 +172,7 @@ contract HomeBridge {
     /// to be called by authorities to check
     /// whether they withdraw message should be relayed or whether it
     /// is too low to cover the cost of calling withdraw and can be ignored
-    function messageValueSufficientToCoverRelay(bytes message) public view returns (bool) {
+    function isMessageValueSufficientToCoverRelay(bytes message) public view returns (bool) {
         return getValueFromMessage(message) > getWithdrawRelayCost();
     }
 
@@ -204,7 +204,7 @@ contract HomeBridge {
         // this fails if `value` is not even enough to cover the relay cost.
         // Authorities simply IGNORE withdraws where `value` can’t relay cost.
         // Think of it as `value` getting burned entirely on the relay with no value left to pay out the recipient.
-        require(messageValueSufficientToCoverRelay(message));
+        require(isMessageValueSufficientToCoverRelay(message));
 
         uint estimatedWeiCostOfWithdraw = getWithdrawRelayCost();
 
