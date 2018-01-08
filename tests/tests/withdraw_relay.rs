@@ -48,7 +48,7 @@ test_app_stream! {
 // authority not responsible.
 // message is ignored.
 test_app_stream! {
-	name => withdraw_relay_single_log_authority_not_responsible_no_relay
+	name => withdraw_relay_single_log_authority_not_responsible_no_relay,
 	database => Database::default(),
 	home =>
 		account => "0x0000000000000000000000000000000000000001",
