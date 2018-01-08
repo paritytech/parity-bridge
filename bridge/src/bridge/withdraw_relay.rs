@@ -3,7 +3,7 @@ use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all, Join};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
+use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
@@ -27,17 +27,20 @@ struct RelayAssignment {
 	message_payload: Bytes,
 }
 
-fn signatures_payload(foreign: &foreign::ForeignBridge, signatures: u32, my_address: Address, log: Log) -> error::Result<Option<RelayAssignment>> {
+fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32, my_address: Address, log: Log) -> error::Result<Option<RelayAssignment>> {
+	// convert web3::Log to ethabi::RawLog since ethabi events can
+	// only be parsed from the latter
 	let raw_log = RawLog {
 		topics: log.topics.into_iter().map(|t| t.0).collect(),
 		data: log.data.0,
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
 	if collected_signatures.authority != my_address.0 {
-		// someone else will relay this transaction to home
+		// this authority is not responsible for relaying this transaction.
+		// someone else will relay this transaction to home.
 		return Ok(None);
 	}
-	let signature_payloads = (0..signatures).into_iter()
+	let signature_payloads = (0..required_signatures).into_iter()
 		.map(|index| ethabi::util::pad_u32(index))
 		.map(|index| foreign.functions().signature().input(collected_signatures.message_hash, index))
 		.map(Into::into)
