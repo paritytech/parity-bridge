@@ -181,11 +181,56 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 				WithdrawRelayState::FetchMessagesSignatures { ref mut future, block } => {
 					let (messages, signatures) = try_ready!(future.poll());
 					assert_eq!(messages.len(), signatures.len());
+
 					let app = &self.app;
 					let home_contract = &self.home_contract;
 
-					let relays = messages.into_iter().zip(signatures.into_iter())
-						.map(|(message, signatures)| withdraw_relay_payload(&app.home_bridge, signatures, message))
+					let message_value_sufficient_payloads = messages
+						.iter()
+						.map(|message| {
+							message_value_sufficient_payload(
+								&app.home_bridge,
+								message
+							)
+						})
+						.map(|payload| {
+							app.timer.timeout(
+								api::call(&app.connections.home, home_contract.clone(), payload),
+								app.config.home.request_timeout)
+						})
+						.collect::<Vec<_>>();
+
+					WithdrawRelayState::FetchMessageValueSufficient {
+						future: join_all(message_value_sufficient_payloads),
+						messages,
+						signatures,
+						block,
+					}
+				},
+				WithdrawRelayState::FetchMessageValueSufficient {
+					ref mut future,
+					ref messages,
+					ref signatures,
+					block
+				} => {
+					let message_value_sufficient = try_ready!(future.poll());
+
+					let app = &self.app;
+					let home_contract = &self.home_contract;
+
+					let relays = messages.into_iter()
+						.zip(signatures.into_iter())
+						.zip(message_value_sufficient.into_iter())
+						// ignore those messages that don't have sufficient
+						// value to pay for the relay gas cost
+						.filter(|&(_, ref is_message_value_sufficient)| {
+							// TODO [snd] this is ugly.
+							// in the future ethabi should return a bool
+							// for `is_message_value_sufficient`
+							// since the contract function returns a bool
+							U256::from(is_message_value_sufficient.0.as_slice()) == U256::from(1)
+						})
+						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
 						.map(|payload| TransactionRequest {
 							from: app.config.home.account.clone(),
 							to: Some(home_contract.clone()),
