@@ -135,7 +135,8 @@ macro_rules! test_app_stream {
 				authorities: Authorities {
 					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
 					required_signatures: $signatures,
-				}
+				},
+				estimated_gas_cost_of_withdraw: 100_000,
 			};
 
 			let app = App {
