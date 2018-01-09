@@ -85,7 +85,6 @@ contract('HomeBridge', function(accounts) {
 
   it("should get message parts correctly", function() {
     var homeBridge;
-    var signature;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
