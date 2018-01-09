@@ -118,13 +118,13 @@ contract('HomeBridge', function(accounts) {
   it("should allow correct withdraw without recipient paying for gas", function() {
     var homeBridge;
     var signature;
-    var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -139,7 +139,6 @@ contract('HomeBridge', function(accounts) {
         from: userAccount
       })
     }).then(function(result) {
-      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -176,7 +175,6 @@ contract('HomeBridge', function(accounts) {
     var homeBridge;
     var initialBalances;
     var signature;
-    var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
@@ -188,6 +186,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -206,7 +205,6 @@ contract('HomeBridge', function(accounts) {
         from: chargerAccount,
       })
     }).then(function(result) {
-      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -257,7 +255,6 @@ contract('HomeBridge', function(accounts) {
     var homeBridge;
     var initialBalances;
     var signature;
-    var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
@@ -265,6 +262,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
     var value = estimatedGasCostOfWithdraw;
+    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -283,7 +281,6 @@ contract('HomeBridge', function(accounts) {
         from: chargerAccount,
       })
     }).then(function(result) {
-      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -306,14 +303,14 @@ contract('HomeBridge', function(accounts) {
 
   it("should allow second withdraw with different transactionHash but same recipient and value", function() {
     var homeBridge;
-    var message1;
-    var message2;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     let estimatedGasCostOfWithdraw = 0;
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message2 = createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -327,7 +324,6 @@ contract('HomeBridge', function(accounts) {
         from: userAccount
       })
     }).then(function(result) {
-      message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message1);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -344,7 +340,6 @@ contract('HomeBridge', function(accounts) {
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
 
-      message2 = createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
       return helpers.sign(authorities[0], message2);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -365,14 +360,14 @@ contract('HomeBridge', function(accounts) {
 
   it("should not allow second withdraw (replay attack) with same transactionHash but different recipient and value", function() {
     var homeBridge;
-    var message1;
-    var message2;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message2 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -386,7 +381,6 @@ contract('HomeBridge', function(accounts) {
         from: userAccount
       })
     }).then(function(result) {
-      message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message1);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -403,7 +397,6 @@ contract('HomeBridge', function(accounts) {
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
 
-      message2 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message2);
     }).then(function(signature) {
       var vrs = helpers.signatureToVRS(signature);
@@ -424,13 +417,13 @@ contract('HomeBridge', function(accounts) {
   it("withdraw without funds on HomeBridge should fail", function() {
     var homeBridge;
     var signature;
-    var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -438,7 +431,6 @@ contract('HomeBridge', function(accounts) {
       estimatedGasCostOfWithdraw
     ).then(function(instance) {
       homeBridge = instance;
-      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
@@ -460,13 +452,13 @@ contract('HomeBridge', function(accounts) {
   it("should not allow withdraw with message.length != 84", function() {
     var homeBridge;
     var signature;
-    var message;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var estimatedGasCostOfWithdraw = 0;
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -480,7 +472,6 @@ contract('HomeBridge', function(accounts) {
         from: userAccount
       })
     }).then(function(result) {
-      message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
