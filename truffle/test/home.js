@@ -114,6 +114,54 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
+  it("isMessageValueSufficientToCoverRelay should work correctly", function() {
+    var homeBridge;
+    var gasPrice;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = web3.toBigNumber(100000);
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
+    var estimatedWeiCostOfWithdraw;
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
+      homeBridge = instance;
+      // do a test transaction so we can figure out the gasPrice
+      return homeBridge.sendTransaction({
+        value: 1,
+        from: userAccount
+      })
+    }).then(function(result) {
+      return web3.eth.getTransaction(result.tx);
+    }).then(function(tx) {
+      // getting the gas price dynamically instead of hardcoding it
+      // (which would require less code)
+      // is required because solidity-coverage sets it to 1
+      // and the usual default is 100000000000
+      gasPrice = tx.gasPrice;
+      estimatedWeiCostOfWithdraw = gasPrice.times(estimatedGasCostOfWithdraw);
+
+      return homeBridge.getWithdrawRelayCost();
+    }).then(function(result) {
+      assert(result.equals(estimatedWeiCostOfWithdraw), "getWithdrawRelayCost should return correct value");
+
+      var message = createMessage(recipientAccount, estimatedWeiCostOfWithdraw, transactionHash);
+      return homeBridge.isMessageValueSufficientToCoverRelay(message);
+    }).then(function(result) {
+      assert.equal(result, false, "exactly estimatedWeiCostOfWithdraw is not sufficient value");
+
+      var message = createMessage(recipientAccount, estimatedWeiCostOfWithdraw.plus(1), transactionHash);
+      return homeBridge.isMessageValueSufficientToCoverRelay(message);
+    }).then(function(result) {
+      assert.equal(result, true, "estimatedWeiCostOfWithdraw + 1 is sufficient value");
+    })
+  })
+
   it("should allow correct withdraw without recipient paying for gas", function() {
     var homeBridge;
     var signature;
