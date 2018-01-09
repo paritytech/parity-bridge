@@ -251,7 +251,7 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
-  it("should revert withdraw if value <= estimatedWeiCostOfWithdraw", function() {
+  it("should revert withdraw if value is insufficient to cover costs", function() {
     var homeBridge;
     var initialBalances;
     var signature;
