@@ -83,6 +83,38 @@ contract('HomeBridge', function(accounts) {
     return message;
   }
 
+  it("should get message parts correctly", function() {
+    var homeBridge;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
+    var recipientAccount = accounts[3];
+    var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = createMessage(recipientAccount, value, transactionHash);
+
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
+      homeBridge = instance;
+
+      return homeBridge.getRecipientFromMessage(message);
+    }).then(function(result) {
+      assert.equal(result, recipientAccount);
+
+      return homeBridge.getValueFromMessage(message);
+    }).then(function(result) {
+      assert(result.equals(value));
+
+      return homeBridge.getTransactionHashFromMessage(message);
+    }).then(function(result) {
+      assert.equal(result, transactionHash);
+    })
+  })
+
   it("should allow correct withdraw without recipient paying for gas", function() {
     var homeBridge;
     var signature;
