@@ -1,3 +1,5 @@
+estimated_gas_cost_of_withdraw = 100000
+
 [home]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
