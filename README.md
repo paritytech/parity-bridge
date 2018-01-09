@@ -36,6 +36,8 @@ Options:
 ### configuration [file example](./examples/config.toml)
 
 ```toml
+estimated_gas_cost_of_withdraw = 100000
+
 [home]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
@@ -64,6 +66,12 @@ required_signatures = 2
 home_deploy = { gas = 500000 }
 foreign_deploy = { gas = 500000 }
 ```
+
+#### options
+
+- `estimated_gas_cost_of_withdraw` - how much gas a transaction to `HomeBridge.withdraw` consumes (**required**)
+  - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
+  - currently recommended value: `100000`
 
 #### home options
 
