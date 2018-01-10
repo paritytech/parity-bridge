@@ -70,6 +70,7 @@ foreign_deploy = { gas = 500000 }
 #### options
 
 - `estimated_gas_cost_of_withdraw` - how much gas a transaction to `HomeBridge.withdraw` consumes (**required**)
+  - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) below for details
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - currently recommended value: `100000`
 
@@ -160,3 +161,52 @@ checked_withdraw_confirm = 121
 cd truffle
 yarn test
 ```
+
+### recipient pays relay cost to relaying authority
+
+a bridge `authority` has to pay for gas (`cost`) to execute `HomeBridge.withdraw` when
+withdrawing `value` from `foreign` to `home`.
+`value - cost` is transferred to the `recipient`. `cost` is transferred to the `authority`
+doing the relay.
+this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
+that shuts down an attack that exhausts authorities funds on `home`.
+
+read on for a more thorough explanation.
+
+parity-bridge connects a value-bearing `home` ethereum blockchain
+(usually the ethereum foundation chain)
+to a non-value-bearing PoS `foreign` ethereum blockchain.
+
+value-bearing means that the ether on that chain has usable value in the sense that
+in order to obtain it one has to either mine it (trade in electricity)
+or trade in another currency.
+non-value-bearing means that once can easily obtain a large amount of ether
+on that chain for free.
+for example through a faucet in the case of testnets.
+
+the bridge authorities are also the validators of the `foreign` PoA chain.
+transactions by the authorities are therefore free (gas price = 0) on `foreign`.
+
+to execute a transaction on `home` a bridge authority has to spend ether to
+pay for the gas.
+
+this opened up an attack where a malicious user could
+deposit a very small amount of wei on `HomeBridge`, get it relayed to `ForeignBridge`
+then spam the `ForeignBridge.transfer` with `1` wei withdraws.
+it would cost the attacker very little actual `home` chain wei and essentially
+free testnet wei to cause the authorities to spend orders of magnitude more wei
+to relay the withdraw to `home` by executing `HomeBridge.withdraw`.
+an attacker was able to exhaust bridge authorities funds on `home`.
+
+to shut down this attack `HomeBridge.withdraw` was modified so
+`value - cost` is transferred to the `recipient` and `cost` is transferred to the `authority`
+doing the relay.
+this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
+
+if the value withdrawn is too low to pay for the relay at current gas prices then
+bridge authorities will ignore it. one can think of it as value getting
+spent entirely on paying the relay with no value left to pay out the recipient.
+
+`HomeBridge.withdraw` is currently the only transaction bridge authorities execute on `home`.
+care must be taken to secure future functions that bridge authorities will execute
+on `home` in similar ways.
