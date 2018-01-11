@@ -301,19 +301,35 @@ contract ForeignBridge {
         }
     }
 
-    /// Used to transfer money between accounts
-    function transfer (address recipient, uint value, bool externalTransfer) public {
+    /// Transfer `value` from `msg.sender`s local balance (on `foreign` chain) to `recipient` on `home` chain.
+    ///
+    /// immediately decreases `msg.sender`s local balance.
+    /// emits a `Withdraw` event which will be picked up by the bridge authorities.
+    /// bridge authorities will then sign off (by calling `submitSignature`) on a message containing `value`,
+    /// `recipient` and the `hash` of the transaction on `foreign` containing the `Withdraw` event.
+    /// once `requiredSignatures` are collected a `CollectedSignatures` event will be emitted.
+    /// an authority will pick up `CollectedSignatures` an call `HomeBridge.withdraw`
+    /// which transfers `value - relayCost` to `recipient` completing the transfer.
+    function transferHomeViaRelay(address recipient, uint value) public {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
-        if (externalTransfer) {
-            Withdraw(recipient, value);
-        } else {
-            balances[recipient] += value;
-            Transfer(msg.sender, recipient, value);
-        }
+        Withdraw(recipient, value);
+    }
+
+    /// Transfer `value` to `recipient` on this `foreign` chain.
+    ///
+    /// does not affect `home` chain. does not do a relay.
+    function transferLocal(address recipient, uint value) public {
+        require(balances[msg.sender] >= value);
+        // fails if value == 0, or if there is an overflow
+        require(balances[recipient] + value > balances[recipient]);
+
+        balances[msg.sender] -= value;
+        balances[recipient] += value;
+        Transfer(msg.sender, recipient, value);
     }
 
     /// Should be used as sync tool
