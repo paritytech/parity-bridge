@@ -86,6 +86,25 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
+  it("should not be possible to do same deposit twice for same authority", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var userAccount = accounts[2];
+    var value = web3.toWei(1, "ether");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
+    }).then(function(_) {
+      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
+    }).then(function(result) {
+      assert(false, "doing same deposit twice from same authority should fail");
+    }, function(err) {
+    })
+  })
+
   it("should ignore misbehaving authority when confirming deposit", function() {
     var meta;
     var requiredSignatures = 2;
