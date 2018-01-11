@@ -115,33 +115,34 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
-  it("should allow user to transfer value internally", function() {
+  it("should allow user to transfer value locally", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var userAccount2 = accounts[3];
-    var value = web3.toWei(3, "ether");
-    var value2 = web3.toWei(1, "ether");
+    var user1InitialValue = web3.toWei(3, "ether");
+    var transferedValue = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
+      // top up balance so we can transfer
+      return meta.deposit(userAccount, user1InitialValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(userAccount2, value2, { from: userAccount });
+      return meta.transferLocal(userAccount2, transferedValue, { from: userAccount });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
       assert.equal(userAccount, result.logs[0].args.from, "Event from should be transaction sender");
       assert.equal(userAccount2, result.logs[0].args.to, "Event from should be transaction recipient");
-      assert.equal(value2, result.logs[0].args.value, "Event value should match transaction value");
+      assert.equal(transferedValue, result.logs[0].args.value, "Event value should match transaction value");
       return Promise.all([
         meta.balances.call(userAccount),
         meta.balances.call(userAccount2)
       ])
     }).then(function(result) {
       assert.equal(web3.toWei(2, "ether"), result[0]);
-      assert.equal(web3.toWei(1, "ether"), result[1]);
+      assert.equal(transferedValue, result[1]);
     })
   })
 
