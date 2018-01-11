@@ -2,7 +2,7 @@ pragma solidity ^0.4.17;
 
 
 library Authorities {
-    function contains (address[] self, address value) internal pure returns (bool) {
+    function contains(address[] self, address value) internal pure returns (bool) {
         for (uint i = 0; i < self.length; i++) {
             if (self[i] == value) {
                 return true;
@@ -15,14 +15,14 @@ library Authorities {
 
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
-    function signer (bytes signature, bytes message) public pure returns (address) {
+    function signer(bytes signature, bytes message) public pure returns (address) {
         return Signer.signer(signature, message);
     }
 }
 
 
 library Utils {
-    function toString (uint256 inputValue) internal pure returns (string str) {
+    function toString(uint256 inputValue) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
         uint workingValue = inputValue;
@@ -42,7 +42,7 @@ library Utils {
 
 
 library Signer {
-    function signer (bytes signature, bytes message) internal pure returns (address) {
+    function signer(bytes signature, bytes message) internal pure returns (address) {
         require(signature.length == 65);
         bytes32 r;
         bytes32 s;
@@ -56,7 +56,7 @@ library Signer {
         return ecrecover(hash(message), uint8(v), r, s);
     }
 
-    function hash (bytes message) internal pure returns (bytes32) {
+    function hash(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
         return keccak256(prefix, Utils.toString(message.length), message);
     }
@@ -91,7 +91,7 @@ contract HomeBridge {
     event Withdraw (address recipient, uint value);
 
     /// Multisig authority validation
-    modifier allAuthorities (uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
+    modifier allAuthorities(uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
         var hash = Signer.hash(message);
         var used = new address[](requiredSignatures);
 
@@ -107,7 +107,7 @@ contract HomeBridge {
     }
 
     /// Constructor.
-    function HomeBridge (
+    function HomeBridge(
         uint requiredSignaturesParam,
         address[] authoritiesParam,
         uint estimatedGasCostOfWithdrawParam
@@ -189,7 +189,7 @@ contract HomeBridge {
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
     ///
     /// NOTE that anyone can call withdraw provided they have the message and required signatures!
-    function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
+    function withdraw(uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
         address recipient = getRecipientFromMessage(message);
         uint value = getValueFromMessage(message);
@@ -276,7 +276,7 @@ contract ForeignBridge {
     }
 
     /// Multisig authority validation
-    modifier onlyAuthority () {
+    modifier onlyAuthority() {
         require(authorities.contains(msg.sender));
         _;
     }
@@ -286,7 +286,7 @@ contract ForeignBridge {
     /// deposit recipient (bytes20)
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
-    function deposit (address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
+    function deposit(address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
         // Protection from misbehaing authority
         var hash = keccak256(recipient, value, transactionHash);
 
@@ -301,19 +301,35 @@ contract ForeignBridge {
         }
     }
 
-    /// Used to transfer money between accounts
-    function transfer (address recipient, uint value, bool externalTransfer) public {
+    /// Transfer `value` from `msg.sender`s local balance (on `foreign` chain) to `recipient` on `home` chain.
+    ///
+    /// immediately decreases `msg.sender`s local balance.
+    /// emits a `Withdraw` event which will be picked up by the bridge authorities.
+    /// bridge authorities will then sign off (by calling `submitSignature`) on a message containing `value`,
+    /// `recipient` and the `hash` of the transaction on `foreign` containing the `Withdraw` event.
+    /// once `requiredSignatures` are collected a `CollectedSignatures` event will be emitted.
+    /// an authority will pick up `CollectedSignatures` an call `HomeBridge.withdraw`
+    /// which transfers `value - relayCost` to `recipient` completing the transfer.
+    function transferHomeViaRelay(address recipient, uint value) public {
         require(balances[msg.sender] >= value);
         // fails if value == 0, or if there is an overflow
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
-        if (externalTransfer) {
-            Withdraw(recipient, value);
-        } else {
-            balances[recipient] += value;
-            Transfer(msg.sender, recipient, value);
-        }
+        Withdraw(recipient, value);
+    }
+
+    /// Transfer `value` to `recipient` on this `foreign` chain.
+    ///
+    /// does not affect `home` chain. does not do a relay.
+    function transferLocal(address recipient, uint value) public {
+        require(balances[msg.sender] >= value);
+        // fails if value == 0, or if there is an overflow
+        require(balances[recipient] + value > balances[recipient]);
+
+        balances[msg.sender] -= value;
+        balances[recipient] += value;
+        Transfer(msg.sender, recipient, value);
     }
 
     /// Should be used as sync tool
@@ -324,7 +340,7 @@ contract ForeignBridge {
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
-    function submitSignature (bytes signature, bytes message) public onlyAuthority() {
+    function submitSignature(bytes signature, bytes message) public onlyAuthority() {
         // Validate submited signatures
         require(Signer.signer(signature, message) == msg.sender);
 
@@ -345,12 +361,12 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature (bytes32 hash, uint index) public view returns (bytes) {
+    function signature(bytes32 hash, uint index) public view returns (bytes) {
         return signatures[hash].signatures[index];
     }
 
     /// Get message
-    function message (bytes32 hash) public view returns (bytes) {
+    function message(bytes32 hash) public view returns (bytes) {
         return signatures[hash].message;
     }
 }
