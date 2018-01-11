@@ -91,7 +91,7 @@ contract('ForeignBridge', function(accounts) {
     var requiredSignatures = 2;
     var authorities = [accounts[0], accounts[1], accounts[2]];
     var userAccount = accounts[3];
-    var invalid_value = web3.toWei(2, "ether");
+    var invalidValue = web3.toWei(2, "ether");
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
@@ -100,7 +100,7 @@ contract('ForeignBridge', function(accounts) {
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "No event should be created yet");
-      return meta.deposit(userAccount, invalid_value, hash, { from: authorities[1] });
+      return meta.deposit(userAccount, invalidValue, hash, { from: authorities[1] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "Misbehaving authority should be ignored");
       return meta.deposit(userAccount, value, hash, { from: authorities[2] })
