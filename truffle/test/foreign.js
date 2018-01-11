@@ -128,7 +128,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(userAccount2, value2, false, { from: userAccount });
+      return meta.transferLocal(userAccount2, value2, { from: userAccount });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
@@ -158,7 +158,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(userAccount2, value2, false, { from: userAccount });
+      return meta.transferLocal(userAccount2, value2, { from: userAccount });
     }).then(function(result) {
       assert(false, "Transfer should fail");
     }, function(err) {
@@ -178,7 +178,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(userAccount2, value2, false, { from: userAccount });
+      return meta.transferLocal(userAccount2, value2, { from: userAccount });
     }).then(function(result) {
       assert(false, "Transfer of value 0 should fail");
     }, function (err) {
@@ -201,7 +201,7 @@ contract('ForeignBridge', function(accounts) {
         meta.deposit(userAccount2, value2, hash, { from: authorities[0] }),
       ])
     }).then(function(result) {
-      return meta.transfer(userAccount2, value, false, { from: userAccount });
+      return meta.transferLocal(userAccount2, value, { from: userAccount });
     }).then(function(result) {
       assert(false, "Transfer with overflow should fail");
     }, function (err) {
@@ -221,7 +221,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(userAccount2, value2, true, { from: userAccount });
+      return meta.transferHomeViaRelay(userAccount2, value2, { from: userAccount });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
