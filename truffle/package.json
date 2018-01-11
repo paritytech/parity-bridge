@@ -15,14 +15,14 @@
     "concurrently": "^3.5.1",
     "coveralls": "^3.0.0",
     "ganache-cli": "^6.0.3",
-    "solidity-coverage": "^0.4.2",
-    "solium": "^1.0.11",
-    "truffle": "^4.0.1"
+    "solidity-coverage": "^0.4.8",
+    "solium": "^1.1.2",
+    "truffle": "^4.0.4"
   },
   "dependencies": {},
   "scripts": {
     "ci": "concurrently \"yarn run solium\" \"yarn run truffle-with-rpc\" \"yarn run solidity-coverage\"",
-    "ganache": "ganache-cli -p 8545",
+    "ganache": "ganache-cli --port 8547",
     "solidity-coverage": "solidity-coverage",
     "solium": "solium --dir contracts/",
     "test": "yarn run truffle-with-rpc",

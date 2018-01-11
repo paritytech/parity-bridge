@@ -2401,7 +2401,11 @@ sol-digger@0.0.2:
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/sol-digger/-/sol-digger-0.0.2.tgz#406c4a9d31e269e7f88eb1c2ea101318e5e09025"
 
-sol-explore@^1.6.1, sol-explore@^1.6.2:
+sol-explore@1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/sol-explore/-/sol-explore-1.6.1.tgz#b59f073c69fe332560d5a10c32ba8ca7f2986cfb"
+
+sol-explore@^1.6.2:
   version "1.6.2"
   resolved "https://registry.yarnpkg.com/sol-explore/-/sol-explore-1.6.2.tgz#43ae8c419fd3ac056a05f8a9d1fb1022cd41ecc2"
 
@@ -2415,9 +2419,9 @@ solc@0.4.18:
     semver "^5.3.0"
     yargs "^4.7.1"
 
-solidity-coverage@^0.4.2:
-  version "0.4.3"
-  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.4.3.tgz#087bd067971a007096d98b2c7e09ec56f39e5265"
+solidity-coverage@^0.4.8:
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.4.8.tgz#2447c641d43267c12b7ac8114e573a813394766b"
   dependencies:
     death "^1.1.0"
     ethereumjs-testrpc-sc "6.0.7"
@@ -2426,24 +2430,24 @@ solidity-coverage@^0.4.2:
     req-cwd "^1.0.1"
     shelljs "^0.7.4"
     sol-explore "^1.6.2"
-    solidity-parser-sc "0.4.1"
+    solidity-parser-sc "0.4.4"
     web3 "^0.18.4"
 
-solidity-parser-sc@0.4.1:
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/solidity-parser-sc/-/solidity-parser-sc-0.4.1.tgz#d72e4fd7776a305b2b56270a821638178521f89a"
+solidity-parser-sc@0.4.4:
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/solidity-parser-sc/-/solidity-parser-sc-0.4.4.tgz#a7354476ce7b774caa43c9089c00b68a2efbec61"
   dependencies:
     mocha "^2.4.5"
     pegjs "^0.10.0"
     yargs "^4.6.0"
 
-solium-plugin-security@0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.0.2.tgz#2e1d690c2d260713b61bbc4194efea2306abd940"
+solium-plugin-security@0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.1.1.tgz#2a87bcf8f8c3abf7d198e292e4ac080284e3f3f6"
 
-solium@^1.0.11:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/solium/-/solium-1.0.11.tgz#01335e7c6ee14c549589469e40493bc3d3cde898"
+solium@^1.1.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/solium/-/solium-1.1.2.tgz#0e6d95d17ddd412e415573a72e53137357dba2f8"
   dependencies:
     ajv "^5.2.2"
     chokidar "^1.6.0"
@@ -2452,14 +2456,14 @@ solium@^1.0.11:
     js-string-escape "^1.0.1"
     lodash "^4.14.2"
     sol-digger "0.0.2"
-    sol-explore "^1.6.1"
-    solium-plugin-security "0.0.2"
-    solparse "2.0.2"
+    sol-explore "1.6.1"
+    solium-plugin-security "0.1.1"
+    solparse "2.2.2"
     text-table "^0.2.0"
 
-solparse@2.0.2:
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.0.2.tgz#3dc3cd6320da2fa24fb69aae7a235ba790636c4e"
+solparse@2.2.2:
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/solparse/-/solparse-2.2.2.tgz#2e0f6684a7efffabe561ec51ebd91663823d3e40"
   dependencies:
     mocha "^4.0.1"
     pegjs "^0.10.0"
@@ -2688,9 +2692,9 @@ tree-kill@^1.1.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/tree-kill/-/tree-kill-1.2.0.tgz#5846786237b4239014f05db156b643212d4c6f36"
 
-truffle@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/truffle/-/truffle-4.0.1.tgz#d8661a4ad7a6ca094b7517d29b199c60e6dde665"
+truffle@^4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/truffle/-/truffle-4.0.4.tgz#b447cb3b0469054413b5ff421f6e8baeefddb2be"
   dependencies:
     mocha "^3.4.2"
     original-require "^1.0.1"

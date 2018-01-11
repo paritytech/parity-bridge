@@ -135,7 +135,8 @@ macro_rules! test_app_stream {
 				authorities: Authorities {
 					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
 					required_signatures: $signatures,
-				}
+				},
+				estimated_gas_cost_of_withdraw: 100_000,
 			};
 
 			let app = App {
@@ -153,6 +154,23 @@ macro_rules! test_app_stream {
 			let app = Arc::new(app);
 			let stream = $init_stream(app, &$db);
 			let res = stream.collect().wait();
+
+			assert_eq!(
+				home.expected_requests.len(),
+				home.requests.get(),
+				"home: expected {} requests but received only {}",
+				home.expected_requests.len(),
+				home.requests.get()
+			);
+
+			assert_eq!(
+				foreign.expected_requests.len(),
+				foreign.requests.get(),
+				"foreign: expected {} requests but received only {}",
+				foreign.expected_requests.len(),
+				foreign.requests.get()
+			);
+
 			assert_eq!($expected, res.unwrap());
 		}
 	}

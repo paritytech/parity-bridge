@@ -36,6 +36,8 @@ Options:
 ### configuration [file example](./examples/config.toml)
 
 ```toml
+estimated_gas_cost_of_withdraw = 100000
+
 [home]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
@@ -64,6 +66,13 @@ required_signatures = 2
 home_deploy = { gas = 500000 }
 foreign_deploy = { gas = 500000 }
 ```
+
+#### options
+
+- `estimated_gas_cost_of_withdraw` - how much gas a transaction to `HomeBridge.withdraw` consumes (**required**)
+  - currently recommended value: `100000`
+  - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
+  - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
 
 #### home options
 
@@ -146,22 +155,58 @@ checked_withdraw_confirm = 121
 
 ### truffle tests
 
-#### install
+[requires yarn to be installed](https://yarnpkg.com/lang/en/docs/install/)
 
-```
-npm install -g truffle
-npm install -g ganache-cli
-```
-
-#### run
-
-start testing ethereum rpc client in one shell:
-```
-ganache-cli
-```
-
-run tests in another shell:
 ```
 cd truffle
-truffle test
+yarn test
 ```
+
+### recipient pays relay cost to relaying authority
+
+a bridge `authority` has to pay for gas (`cost`) to execute `HomeBridge.withdraw` when
+withdrawing `value` from `foreign` chain to `home` chain.
+`value - cost` is transferred to the `recipient`. `cost` is transferred to the `authority`
+executing `HomeBridge.withdraw`.
+the `recipient` pays the relaying `authority` for the execution of the transaction.
+that shuts down an attack that enabled exhaustion of authorities funds on `home`.
+
+read on for a more thorough explanation.
+
+parity-bridge connects a value-bearing ethereum blockchain `home`
+(initally the ethereum foundation chain)
+to a non-value-bearing PoA ethereum blockchain `foreign` (initally the kovan testnet).
+
+value-bearing means that the ether on that chain has usable value in the sense that
+in order to obtain it one has to either mine it (trade in electricity)
+or trade in another currency.
+non-value-bearing means that one can easily obtain a large amount of ether
+on that chain for free.
+through a faucet in the case of testnets for example.
+
+the bridge authorities are also the validators of the `foreign` PoA chain.
+transactions by the authorities are therefore free (gas price = 0) on `foreign`.
+
+to execute a transaction on `home` a bridge authority has to spend ether to
+pay for the gas.
+
+this opened up an attack where a malicious user could
+deposit a very small amount of wei on `HomeBridge`, get it relayed to `ForeignBridge`,
+then spam `ForeignBridge.transfer` with `1` wei withdraws.
+it would cost the attacker very little `home` chain wei and essentially
+free `foreign` testnet wei to cause the authorities to spend orders of magnitude more wei
+to relay the withdraw to `home` by executing `HomeBridge.withdraw`.
+an attacker was able to exhaust bridge authorities funds on `home`.
+
+to shut down this attack `HomeBridge.withdraw` was modified so
+`value - cost` is transferred to the `recipient` and `cost` is transferred to the `authority`
+doing the relay.
+this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
+
+if the value withdrawn is too low to pay for the relay at current gas prices then
+bridge authorities will ignore it. one can think of it as value getting
+spent entirely on paying the relay with no value left to pay out the recipient.
+
+`HomeBridge.withdraw` is currently the only transaction bridge authorities execute on `home`.
+care must be taken to secure future functions that bridge authorities will execute
+on `home` in similar ways.

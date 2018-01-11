@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.17;
 
 
 library Authorities {
@@ -22,13 +22,14 @@ library SignerTest {
 
 
 library Utils {
-    function toString (uint256 v) internal pure returns (string str) {
+    function toString (uint256 inputValue) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
+        uint workingValue = inputValue;
         uint i = 0;
-        while (v != 0) {
-            uint remainder = v % 10;
-            v = v / 10;
+        while (workingValue != 0) {
+            uint remainder = workingValue % 10;
+            workingValue = workingValue / 10;
             reversed[i++] = byte(48 + remainder);
         }
         bytes memory s = new bytes(i);
@@ -70,6 +71,13 @@ contract HomeBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
+    /// The gas cost of calling `HomeBridge.withdraw`.
+    ///
+    /// Is subtracted from `value` on withdraw.
+    /// recipient pays the relaying authority for withdraw.
+    /// this shuts down attacks that exhaust authorities funds on home chain.
+    uint public estimatedGasCostOfWithdraw;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -99,16 +107,78 @@ contract HomeBridge {
     }
 
     /// Constructor.
-    function HomeBridge (uint n, address[] a) public {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function HomeBridge (
+        uint requiredSignaturesParam,
+        address[] authoritiesParam,
+        uint estimatedGasCostOfWithdrawParam
+    ) public
+    {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
+        estimatedGasCostOfWithdraw = estimatedGasCostOfWithdrawParam;
     }
 
     /// Should be used to deposit money.
     function () public payable {
         Deposit(msg.sender, msg.value);
+    }
+
+    // layout of message :: bytes:
+    // offset  0: 32 bytes :: uint (little endian) - message length
+    // offset 32: 20 bytes :: address - recipient address
+    // offset 52: 32 bytes :: uint (little endian) - value
+    // offset 84: 32 bytes :: bytes32 - transaction hash
+
+    // bytes 1 to 32 are 0 because message length is stored as little endian.
+    // mload always reads 32 bytes.
+    // so we can and have to start reading recipient at offset 20 instead of 32.
+    // if we were to read at 32 the address would contain part of value and be corrupted.
+    // when reading from offset 20 mload will read 12 zero bytes followed
+    // by the 20 recipient address bytes and correctly convert it into an address.
+    // this saves some storage/gas over the alternative solution
+    // which is padding address to 32 bytes and reading recipient at offset 32.
+    // for more details see discussion in:
+    // https://github.com/paritytech/parity-bridge/issues/61
+
+    function getRecipientFromMessage(bytes message) public pure returns (address) {
+        address recipient;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            recipient := mload(add(message, 20))
+        }
+        return recipient;
+    }
+
+    function getValueFromMessage(bytes message) public pure returns (uint) {
+        uint value;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            value := mload(add(message, 52))
+        }
+        return value;
+    }
+
+    function getTransactionHashFromMessage(bytes message) public pure returns (bytes32) {
+        bytes32 hash;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            hash := mload(add(message, 84))
+        }
+        return hash;
+    }
+
+    /// to be called by authorities to check
+    /// whether they withdraw message should be relayed or whether it
+    /// is too low to cover the cost of calling withdraw and can be ignored
+    function isMessageValueSufficientToCoverRelay(bytes message) public view returns (bool) {
+        return getValueFromMessage(message) > getWithdrawRelayCost();
+    }
+
+    /// an upper bound to the cost of relaying a withdraw by calling HomeBridge.withdraw
+    function getWithdrawRelayCost() public view returns (uint) {
+        return estimatedGasCostOfWithdraw * tx.gasprice;
     }
 
     /// Used to withdraw money from the contract.
@@ -118,44 +188,36 @@ contract HomeBridge {
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
     ///
-    /// NOTE that anyone can call withdraw provided they have the
-    /// message and required signatures!
+    /// NOTE that anyone can call withdraw provided they have the message and required signatures!
     function withdraw (uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
-        address recipient;
-        uint value;
-        bytes32 hash;
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            // layout of message :: bytes:
-            // offset  0: 32 bytes :: uint (little endian) - message length
-            // offset 32: 20 bytes :: address - recipient address
-            // offset 52: 32 bytes :: uint (little endian) - value
-            // offset 84: 32 bytes :: bytes32 - transaction hash
+        address recipient = getRecipientFromMessage(message);
+        uint value = getValueFromMessage(message);
+        bytes32 hash = getTransactionHashFromMessage(message);
 
-            // we require above that message length == 84.
-            // bytes 1 to 32 are 0 because message length is stored as little endian.
-            // mload always reads 32 bytes.
-            // so we can and have to start reading recipient at offset 20 instead of 32.
-            // if we were to read at 32 the address would contain part of value and be corrupted.
-            // when reading from offset 20 mload will read 12 zero bytes followed
-            // by the 20 recipient address bytes and correctly convert it into an address.
-            // this saves some storage/gas over the alternative solution
-            // which is padding address to 32 bytes and reading recipient at offset 32.
-            // for more details see discussion in:
-            // https://github.com/paritytech/parity-bridge/issues/61
-            recipient := mload(add(message, 20))
-            value := mload(add(message, 52))
-            hash := mload(add(message, 84))
-        }
-
-        // Duplicated withdraw
+        // The following two statements guard against reentry into this function.
+        // Duplicated withdraw or reentry.
         require(!withdraws[hash]);
-
-        // Order of operations below is critical to avoid TheDAO-like bug
+        // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
-        recipient.transfer(value);
-        Withdraw(recipient, value);
+
+        // this fails if `value` is not even enough to cover the relay cost.
+        // Authorities simply IGNORE withdraws where `value` can’t relay cost.
+        // Think of it as `value` getting burned entirely on the relay with no value left to pay out the recipient.
+        require(isMessageValueSufficientToCoverRelay(message));
+
+        uint estimatedWeiCostOfWithdraw = getWithdrawRelayCost();
+
+        // charge recipient for relay cost
+        uint valueRemainingAfterSubtractingCost = value - estimatedWeiCostOfWithdraw;
+
+        // pay out recipient
+        recipient.transfer(valueRemainingAfterSubtractingCost);
+
+        // refund relay cost to relaying authority
+        msg.sender.transfer(estimatedWeiCostOfWithdraw);
+
+        Withdraw(recipient, valueRemainingAfterSubtractingCost);
     }
 }
 
@@ -202,11 +264,15 @@ contract ForeignBridge {
     event CollectedSignatures(address authority, bytes32 messageHash);
 
     /// Constructor.
-    function ForeignBridge(uint n, address[] a) public {
-        require(n != 0);
-        require(n <= a.length);
-        requiredSignatures = n;
-        authorities = a;
+    function ForeignBridge(
+        uint requiredSignaturesParam,
+        address[] authoritiesParam
+    ) public
+    {
+        require(requiredSignaturesParam != 0);
+        require(requiredSignaturesParam <= authoritiesParam.length);
+        requiredSignatures = requiredSignaturesParam;
+        authorities = authoritiesParam;
     }
 
     /// Multisig authority validation
@@ -279,12 +345,12 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature (bytes32 hash, uint index) public constant returns (bytes) {
+    function signature (bytes32 hash, uint index) public view returns (bytes) {
         return signatures[hash].signatures[index];
     }
 
     /// Get message
-    function message (bytes32 hash) public constant returns (bytes) {
+    function message (bytes32 hash) public view returns (bytes) {
         return signatures[hash].message;
     }
 }

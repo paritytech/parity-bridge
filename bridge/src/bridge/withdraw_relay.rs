@@ -3,7 +3,7 @@ use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all, Join};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
+use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
@@ -12,28 +12,36 @@ use util::web3_filter;
 use database::Database;
 use error::{self, Error};
 
+/// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
 	let filter = foreign.events().collected_signatures().create_filter();
 	web3_filter(filter, address)
 }
 
+/// payloads for calls to `ForeignBridge.signature` and `ForeignBridge.message`
+/// to retrieve the signatures (v, r, s) and messages
+/// which the withdraw relay process should later relay to `HomeBridge`
+/// by calling `HomeBridge.withdraw(v, r, s, message)`
 #[derive(Debug, PartialEq)]
 struct RelayAssignment {
 	signature_payloads: Vec<Bytes>,
 	message_payload: Bytes,
 }
 
-fn signatures_payload(foreign: &foreign::ForeignBridge, signatures: u32, my_address: Address, log: Log) -> error::Result<Option<RelayAssignment>> {
+fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32, my_address: Address, log: Log) -> error::Result<Option<RelayAssignment>> {
+	// convert web3::Log to ethabi::RawLog since ethabi events can
+	// only be parsed from the latter
 	let raw_log = RawLog {
 		topics: log.topics.into_iter().map(|t| t.0).collect(),
 		data: log.data.0,
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
 	if collected_signatures.authority != my_address.0 {
-		// someone else will relay this transaction to home
+		// this authority is not responsible for relaying this transaction.
+		// someone else will relay this transaction to home.
 		return Ok(None);
 	}
-	let signature_payloads = (0..signatures).into_iter()
+	let signature_payloads = (0..required_signatures).into_iter()
 		.map(|index| ethabi::util::pad_u32(index))
 		.map(|index| foreign.functions().signature().input(collected_signatures.message_hash, index))
 		.map(Into::into)
@@ -46,7 +54,19 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, signatures: u32, my_addr
 	}))
 }
 
-fn withdraw_relay_payload(home: &home::HomeBridge, signatures: Vec<Bytes>, message: Bytes) -> Bytes {
+/// returns the payload for a call to `HomeBridge.isMessageValueSufficientToCoverRelay(message)`
+/// for the given `message`
+fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) -> Bytes {
+	assert_eq!(message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	home
+		.functions()
+		.is_message_value_sufficient_to_cover_relay()
+		.input(message.0.clone()).into()
+}
+
+/// returns the payload for a transaction to `HomeBridge.withdraw(r, s, v, message)`
+/// for the given `signatures` (r, s, v) and `message`
+fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
 	assert_eq!(message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
 	let mut v_vec = Vec::new();
 	let mut r_vec = Vec::new();
@@ -63,13 +83,20 @@ fn withdraw_relay_payload(home: &home::HomeBridge, signatures: Vec<Bytes>, messa
 		s_vec.push(s);
 		r_vec.push(r);
 	}
-	home.functions().withdraw().input(v_vec, r_vec, s_vec, message.0).into()
+	home.functions().withdraw().input(v_vec, r_vec, s_vec, message.0.clone()).into()
 }
 
+/// state of the withdraw relay state machine
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
-	Fetch {
+	FetchMessagesSignatures {
 		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
+		block: u64,
+	},
+	FetchMessageValueSufficient {
+		future: JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
+		messages: Vec<Bytes>,
+		signatures: Vec<Vec<Bytes>>,
 		block: u64,
 	},
 	RelayWithdraws {
@@ -149,19 +176,65 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.map(|calls| join_all(calls))
 						.collect::<Vec<_>>();
 
-					WithdrawRelayState::Fetch {
+					// wait for fetching of messages and signatures to complete
+					WithdrawRelayState::FetchMessagesSignatures {
 						future: join_all(message_calls).join(join_all(signature_calls)),
 						block: item.to,
 					}
 				},
-				WithdrawRelayState::Fetch { ref mut future, block } => {
+				WithdrawRelayState::FetchMessagesSignatures { ref mut future, block } => {
 					let (messages, signatures) = try_ready!(future.poll());
 					assert_eq!(messages.len(), signatures.len());
+
 					let app = &self.app;
 					let home_contract = &self.home_contract;
 
-					let relays = messages.into_iter().zip(signatures.into_iter())
-						.map(|(message, signatures)| withdraw_relay_payload(&app.home_bridge, signatures, message))
+					let message_value_sufficient_payloads = messages
+						.iter()
+						.map(|message| {
+							message_value_sufficient_payload(
+								&app.home_bridge,
+								message
+							)
+						})
+						.map(|payload| {
+							app.timer.timeout(
+								api::call(&app.connections.home, home_contract.clone(), payload),
+								app.config.home.request_timeout)
+						})
+						.collect::<Vec<_>>();
+
+					WithdrawRelayState::FetchMessageValueSufficient {
+						future: join_all(message_value_sufficient_payloads),
+						messages,
+						signatures,
+						block,
+					}
+				},
+				WithdrawRelayState::FetchMessageValueSufficient {
+					ref mut future,
+					ref messages,
+					ref signatures,
+					block
+				} => {
+					let message_value_sufficient = try_ready!(future.poll());
+
+					let app = &self.app;
+					let home_contract = &self.home_contract;
+
+					let relays = messages.into_iter()
+						.zip(signatures.into_iter())
+						.zip(message_value_sufficient.into_iter())
+						// ignore those messages that don't have sufficient
+						// value to pay for the relay gas cost
+						.filter(|&(_, ref is_message_value_sufficient)| {
+							// TODO [snd] this is ugly.
+							// in the future ethabi should return a bool
+							// for `is_message_value_sufficient`
+							// since the contract function returns a bool
+							U256::from(is_message_value_sufficient.0.as_slice()) == U256::from(1)
+						})
+						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
 						.map(|payload| TransactionRequest {
 							from: app.config.home.account.clone(),
 							to: Some(home_contract.clone()),
@@ -178,6 +251,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								app.config.home.request_timeout)
 						})
 						.collect::<Vec<_>>();
+					// wait for relays to complete
 					WithdrawRelayState::RelayWithdraws {
 						future: join_all(relays),
 						block,
@@ -255,7 +329,7 @@ mod tests {
 		];
 		let message: Bytes = vec![0x33; 84].into();
 
-		let payload = withdraw_relay_payload(&home, signatures, message);
+		let payload = withdraw_relay_payload(&home, &signatures, &message);
 		let expected: Bytes = "9ce318f6000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001100000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000002111111111111111111111111111111111111111111111111111111111111111122222222222222222222222222222222222222222222222222222222222222220000000000000000000000000000000000000000000000000000000000000002111111111111111111111111111111111111111111111111111111111111111122222222222222222222222222222222222222222222222222222222222222220000000000000000000000000000000000000000000000000000000000000054333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333000000000000000000000000".from_hex().unwrap().into();
 		assert_eq!(expected, payload);
 	}
