@@ -146,43 +146,51 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
-  it("should not allow user to transfer value", function() {
+  it("should not allow user to transfer value they don't have either locally or to home", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
-    var userAccount2 = accounts[3];
-    var value = web3.toWei(3, "ether");
-    var value2 = web3.toWei(4, "ether");
+    var recipientAccount = accounts[3];
+    var userValue = web3.toWei(3, "ether");
+    var transferedValue = web3.toWei(4, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
+      return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(userAccount2, value2, { from: userAccount });
+      return meta.transferLocal(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
-      assert(false, "Transfer should fail");
+      assert(false, "transferLocal should fail");
+    }, function(err) {
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
+    }).then(function(result) {
+      assert(false, "transferHomeViaRelay should fail");
     }, function(err) {
     })
   })
 
-  it("should fail to transfer 0 value", function() {
+  it("should fail to transfer 0 value both locally and to home", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
-    var userAccount2 = accounts[3];
-    var value = web3.toWei(3, "ether");
-    var value2 = web3.toWei(0, "ether");
+    var recipientAccount = accounts[3];
+    var userValue = web3.toWei(3, "ether");
+    var transferedValue = web3.toWei(0, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
-      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
+      return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(userAccount2, value2, { from: userAccount });
+      return meta.transferLocal(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
-      assert(false, "Transfer of value 0 should fail");
-    }, function (err) {
+      assert(false, "transferLocal should fail");
+    }, function(err) {
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
+    }).then(function(result) {
+      assert(false, "transferHomeViaRelay should fail");
+    }, function(err) {
     })
   })
 
@@ -220,6 +228,7 @@ contract('ForeignBridge', function(accounts) {
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
+      // top up balance so we can transfer
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
       return meta.transferHomeViaRelay(userAccount2, value2, { from: userAccount });
