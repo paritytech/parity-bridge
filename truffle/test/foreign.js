@@ -401,19 +401,21 @@ contract('ForeignBridge', function(accounts) {
 
   it("should not be possible to submit signature twice", function() {
     var meta;
-    var requiredSignatures = 0;
+    var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    var signature;
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
-      return meta.submitSignature(result, message, { from: authorities[0] });
-    }).then(function(result) {
-      return meta.submitSignature(result, message, { from: authorities[0] });
-    }).then(function(result) {
+      signature = result;
+      return meta.submitSignature(signature, message, { from: authorities[0] });
+    }).then(function(_) {
+      return meta.submitSignature(signature, message, { from: authorities[0] });
+    }).then(function(_) {
       assert(false, "submitSignature should fail");
-    }, function (err) {
+    }, function (_) {
       // nothing
     })
   })
