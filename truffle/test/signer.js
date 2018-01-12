@@ -7,7 +7,7 @@ contract("Signer", function() {
     var account = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
 
     return Signer.new().then(function(instance) {
-      return instance.signer.call(signature, message)
+      return instance.recoverAddressFromSignedMessage.call(signature, message)
     }).then(function(result) {
       assert.equal(account, result);
     })
@@ -19,7 +19,7 @@ contract("Signer", function() {
     var account = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
 
     return Signer.new().then(function(instance) {
-      return instance.signer.call(signature, message)
+      return instance.recoverAddressFromSignedMessage.call(signature, message)
     }).then(function(result) {
       assert.equal(account, result);
     })

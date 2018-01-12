@@ -3,8 +3,8 @@ pragma solidity ^0.4.17;
 
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
-    function signer(bytes signature, bytes message) public pure returns (address) {
-        return MessageSigning.signer(signature, message);
+    function recoverAddressFromSignedMessage(bytes signature, bytes message) public pure returns (address) {
+        return MessageSigning.recoverAddressFromSignedMessage(signature, message);
     }
 }
 
@@ -39,7 +39,7 @@ library Helpers {
 
 
 library MessageSigning {
-    function signer(bytes signature, bytes message) internal pure returns (address) {
+    function recoverAddressFromSignedMessage(bytes signature, bytes message) internal pure returns (address) {
         require(signature.length == 65);
         bytes32 r;
         bytes32 s;
@@ -335,7 +335,7 @@ contract ForeignBridge {
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature(bytes signature, bytes message) public onlyAuthority() {
         // Validate submited signatures
-        require(MessageSigning.signer(signature, message) == msg.sender);
+        require(MessageSigning.recoverAddressFromSignedMessage(signature, message) == msg.sender);
 
         // Valid withdraw message must have 84 bytes
         require(message.length == 84);
