@@ -19,7 +19,7 @@ library Helpers {
         return false;
     }
 
-    function toString(uint256 inputValue) internal pure returns (string str) {
+    function intToString(uint256 inputValue) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
         uint workingValue = inputValue;
@@ -55,7 +55,7 @@ library Signer {
 
     function hash(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        return keccak256(prefix, Helpers.toString(message.length), message);
+        return keccak256(prefix, Helpers.intToString(message.length), message);
     }
 }
 
