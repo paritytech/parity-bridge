@@ -67,22 +67,6 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
-  function createMessage(recipient, value, transactionHash) {
-    web3._extend.utils.isBigNumber(value);
-    recipient = helpers.strip0x(recipient);
-    assert.equal(recipient.length, 20 * 2);
-
-    transactionHash = helpers.strip0x(transactionHash);
-    assert.equal(transactionHash.length, 32 * 2);
-
-    var value = helpers.strip0x(helpers.bigNumberToPaddedBytes32(value));
-    assert.equal(value.length, 64);
-    var message = "0x" + recipient + value + transactionHash;
-    var expectedMessageLength = (20 + 32 + 32) * 2 + 2;
-    assert.equal(message.length, expectedMessageLength);
-    return message;
-  }
-
   it("should get message parts correctly", function() {
     var homeBridge;
     var requiredSignatures = 1;
@@ -91,7 +75,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
-    var message = createMessage(recipientAccount, value, transactionHash);
+    var message = helpers.createMessage(recipientAccount, value, transactionHash);
 
     return HomeBridge.new(
       requiredSignatures,
@@ -150,12 +134,12 @@ contract('HomeBridge', function(accounts) {
     }).then(function(result) {
       assert(result.equals(estimatedWeiCostOfWithdraw), "getWithdrawRelayCost should return correct value");
 
-      var message = createMessage(recipientAccount, estimatedWeiCostOfWithdraw, transactionHash);
+      var message = helpers.createMessage(recipientAccount, estimatedWeiCostOfWithdraw, transactionHash);
       return homeBridge.isMessageValueSufficientToCoverRelay(message);
     }).then(function(result) {
       assert.equal(result, false, "exactly estimatedWeiCostOfWithdraw is not sufficient value");
 
-      var message = createMessage(recipientAccount, estimatedWeiCostOfWithdraw.plus(1), transactionHash);
+      var message = helpers.createMessage(recipientAccount, estimatedWeiCostOfWithdraw.plus(1), transactionHash);
       return homeBridge.isMessageValueSufficientToCoverRelay(message);
     }).then(function(result) {
       assert.equal(result, true, "estimatedWeiCostOfWithdraw + 1 is sufficient value");
@@ -171,7 +155,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -233,7 +217,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -309,7 +293,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
     var value = estimatedGasCostOfWithdraw;
-    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -356,8 +340,8 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
-    var message2 = createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
+    var message1 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message2 = helpers.createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -413,8 +397,8 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message1 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
-    var message2 = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message1 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message2 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -470,7 +454,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
@@ -505,7 +489,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var message = createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
 
     return HomeBridge.new(
       requiredSignatures,
