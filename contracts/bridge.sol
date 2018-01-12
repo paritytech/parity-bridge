@@ -50,10 +50,10 @@ library MessageSigning {
             s := mload(add(signature, 0x40))
             v := mload(add(signature, 0x60))
         }
-        return ecrecover(hash(message), uint8(v), r, s);
+        return ecrecover(hashMessage(message), uint8(v), r, s);
     }
 
-    function hash(bytes message) internal pure returns (bytes32) {
+    function hashMessage(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
         return keccak256(prefix, Helpers.intToString(message.length), message);
     }
@@ -87,7 +87,7 @@ contract HomeBridge {
 
     /// Multisig authority validation
     modifier allAuthorities(uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
-        var hash = MessageSigning.hash(message);
+        var hash = MessageSigning.hashMessage(message);
         var used = new address[](requiredSignatures);
 
         require(requiredSignatures <= v.length);
