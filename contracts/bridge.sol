@@ -9,7 +9,7 @@ library SignerTest {
 }
 
 
-library Utils {
+library Helpers {
     function addressArrayContains(address[] array, address value) internal pure returns (bool) {
         for (uint i = 0; i < array.length; i++) {
             if (array[i] == value) {
@@ -55,7 +55,7 @@ library Signer {
 
     function hash(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        return keccak256(prefix, Utils.toString(message.length), message);
+        return keccak256(prefix, Helpers.toString(message.length), message);
     }
 }
 
@@ -94,8 +94,8 @@ contract HomeBridge {
 
         for (uint i = 0; i < requiredSignatures; i++) {
             var a = ecrecover(hash, v[i], r[i], s[i]);
-            require(Utils.addressArrayContains(authorities, a));
-            require(!Utils.addressArrayContains(used, a));
+            require(Helpers.addressArrayContains(authorities, a));
+            require(!Helpers.addressArrayContains(used, a));
             used[i] = a;
         }
         _;
@@ -270,7 +270,7 @@ contract ForeignBridge {
 
     /// Multisig authority validation
     modifier onlyAuthority() {
-        require(Utils.addressArrayContains(authorities, msg.sender));
+        require(Helpers.addressArrayContains(authorities, msg.sender));
         _;
     }
 
@@ -284,7 +284,7 @@ contract ForeignBridge {
         var hash = keccak256(recipient, value, transactionHash);
 
         // Duplicated deposits
-        require(!Utils.addressArrayContains(deposits[hash], msg.sender));
+        require(!Helpers.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
         // TODO: this may cause troubles if requriedSignatures len is changed
@@ -342,7 +342,7 @@ contract ForeignBridge {
         var hash = keccak256(message);
 
         // Duplicated signatures
-        require(!Utils.addressArrayContains(signatures[hash].signed, msg.sender));
+        require(!Helpers.addressArrayContains(signatures[hash].signed, msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
         signatures[hash].signatures.push(signature);
