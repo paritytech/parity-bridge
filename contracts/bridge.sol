@@ -1,18 +1,6 @@
 pragma solidity ^0.4.17;
 
 
-library Authorities {
-    function contains(address[] self, address value) internal pure returns (bool) {
-        for (uint i = 0; i < self.length; i++) {
-            if (self[i] == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
-
 /// Library used only to test Signer library via rpc calls
 library SignerTest {
     function signer(bytes signature, bytes message) public pure returns (address) {
@@ -22,6 +10,15 @@ library SignerTest {
 
 
 library Utils {
+    function addressArrayContains(address[] array, address value) internal pure returns (bool) {
+        for (uint i = 0; i < array.length; i++) {
+            if (array[i] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function toString(uint256 inputValue) internal pure returns (string str) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
@@ -64,8 +61,6 @@ library Signer {
 
 
 contract HomeBridge {
-    using Authorities for address[];
-
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
@@ -99,8 +94,8 @@ contract HomeBridge {
 
         for (uint i = 0; i < requiredSignatures; i++) {
             var a = ecrecover(hash, v[i], r[i], s[i]);
-            require(authorities.contains(a));
-            require(!used.contains(a));
+            require(Utils.addressArrayContains(authorities, a));
+            require(!Utils.addressArrayContains(used, a));
             used[i] = a;
         }
         _;
@@ -223,8 +218,6 @@ contract HomeBridge {
 
 
 contract ForeignBridge {
-    using Authorities for address[];
-
     struct SignaturesCollection {
         /// Signed message.
         bytes message;
@@ -277,7 +270,7 @@ contract ForeignBridge {
 
     /// Multisig authority validation
     modifier onlyAuthority() {
-        require(authorities.contains(msg.sender));
+        require(Utils.addressArrayContains(authorities, msg.sender));
         _;
     }
 
@@ -291,7 +284,7 @@ contract ForeignBridge {
         var hash = keccak256(recipient, value, transactionHash);
 
         // Duplicated deposits
-        require(!deposits[hash].contains(msg.sender));
+        require(!Utils.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
         // TODO: this may cause troubles if requriedSignatures len is changed
@@ -349,7 +342,7 @@ contract ForeignBridge {
         var hash = keccak256(message);
 
         // Duplicated signatures
-        require(!signatures[hash].signed.contains(msg.sender));
+        require(!Utils.addressArrayContains(signatures[hash].signed, msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
         signatures[hash].signatures.push(signature);
