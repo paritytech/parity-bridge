@@ -1,14 +1,6 @@
 pragma solidity ^0.4.17;
 
 
-/// Library used only to test MessageSigning library via rpc calls
-library MessageSigningTest {
-    function recoverAddressFromSignedMessage(bytes signature, bytes message) public pure returns (address) {
-        return MessageSigning.recoverAddressFromSignedMessage(signature, message);
-    }
-}
-
-
 library Helpers {
     function addressArrayContains(address[] array, address value) internal pure returns (bool) {
         for (uint i = 0; i < array.length; i++) {
@@ -56,6 +48,14 @@ library MessageSigning {
     function hashMessage(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
         return keccak256(prefix, Helpers.intToString(message.length), message);
+    }
+}
+
+
+/// Library used only to test MessageSigning library via rpc calls
+library MessageSigningTest {
+    function recoverAddressFromSignedMessage(bytes signature, bytes message) public pure returns (address) {
+        return MessageSigning.recoverAddressFromSignedMessage(signature, message);
     }
 }
 
