@@ -1,12 +1,12 @@
-var Signer = artifacts.require("SignerTest");
+var MessageSigning = artifacts.require("MessageSigningTest");
 
-contract("Signer", function() {
+contract("MessageSigning", function() {
   it("should validate signature", function() {
     var signature = "0xb585c41f3cceb2ff9b5c033f2edbefe93415bde365489c989bad8cef3b18e38148a13e100608a29735d709fe708926d37adcecfffb32b1d598727028a16df5db1b";
     var message = "0xdeadbeaf";
     var account = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
 
-    return Signer.new().then(function(instance) {
+    return MessageSigning.new().then(function(instance) {
       return instance.recoverAddressFromSignedMessage.call(signature, message)
     }).then(function(result) {
       assert.equal(account, result);
@@ -18,7 +18,7 @@ contract("Signer", function() {
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     var account = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
 
-    return Signer.new().then(function(instance) {
+    return MessageSigning.new().then(function(instance) {
       return instance.recoverAddressFromSignedMessage.call(signature, message)
     }).then(function(result) {
       assert.equal(account, result);
