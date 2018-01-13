@@ -1,7 +1,10 @@
 pragma solidity ^0.4.17;
 
 
+/// general helpers.
+/// `internal` so they get compiled into contracts using them.
 library Helpers {
+    /// returns whether `array` contains `value`.
     function addressArrayContains(address[] array, address value) internal pure returns (bool) {
         for (uint i = 0; i < array.length; i++) {
             if (array[i] == value) {
@@ -30,6 +33,8 @@ library Helpers {
 }
 
 
+// helpers for message signing.
+// `internal` so they get compiled into contracts using them.
 library MessageSigning {
     function recoverAddressFromSignedMessage(bytes signature, bytes message) internal pure returns (address) {
         require(signature.length == 65);
