@@ -459,6 +459,8 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80");
+    // make message too short
+    message = message.substr(0, 83);
 
     return HomeBridge.new(
       requiredSignatures,
@@ -466,6 +468,7 @@ contract('HomeBridge', function(accounts) {
       estimatedGasCostOfWithdraw
     ).then(function(instance) {
       homeBridge = instance;
+
       // "charge" HomeBridge so we can withdraw later
       return homeBridge.sendTransaction({
         value: value,
@@ -476,18 +479,18 @@ contract('HomeBridge', function(accounts) {
     }).then(function(result) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
+
       return homeBridge.withdraw(
         [vrs.v],
         [vrs.r],
         [vrs.s],
-        // change message length to 83
-        message.substr(0, 83),
-        {from: authorities[0]}
+        message,
+        // anyone can call withdraw (provided they have the message and required signatures)
+        {from: userAccount}
       );
     }).then(function(result) {
-      assert(false, "should fail");
-    }, function (err) {
-      // nothing
+      assert(false, "withdraw should fail");
+    }, function(err) {
     })
   })
 })
