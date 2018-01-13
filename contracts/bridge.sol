@@ -59,6 +59,7 @@ library MessageSigningTest {
     }
 }
 
+
 library Message {
     // layout of message :: bytes:
     // offset  0: 32 bytes :: uint (little endian) - message length
@@ -109,17 +110,18 @@ library Message {
 /// Library used only to test Message library via rpc calls
 library MessageTest {
     function getRecipient(bytes message) public pure returns (address) {
-      return Message.getRecipient(message);
+        return Message.getRecipient(message);
     }
 
     function getValue(bytes message) public pure returns (uint) {
-      return Message.getValue(message);
+        return Message.getValue(message);
     }
 
     function getTransactionHash(bytes message) public pure returns (bytes32) {
-      return Message.getTransactionHash(message);
+        return Message.getTransactionHash(message);
     }
 }
+
 
 contract HomeBridge {
     /// Number of authorities signatures required to withdraw the money.
