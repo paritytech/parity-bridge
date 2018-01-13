@@ -24,4 +24,17 @@ contract("MessageSigning", function() {
       assert.equal(account, result);
     })
   })
+
+  it("should fail to recover address from signature that is too short", function() {
+    var signature = "0x3c9158597e22fa43fcc6636399c560441808e1d8496de0108e401a2ad71022b15d1191cf3c96e06759601c8e00ce7f03f350c12b19d0a8ba3ab3c07a71063f2b";
+    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
+    var account = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
+
+    return MessageSigning.new().then(function(instance) {
+      return instance.recoverAddressFromSignedMessage.call(signature, message)
+    }).then(function(result) {
+      assert(false, "should fail because signature is too short");
+    }, function(err) {
+    })
+  })
 })
