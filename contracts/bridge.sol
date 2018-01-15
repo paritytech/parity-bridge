@@ -15,20 +15,23 @@ library Helpers {
     }
 
     function intToString(uint256 inputValue) internal pure returns (string) {
-        // it is used only for small numbers
-        bytes memory reversed = new bytes(8);
-        uint workingValue = inputValue;
-        uint i = 0;
-        while (workingValue != 0) {
-            uint remainder = workingValue % 10;
-            workingValue = workingValue / 10;
-            reversed[i++] = byte(48 + remainder);
-        }
-        bytes memory s = new bytes(i);
-        for (uint j = 0; j < i; j++) {
-            s[j] = reversed[i - j - 1];
-        }
-        return string(s);
+        // figure out the length of the resulting string
+        uint length = 0;
+        uint currentValue = inputValue;
+        do {
+            length++;
+            currentValue /= 10;
+        } while (currentValue != 0);
+        // allocate enough memory
+        bytes memory result = new bytes(length);
+        // construct the string backwards
+        uint i = length - 1;
+        currentValue = inputValue;
+        do {
+            result[i--] = byte(48 + currentValue % 10);
+            currentValue /= 10;
+        } while (currentValue != 0);
+        return string(result);
     }
 }
 

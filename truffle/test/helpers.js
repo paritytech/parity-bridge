@@ -45,20 +45,15 @@ contract("Helpers", function() {
     })
   })
 
-  it("`intToString` should convert `0` to the empty string", function() {
-    return Helpers.new().then(function(instance) {
-
-      return instance.intToString.call(0)
-    }).then(function(result) {
-      assert.equal(result, "");
-    })
-  })
-
   it("`intToString` should convert int to string", function() {
     var numbersFrom1To100 = helpers.range(1, 101);
     var library;
     return Helpers.new().then(function(instance) {
       library = instance;
+
+      return library.intToString.call(0)
+    }).then(function(result) {
+      assert.equal(result, "0");
 
       return Promise.all(numbersFrom1To100.map(function(number) {
         return library.intToString.call(number);
@@ -83,15 +78,6 @@ contract("Helpers", function() {
       return library.intToString.estimateGas(12345678)
     }).then(function(result) {
       console.log("estimated gas cost of Helpers.intToString(12345678)", result);
-    })
-  })
-
-  it("`intToString` should fail to convert integers with more than 8 digits to string (rather to producing garbage)", function() {
-    return Helpers.new().then(function(instance) {
-      return instance.intToString.call(123456789)
-    }).then(function(_) {
-      assert(false, "should fail");
-    }, function(err) {
     })
   })
 })
