@@ -14,6 +14,8 @@ library Helpers {
         return false;
     }
 
+    // returns the digits of `inputValue` as a string.
+    // example: `uintToString(12345678)` returns `"12345678"`
     function uintToString(uint inputValue) internal pure returns (string) {
         // figure out the length of the resulting string
         uint length = 0;
