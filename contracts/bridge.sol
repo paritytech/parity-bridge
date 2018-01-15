@@ -14,7 +14,7 @@ library Helpers {
         return false;
     }
 
-    function intToString(uint256 inputValue) internal pure returns (string) {
+    function intToString(uint inputValue) internal pure returns (string) {
         // figure out the length of the resulting string
         uint length = 0;
         uint currentValue = inputValue;
