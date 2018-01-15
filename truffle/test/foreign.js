@@ -105,7 +105,7 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
-  it("should ignore deposits that are not from authorities", function() {
+  it("should not allow non-authorities to execute deposit", function() {
     var meta;
     var requiredSignatures = 1;
     var authorities = [accounts[0], accounts[1]];
