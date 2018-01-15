@@ -105,6 +105,23 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
+  it("should not allow non-authorities to execute deposit", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var userAccount = accounts[2];
+    var value = web3.toWei(1, "ether");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return meta.deposit(userAccount, value, hash, { from: userAccount });
+    }).then(function(result) {
+      assert(false, "should fail");
+    }, function(err) {
+    })
+  })
+
   it("should ignore misbehaving authority when confirming deposit", function() {
     var meta;
     var requiredSignatures = 2;
