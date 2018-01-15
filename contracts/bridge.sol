@@ -14,7 +14,7 @@ library Helpers {
         return false;
     }
 
-    function intToString(uint inputValue) internal pure returns (string) {
+    function uintToString(uint inputValue) internal pure returns (string) {
         // figure out the length of the resulting string
         uint length = 0;
         uint currentValue = inputValue;
@@ -42,8 +42,8 @@ library HelpersTest {
         return Helpers.addressArrayContains(array, value);
     }
 
-    function intToString(uint256 inputValue) public pure returns (string str) {
-        return Helpers.intToString(inputValue);
+    function uintToString(uint256 inputValue) public pure returns (string str) {
+        return Helpers.uintToString(inputValue);
     }
 }
 
@@ -67,7 +67,7 @@ library MessageSigning {
 
     function hashMessage(bytes message) internal pure returns (bytes32) {
         bytes memory prefix = "\x19Ethereum Signed Message:\n";
-        return keccak256(prefix, Helpers.intToString(message.length), message);
+        return keccak256(prefix, Helpers.uintToString(message.length), message);
     }
 }
 

@@ -45,41 +45,41 @@ contract("Helpers", function() {
     })
   })
 
-  it("`intToString` should convert int to string", function() {
+  it("`uintToString` should convert int to string", function() {
     var numbersFrom1To100 = helpers.range(1, 101);
     var library;
     return Helpers.new().then(function(instance) {
       library = instance;
 
-      return library.intToString.call(0)
+      return library.uintToString.call(0)
     }).then(function(result) {
       assert.equal(result, "0");
 
       return Promise.all(numbersFrom1To100.map(function(number) {
-        return library.intToString.call(number);
+        return library.uintToString.call(number);
       }));
     }).then(function(result) {
       assert.deepEqual(result, numbersFrom1To100.map(function(number) {
         return number.toString();
       }), "should convert numbers from 1 to 100 correctly");
 
-      return library.intToString.estimateGas(1);
+      return library.uintToString.estimateGas(1);
     }).then(function(result) {
-      console.log("estimated gas cost of Helpers.intToString(1)", result);
+      console.log("estimated gas cost of Helpers.uintToString(1)", result);
 
-      return library.intToString.call(1234)
+      return library.uintToString.call(1234)
     }).then(function(result) {
       assert.equal(result, "1234");
 
-      return library.intToString.call(12345678)
+      return library.uintToString.call(12345678)
     }).then(function(result) {
       assert.equal(result, "12345678");
 
-      return library.intToString.estimateGas(12345678)
+      return library.uintToString.estimateGas(12345678)
     }).then(function(result) {
-      console.log("estimated gas cost of Helpers.intToString(12345678)", result);
+      console.log("estimated gas cost of Helpers.uintToString(12345678)", result);
 
-      return library.intToString.call(web3.toBigNumber("131242344353464564564574574567456"));
+      return library.uintToString.call(web3.toBigNumber("131242344353464564564574574567456"));
     }).then(function(result) {
       assert.equal(result, "131242344353464564564574574567456");
     })
