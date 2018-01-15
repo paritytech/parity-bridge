@@ -92,3 +92,13 @@ function createMessage(recipient, value, transactionHash) {
   return message;
 }
 module.exports.createMessage = createMessage;
+
+// returns array of integers progressing from `start` up to, but not including, `end`
+function range(start, end) {
+  var result = [];
+  for (var i = start; i < end; i++) {
+    result.push(i);
+  }
+  return result;
+}
+module.exports.range = range;
