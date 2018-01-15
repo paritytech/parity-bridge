@@ -33,6 +33,18 @@ library Helpers {
 }
 
 
+/// Library used only to test Helpers library via rpc calls
+library HelpersTest {
+    function addressArrayContains(address[] array, address value) public pure returns (bool) {
+        return Helpers.addressArrayContains(array, value);
+    }
+
+    function intToString(uint256 inputValue) public pure returns (string str) {
+        return Helpers.intToString(inputValue);
+    }
+}
+
+
 // helpers for message signing.
 // `internal` so they get compiled into contracts using them.
 library MessageSigning {
