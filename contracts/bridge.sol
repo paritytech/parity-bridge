@@ -14,7 +14,7 @@ library Helpers {
         return false;
     }
 
-    function intToString(uint256 inputValue) internal pure returns (string str) {
+    function intToString(uint256 inputValue) internal pure returns (string) {
         // it is used only for small numbers
         bytes memory reversed = new bytes(8);
         uint workingValue = inputValue;
@@ -28,7 +28,7 @@ library Helpers {
         for (uint j = 0; j < i; j++) {
             s[j] = reversed[i - j - 1];
         }
-        str = string(s);
+        return string(s);
     }
 }
 
