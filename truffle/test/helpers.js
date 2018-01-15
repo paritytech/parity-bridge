@@ -78,6 +78,10 @@ contract("Helpers", function() {
       return library.intToString.estimateGas(12345678)
     }).then(function(result) {
       console.log("estimated gas cost of Helpers.intToString(12345678)", result);
+
+      return library.intToString.call(web3.toBigNumber("131242344353464564564574574567456"));
+    }).then(function(result) {
+      assert.equal(result, "131242344353464564564574574567456");
     })
   })
 })
