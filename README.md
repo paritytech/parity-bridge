@@ -8,7 +8,59 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-Simple bridge between ValidatorSet-based parity chain (foreign) with any other Parity chain (home).
+bridge between two ethereum blockchains, `home` and `foreign`.
+
+### current functionality
+
+the bridge allows users to deposit ether into a smart contract on `home` and get it on `foreign` in form of a token balance.
+it also allows users to withdraw their tokens on `foreign` and get the equivalent ether on `home`.
+on `foreign` users can freely transfer tokens between each other.
+
+`foreign` is assumed to use PoA (proof of authority) consensus.
+relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
+
+### next steps
+
+1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the immutable set of bridge authorities
+2. make bridge work with contract-based dynamic validator set
+3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
+
+### eventual goals
+
+connect ethereum to polkadot
+
+### deposit ether into `HomeBridge` and get it in form of a token balance on `ForeignBridge`
+
+`sender` deposits `value` into `HomeBridge`.
+the `HomeBridge` fallback function emits `Deposit(sender, value)`.
+for each `Deposit` event on `HomeBridge` every authority makes a transaction
+`ForeignBridge.deposit(sender, value, transactionHash)`.
+once there are `ForeignBridge.requiredSignatures` such transactions
+with identical arguments and from distinct authorities then
+`ForeignBridge.balances(sender)` is increased by `value` and
+`ForeignBridge.Deposit(sender, value)` is emitted.
+
+### withdraw balance on `ForeignBridge` and get it as ether on `home` chain
+
+`sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
+which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
+for each `ForeignBridge.Withdraw` every bridge authority creates a message containg
+`value`, `recipient` and the `transactionHash` of the transaction containing the `ForeignBridge.Withdraw` event,
+signs the message and makes a transaction `ForeignBridge.submitSignature(signature, message)`.
+this collection of signatures on `foreign` is necessary because transactions are free
+for authorities on `foreign`, since they are the authorities of `foreign`, but not free on `home`.
+once `ForeignBridge.requiredSignatures` signatures by distinct authorities are collected
+a `ForeignBridge.CollectedSignatures(authorityThatSubmittedLastSignature, messageHash)` event is emitted.
+everyone (usually `authorityThatSubmittedLastSignature`) can then call `ForeignBridge.message(messageHash)` and
+`ForeignBridge.signature(messageHash, 0..requiredSignatures)`
+to look up the message and signatures and execute `HomeBridge.withdraw(vs, rs, ss, message)`
+and complete the withdraw.
+
+### transfer on `foreign`
+
+`sender` executes `ForeignBridge.transferLocal(recipient, value)`
+which checks and reduces `ForeignBridge.balances(sender)` and increases `ForeignBridge.balances(recipient)`
+by `value`.
 
 ### build
 
