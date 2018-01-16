@@ -43,7 +43,7 @@ with identical arguments and from distinct authorities then
 ### withdraw balance on `ForeignBridge` and get it as ether on `home` chain
 
 `sender` calls `ForeignBridge.transferHomeViaRelay(recipient, value)`
-which checks and reduces `sender`s balance by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
+which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
 for each `ForeignBridge.Withdraw` every bridge authority creates a message containg
 `value`, `recipient` and the `transactionHash` of the transaction containing the `ForeignBridge.Withdraw` event,
 signs the message and calls `ForeignBridge.submitSignature(signature, message)`.
@@ -58,9 +58,9 @@ and complete the withdraw.
 
 ### transfer on `foreign`
 
-to transfer value to a `recipient` on `ForeignBridge.transferLocal(recipient, value)`.
-which checks and reduces `sender`s balance and increases `recipient`s
-balance by `value`.
+`sender` calls `ForeignBridge.transferLocal(recipient, value)`
+which checks and reduces `ForeignBridge.balances(sender)` and increases `ForeignBridge.balances(recipient)`
+by `value`.
 
 ### build
 
