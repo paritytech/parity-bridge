@@ -58,7 +58,7 @@ and complete the withdraw.
 
 ### transfer on `foreign`
 
-`sender` calls `ForeignBridge.transferLocal(recipient, value)`
+`sender` executes `ForeignBridge.transferLocal(recipient, value)`
 which checks and reduces `ForeignBridge.balances(sender)` and increases `ForeignBridge.balances(recipient)`
 by `value`.
 
