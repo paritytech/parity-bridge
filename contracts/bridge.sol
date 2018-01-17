@@ -295,7 +295,7 @@ contract ForeignBridge {
     event Withdraw(address recipient, uint value);
 
     /// Event created on money transfer
-    event Transfer(address from, address to, uint value);
+    event Transfer(address indexed from, address indexed to, uint tokens);
 
     /// Collected signatures which should be relayed to home chain.
     event CollectedSignatures(address authority, bytes32 messageHash);

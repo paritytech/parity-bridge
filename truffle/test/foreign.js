@@ -171,7 +171,7 @@ contract('ForeignBridge', function(accounts) {
       assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
       assert.equal(userAccount, result.logs[0].args.from, "Event from should be transaction sender");
       assert.equal(userAccount2, result.logs[0].args.to, "Event from should be transaction recipient");
-      assert.equal(transferedValue, result.logs[0].args.value, "Event value should match transaction value");
+      assert.equal(transferedValue, result.logs[0].args.tokens, "Event tokens should match transaction value");
       return Promise.all([
         meta.balances.call(userAccount),
         meta.balances.call(userAccount2)
