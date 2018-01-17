@@ -313,6 +313,11 @@ contract ForeignBridge {
     }
 
     // part of ERC20 spec
+    function name() public pure returns (string) {
+        return "ParityBridgeForeignBridge";
+    }
+
+    // part of ERC20 spec
     function balanceOf(address tokenOwner) public view returns (uint) {
         return balances[tokenOwner];
     }
