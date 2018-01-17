@@ -371,14 +371,15 @@ contract ForeignBridge {
     /// Transfer `value` to `recipient` on this `foreign` chain.
     ///
     /// does not affect `home` chain. does not do a relay.
-    function transferLocal(address recipient, uint value) public {
-        require(balances[msg.sender] >= value);
-        // fails if value == 0, or if there is an overflow
-        require(balances[recipient] + value > balances[recipient]);
+    function transfer(address recipient, uint tokens) public returns (bool) {
+        require(balances[msg.sender] >= tokens);
+        // fails if tokens == 0, or if there is an overflow
+        require(balances[recipient] + tokens > balances[recipient]);
 
-        balances[msg.sender] -= value;
-        balances[recipient] += value;
-        Transfer(msg.sender, recipient, value);
+        balances[msg.sender] -= tokens;
+        balances[recipient] += tokens;
+        Transfer(msg.sender, recipient, tokens);
+        return true;
     }
 
     /// Should be used as sync tool

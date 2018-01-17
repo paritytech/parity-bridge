@@ -165,7 +165,7 @@ contract('ForeignBridge', function(accounts) {
       // top up balance so we can transfer
       return meta.deposit(userAccount, user1InitialValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(userAccount2, transferedValue, { from: userAccount });
+      return meta.transfer(userAccount2, transferedValue, { from: userAccount });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
@@ -195,9 +195,9 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(recipientAccount, transferedValue, { from: userAccount });
+      return meta.transfer(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
-      assert(false, "transferLocal should fail");
+      assert(false, "transfer should fail");
     }, function(err) {
       return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
@@ -219,9 +219,9 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(recipientAccount, transferedValue, { from: userAccount });
+      return meta.transfer(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
-      assert(false, "transferLocal should fail");
+      assert(false, "transfer should fail");
     }, function(err) {
       return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
@@ -243,9 +243,9 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferLocal(recipientAccount, transferedValue, { from: userAccount });
+      return meta.transfer(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
-      assert(false, "transferLocal should fail");
+      assert(false, "transfer should fail");
     }, function(err) {
       return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
     }).then(function(result) {
