@@ -273,6 +273,9 @@ contract ForeignBridge {
     /// Must be lesser than number of authorities.
     uint public requiredSignatures;
 
+    // part of ERC20 spec
+    uint public totalSupply;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -331,6 +334,7 @@ contract ForeignBridge {
         // TODO: this may cause troubles if requriedSignatures len is changed
         if (deposits[hash].length == requiredSignatures) {
             balances[recipient] += value;
+            totalSupply += value;
             Deposit(recipient, value);
         }
     }
@@ -350,6 +354,7 @@ contract ForeignBridge {
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
+        totalSupply -= value;
         Withdraw(recipient, value);
     }
 
