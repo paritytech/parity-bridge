@@ -1,2 +1,2 @@
-use_contract!(home, "HomeBridge", "../contracts/HomeBridge.abi");
-use_contract!(foreign, "ForeignBridge", "../contracts/ForeignBridge.abi");
+use_contract!(home, "HomeBridge", "../compiled_contracts/HomeBridge.abi");
+use_contract!(foreign, "ForeignBridge", "../compiled_contracts/ForeignBridge.abi");

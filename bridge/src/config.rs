@@ -206,14 +206,14 @@ poll_interval = 2
 required_confirmations = 100
 
 [home.contract]
-bin = "../contracts/HomeBridge.bin"
+bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
 account = "0x0000000000000000000000000000000000000001"
 ipc = "/foreign.ipc"
 
 [foreign.contract]
-bin = "../contracts/ForeignBridge.bin"
+bin = "../compiled_contracts/ForeignBridge.bin"
 
 [authorities]
 accounts = [
@@ -233,7 +233,7 @@ home_deploy = { gas = 20 }
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "/home.ipc".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/HomeBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../compiled_contracts/HomeBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(2),
 				request_timeout: Duration::from_secs(5),
@@ -242,7 +242,7 @@ home_deploy = { gas = 20 }
 			foreign: Node {
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/ForeignBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../compiled_contracts/ForeignBridge.bin").from_hex().unwrap().into(),
 				},
 				ipc: "/foreign.ipc".into(),
 				poll_interval: Duration::from_secs(1),
@@ -279,14 +279,14 @@ account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = ""
 
 [home.contract]
-bin = "../contracts/HomeBridge.bin"
+bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
 account = "0x0000000000000000000000000000000000000001"
 ipc = ""
 
 [foreign.contract]
-bin = "../contracts/ForeignBridge.bin"
+bin = "../compiled_contracts/ForeignBridge.bin"
 
 [authorities]
 accounts = [
@@ -302,7 +302,7 @@ required_signatures = 2
 				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/HomeBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../compiled_contracts/HomeBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
@@ -312,7 +312,7 @@ required_signatures = 2
 				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
 				ipc: "".into(),
 				contract: ContractConfig {
-					bin: include_str!("../../contracts/ForeignBridge.bin").from_hex().unwrap().into(),
+					bin: include_str!("../../compiled_contracts/ForeignBridge.bin").from_hex().unwrap().into(),
 				},
 				poll_interval: Duration::from_secs(1),
 				request_timeout: Duration::from_secs(5),
