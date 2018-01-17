@@ -288,7 +288,7 @@ contract ForeignBridge {
     /// Pending signatures and authorities who confirmed them
     mapping (bytes32 => SignaturesCollection) signatures;
 
-    /// Event created on money deposit.
+    /// triggered when relay of deposit from HomeBridge is complete
     event Deposit(address recipient, uint value);
 
     /// Event created on money withdraw.
