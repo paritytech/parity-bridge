@@ -313,7 +313,7 @@ contract ForeignBridge {
     }
 
     // part of ERC20 spec
-    function balanceOf(address tokenOwner) public constant returns (uint) {
+    function balanceOf(address tokenOwner) public view returns (uint) {
         return balances[tokenOwner];
     }
 
