@@ -37,7 +37,7 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 		data: log.data.0,
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
-	if collected_signatures.authority != my_address.0 {
+	if collected_signatures.authority_responsible_for_relay != my_address.0 {
 		info!("bridge not responsible for relaying transaction to home. tx hash: {}", log.transaction_hash.unwrap());
 		// this authority is not responsible for relaying this transaction.
 		// someone else will relay this transaction to home.

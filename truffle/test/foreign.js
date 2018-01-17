@@ -299,7 +299,7 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
-      assert.equal(authorities[0], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      assert.equal(authorities[0], result.logs[0].args.authorityResponsibleForRelay, "Event authority should be equal to transaction sender");
       return Promise.all([
         meta.signature.call(result.logs[0].args.messageHash, 0),
         meta.message(result.logs[0].args.messageHash),
@@ -356,7 +356,7 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
-      assert.equal(authorities[0], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      assert.equal(authorities[0], result.logs[0].args.authorityResponsibleForRelay, "Event authority should be equal to transaction sender");
       return Promise.all([
         meta.signature.call(result.logs[0].args.messageHash, 0),
         meta.signature.call(result.logs[0].args.messageHash, 1),
@@ -370,7 +370,7 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
-      assert.equal(authorities[1], result.logs[0].args.authority, "Event authority should be equal to transaction sender");
+      assert.equal(authorities[1], result.logs[0].args.authorityResponsibleForRelay, "Event authority should be equal to transaction sender");
       return Promise.all([
         meta.signature.call(result.logs[0].args.messageHash, 0),
         meta.signature.call(result.logs[0].args.messageHash, 1),

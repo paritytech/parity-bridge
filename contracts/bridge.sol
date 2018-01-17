@@ -298,7 +298,7 @@ contract ForeignBridge {
     event Transfer(address indexed from, address indexed to, uint tokens);
 
     /// Collected signatures which should be relayed to home chain.
-    event CollectedSignatures(address authority, bytes32 messageHash);
+    event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
 
     /// Constructor.
     function ForeignBridge(
