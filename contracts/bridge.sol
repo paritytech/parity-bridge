@@ -331,7 +331,7 @@ contract ForeignBridge {
         require(!Helpers.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
-        // TODO: this may cause troubles if requriedSignatures len is changed
+        // TODO: this may cause troubles if requiredSignatures len is changed
         if (deposits[hash].length == requiredSignatures) {
             balances[recipient] += value;
             totalSupply += value;
