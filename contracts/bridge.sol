@@ -270,7 +270,7 @@ contract ForeignBridge {
 
     /// Number of authorities signatures required to withdraw the money.
     ///
-    /// Must be lesser than number of authorities.
+    /// Must be less than number of authorities.
     uint public requiredSignatures;
 
     // part of ERC20 spec
