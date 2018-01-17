@@ -334,7 +334,7 @@ contract ForeignBridge {
     /// deposit value (uint)
     /// mainnet transaction hash (bytes32) // to avoid transaction duplication
     function deposit(address recipient, uint value, bytes32 transactionHash) public onlyAuthority() {
-        // Protection from misbehaing authority
+        // Protection from misbehaving authority
         var hash = keccak256(recipient, value, transactionHash);
 
         // Duplicated deposits
