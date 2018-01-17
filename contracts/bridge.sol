@@ -312,6 +312,11 @@ contract ForeignBridge {
         authorities = authoritiesParam;
     }
 
+    // part of ERC20 spec
+    function balanceOf(address tokenOwner) public constant returns (uint) {
+        return balances[tokenOwner];
+    }
+
     /// Multisig authority validation
     modifier onlyAuthority() {
         require(Helpers.addressArrayContains(authorities, msg.sender));
