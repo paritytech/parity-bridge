@@ -10,9 +10,9 @@ matrix:
       cache: cargo
       fast_finish: false
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum
-        - sudo apt-get update
-        - sudo apt-get install solc
+        - sudo add-apt-repository ppa:ethereum/ethereum -y
+        - sudo apt-get update -y
+        - sudo apt-get install solc -y
       script:
         - cargo test --all
     - language: rust
@@ -20,9 +20,9 @@ matrix:
       cache: cargo
       fast_finish: false
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum
-        - sudo apt-get update
-        - sudo apt-get install solc
+        - sudo add-apt-repository ppa:ethereum/ethereum -y
+        - sudo apt-get update -y
+        - sudo apt-get install solc -y
       script:
         - cargo test --all
     - language: rust
@@ -30,9 +30,9 @@ matrix:
       cache: cargo
       fast_finish: false
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum
-        - sudo apt-get update
-        - sudo apt-get install solc
+        - sudo add-apt-repository ppa:ethereum/ethereum -y
+        - sudo apt-get update -y
+        - sudo apt-get install solc -y
       script:
         - cargo test --all
     - language: node_js
