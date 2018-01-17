@@ -264,7 +264,7 @@ contract ForeignBridge {
         bytes message;
         /// Authorities who signed the message.
         address[] signed;
-        /// Signaturs
+        /// Signatures
         bytes[] signatures;
     }
 
