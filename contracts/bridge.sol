@@ -322,7 +322,7 @@ contract ForeignBridge {
         return balances[tokenOwner];
     }
 
-    /// Multisig authority validation
+    /// require that sender is an authority
     modifier onlyAuthority() {
         require(Helpers.addressArrayContains(authorities, msg.sender));
         _;
