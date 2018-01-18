@@ -8,6 +8,7 @@ fn main() {
     let exit_status = Command::new("solc")
         .arg("--abi")
         .arg("--bin")
+        .arg("--optimize")
         .arg("--output-dir").arg("../compiled_contracts")
         .arg("--overwrite")
         .arg("../contracts/bridge.sol")
