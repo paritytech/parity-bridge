@@ -88,9 +88,13 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 			let next_state = match self.state {
 				WithdrawConfirmState::Wait => {
 					let item = try_stream!(self.logs.poll());
+					info!("got {} new withdraws to sign", item.logs.len());
 					let withdraws = item.logs
 						.into_iter()
-						.map(|log| withdraw_confirm_sign_payload(&self.app.foreign_bridge, log))
+						.map(|log| {
+							 info!("withdraw is ready for signature submission. tx hash {}", log.transaction_hash.unwrap());
+							 withdraw_confirm_sign_payload(&self.app.foreign_bridge, log)
+						})
 						.collect::<Result<Vec<_>, _>>()?;
 
 					let requests = withdraws.clone()
@@ -102,6 +106,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						})
 						.collect::<Vec<_>>();
 
+					info!("signing");
 					WithdrawConfirmState::SignWithdraws {
 						future: join_all(requests),
 						withdraws: withdraws,
@@ -110,6 +115,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 				},
 				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut withdraws, block } => {
 					let signatures = try_ready!(future.poll());
+					info!("signing complete");
 					// borrow checker...
 					let app = &self.app;
 					let foreign_contract = &self.foreign_contract;
@@ -128,12 +134,14 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 							condition: None,
 						})
 						.map(|request| {
+							info!("submitting signature");
 							app.timer.timeout(
 								api::send_transaction(&app.connections.foreign, request),
 								app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();
 
+					info!("submitting {} signatures", confirmations.len());
 					WithdrawConfirmState::ConfirmWithdraws {
 						future: join_all(confirmations),
 						block,
@@ -141,10 +149,14 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 				},
 				WithdrawConfirmState::ConfirmWithdraws { ref mut future, block } => {
 					let _ = try_ready!(future.poll());
+					info!("submitting signatures complete");
 					WithdrawConfirmState::Yield(Some(block))
 				},
 				WithdrawConfirmState::Yield(ref mut block) => match block.take() {
-					None => WithdrawConfirmState::Wait,
+					None => {
+						info!("waiting for new withdraws that should get signed");
+						WithdrawConfirmState::Wait
+					},
 					some => return Ok(some.into()),
 				}
 			};
