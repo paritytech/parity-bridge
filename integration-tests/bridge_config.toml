@@ -1,0 +1,30 @@
+estimated_gas_cost_of_withdraw = 0
+
+[home]
+account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
+ipc = "./home.ipc"
+required_confirmations = 0
+
+[home.contract]
+bin = "../compiled_contracts/HomeBridge.bin"
+
+[foreign]
+account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
+ipc = "./foreign.ipc"
+required_confirmations = 0
+
+[foreign.contract]
+bin = "../compiled_contracts/ForeignBridge.bin"
+
+[authorities]
+accounts = [
+	"0x00bd138abd70e2f00903268f3db08f2d25677c9e",
+]
+required_signatures = 1
+
+[transactions]
+home_deploy = { gas = 1000000 }
+foreign_deploy = { gas = 3000000 }
+deposit_relay = { gas = 100000 }
+withdraw_relay = { gas = 3000000 }
+withdraw_confirm = { gas = 3000000 }
