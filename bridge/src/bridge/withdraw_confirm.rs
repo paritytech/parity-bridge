@@ -32,8 +32,10 @@ fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> 
 	Ok(result.into())
 }
 
-fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_payload: Bytes, signature: H520) -> Bytes {
-	foreign.functions().submit_signature().input(signature.to_vec(), withdraw_payload.0).into()
+fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_message: Bytes, signature: H520) -> Bytes {
+	assert_eq!(signature.0.len(), 65);
+	assert_eq!(withdraw_message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	foreign.functions().submit_signature().input(signature.0.to_vec(), withdraw_message.0).into()
 }
 
 /// State of withdraw confirmation.
