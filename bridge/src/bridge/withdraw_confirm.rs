@@ -124,7 +124,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					let confirmations = withdraws
 						.drain(ops::RangeFull)
 						.zip(signatures.into_iter())
-						.map(|(withdraw, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw, signature))
+						.map(|(withdraw_message, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature))
 						.map(|payload| TransactionRequest {
 							from: app.config.foreign.account.clone(),
 							to: Some(foreign_contract.clone()),
