@@ -11,6 +11,7 @@ use contracts::{home, foreign};
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
+use rustc_hex::ToHex;
 
 /// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
