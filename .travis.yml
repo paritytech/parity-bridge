@@ -44,7 +44,8 @@ matrix:
         - sudo apt-get update -y
         - sudo apt-get install solc -y
         - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - sudo cp parity /usr/local/bin
+        - cp parity ${HOME}/bin
+        - export PATH=${HOME}/bin:${PATH}
         - cd integration-tests
       script:
         - cargo run
