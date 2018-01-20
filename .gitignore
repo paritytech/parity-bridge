@@ -23,4 +23,4 @@ node_modules
 
 compiled_contracts
 
-integration_tests/tmp
+integration-tests/tmp
