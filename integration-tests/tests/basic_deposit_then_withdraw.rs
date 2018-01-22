@@ -68,7 +68,8 @@ fn parity_foreign_command() -> Command {
 	command
 }
 
-fn main() {
+#[test]
+fn test_basic_deposit_then_withdraw() {
 	if Path::new(TMP_PATH).exists() {
 		std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
 	}

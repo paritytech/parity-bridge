@@ -49,7 +49,7 @@ matrix:
         - export PATH=${HOME}/bin:${PATH}
         - cd integration-tests
       script:
-        - env BACKTRACE=1 cargo run
+        - env BACKTRACE=1 cargo test -- --nocapture
     - language: node_js
       node_js: node
       cache: yarn
