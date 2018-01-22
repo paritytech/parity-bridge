@@ -1,5 +1,9 @@
 /// spins up two parity nodes with the dev chain.
-/// starts bridge that connects the two.
+/// starts one bridge authority that connects the two.
+/// does a deposit by sending ether to the HomeBridge.
+/// asserts that the deposit got relayed to foreign chain.
+/// does a withdraw by executing ForeignBridge.transferToHomeBridge.
+/// asserts that the withdraw got relayed to home chain.
 
 extern crate tempdir;
 extern crate ethereum_types;
