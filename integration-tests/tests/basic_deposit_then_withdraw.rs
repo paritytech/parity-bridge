@@ -136,7 +136,6 @@ fn test_basic_deposit_then_withdraw() {
 	let mut bridge1 = Command::new("env")
 		.arg("RUST_BACKTRACE=1")
 		.arg("../target/debug/bridge")
-		// .env("RUST_BACKTRACE", "1")
 		.env("RUST_LOG", "info")
 		.arg("--config").arg("bridge_config.toml")
 		.arg("--database").arg("tmp/bridge1_db.txt")
