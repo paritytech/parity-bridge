@@ -192,11 +192,33 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					}
 				},
 				WithdrawRelayState::FetchMessagesSignatures { ref mut future, block } => {
-					let (messages, signatures) = try_ready!(future.poll());
-					assert_eq!(messages.len(), signatures.len());
+					let (messages_raw, signatures_raw) = try_ready!(future.poll());
+					info!("fetching messages and signatures complete");
+					assert_eq!(messages_raw.len(), signatures_raw.len());
 
 					let app = &self.app;
 					let home_contract = &self.home_contract;
+
+					let messages = messages_raw
+						.iter()
+						.map(|message| {
+							app.foreign_bridge.functions().message().output(message.0.as_slice()).map(Bytes)
+						})
+						.collect::<ethabi::Result<Vec<_>>>()
+						.map_err(error::Error::from)?;
+
+					let signatures = signatures_raw
+						.iter()
+						.map(|signatures|
+							signatures.iter().map(
+								|signature| {
+									app.foreign_bridge.functions().signature().output(signature.0.as_slice()).map(Bytes)
+								}
+							)
+							.collect::<ethabi::Result<Vec<_>>>()
+							.map_err(error::Error::from)
+						)
+						.collect::<error::Result<Vec<_>>>()?;
 
 					let message_value_sufficient_payloads = messages
 						.iter()
