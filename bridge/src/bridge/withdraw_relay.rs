@@ -92,7 +92,10 @@ fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
 	FetchMessagesSignatures {
-		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
+		future: Join<
+			JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
+			JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>
+		>,
 		block: u64,
 	},
 	FetchMessageValueSufficient {
