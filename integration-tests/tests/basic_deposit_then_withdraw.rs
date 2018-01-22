@@ -28,13 +28,9 @@ fn parity_home_command() -> Command {
 	let mut command = Command::new("parity");
 	command
 		.arg("--base-path").arg(format!("{}/home", TMP_PATH))
-		// .arg("--chain").arg("home_chain.json")
 		.arg("--chain").arg("dev")
-		// .arg("--config").arg("parity_home_config.toml")
 		.arg("--ipc-path").arg("home.ipc")
-		// .arg("--db-path").arg("tmp/home_chain")
 		.arg("--logging").arg("rpc=trace")
-		// .arg("--no-jsonrpc")
 		.arg("--jsonrpc-port").arg("8550")
 		.arg("--jsonrpc-apis").arg("all")
 		.arg("--port").arg("30310")
@@ -50,13 +46,9 @@ fn parity_foreign_command() -> Command {
 	let mut command = Command::new("parity");
 	command
 		.arg("--base-path").arg(format!("{}/foreign", TMP_PATH))
-		// .arg("--chain").arg("home_chain.json")
 		.arg("--chain").arg("dev")
-		// .arg("--config").arg("parity_home_config.toml")
 		.arg("--ipc-path").arg("foreign.ipc")
-		// .arg("--db-path").arg("tmp/home_chain")
 		.arg("--logging").arg("rpc=trace")
-		// .arg("--no-jsonrpc")
 		.arg("--jsonrpc-port").arg("8551")
 		.arg("--jsonrpc-apis").arg("all")
 		.arg("--port").arg("30311")
@@ -75,17 +67,14 @@ fn test_basic_deposit_then_withdraw() {
 	}
 	let tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
 
-	// TODO home_base
-	// TODO foreign_base
-
-	// build the bridge cli process
-	let exit_status = Command::new("cargo")
+	println!("\nbuild the bridge cli executable so we can run it later\n");
+	assert!(Command::new("cargo")
 		.env("RUST_BACKTRACE", "1")
 		.current_dir("../cli")
 		.arg("build")
 		.status()
-		.expect("failed to compile bridge cli");
-	assert!(exit_status.success());
+		.expect("failed to build bridge cli")
+        .success());
 
 	// start a parity node that represents the home chain
 	let mut parity_home = parity_home_command()
@@ -147,44 +136,6 @@ fn test_basic_deposit_then_withdraw() {
 	// give nodes time to start up
 	thread::sleep(Duration::from_millis(10000));
 
-	// unlock authority account on home so bridge can connect later
-	// let exit_status = Command::new("curl")
-	//	   .arg("--data").arg(r#"{"jsonrpc":"2.0","method":"personal_unlockAccount","params":["0x00bd138abd70e2f00903268f3db08f2d25677c9e", "node0", "0x0"],"id":0}"#)
-	//	   .arg("-H").arg("Content-Type: application/json")
-	//	   .arg("-X").arg("POST")
-	//	   .arg("localhost:8550")
-	//	   .status()
-	//	.expect("failed to unlock authority account on home");
-	// assert!(exit_status.success());
-
-	// unlock authority account on home so bridge can connect later
-	// let exit_status = Command::new("curl")
-	//	   .arg("--data").arg(r#"{"jsonrpc":"2.0","method":"personal_unlockAccount","params":["0x00bd138abd70e2f00903268f3db08f2d25677c9e", "node0", "0x0"],"id":0}"#)
-	//	   .arg("-H").arg("Content-Type: application/json")
-	//	   .arg("-X").arg("POST")
-	//	   .arg("localhost:8551")
-	//	   .status()
-	//	.expect("failed to unlock authority account on foreign");
-	// assert!(exit_status.success());
-
-	// unlock user account which has a lot of ether on dev chain
-	// on home and foreign
-	// so we can make transactions
-	// let exit_status = Command::new("curl")
-	//	   .arg("--data").arg(r#"{"jsonrpc":"2.0","method":"personal_unlockAccount","params":["0x00a329c0648769a73afac7f9381e08fb43dbea72", "", "0x0"],"id":0}"#)
-	//	   .arg("-H").arg("Content-Type: application/json")
-	//	   .arg("-X").arg("POST")
-	//	   .arg("localhost:8550")
-	//	   .status()
-	//	.expect("failed to unlock user account on home");
-	// let exit_status = Command::new("curl")
-	//	   .arg("--data").arg(r#"{"jsonrpc":"2.0","method":"personal_unlockAccount","params":["0x00a329c0648769a73afac7f9381e08fb43dbea72", "", "0x0"],"id":0}"#)
-	//	   .arg("-H").arg("Content-Type: application/json")
-	//	   .arg("-X").arg("POST")
-	//	   .arg("localhost:8551")
-	//	   .status()
-	//	.expect("failed to unlock user account on foreign");
-
 	// start bridge authority 1
 	let mut bridge1 = Command::new("env")
 		.arg("RUST_BACKTRACE=1")
@@ -198,6 +149,8 @@ fn test_basic_deposit_then_withdraw() {
 
 	// give the bridge time to start up and deploy the contracts
 	thread::sleep(Duration::from_millis(10000));
+
+	println!("\ndeposit ether into HomeBridge\n");
 
 	// user deposits into HomeBridge
 	let exit_status = Command::new("curl")
@@ -213,11 +166,10 @@ fn test_basic_deposit_then_withdraw() {
 		.expect("failed to deposit into HomeBridge");
 	assert!(exit_status.success());
 
-	println!("\ndeposit into home sent\n");
-
-	// wait for it to be mined
+	println!("\ndeposit into home sent. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
 
+    // connect for foreign and home via IPC
 	let mut event_loop = Core::new().unwrap();
 	let foreign_transport = Ipc::with_event_loop("foreign.ipc", &event_loop.handle())
 		.expect("failed to connect to foreign.ipc");
@@ -230,7 +182,6 @@ fn test_basic_deposit_then_withdraw() {
 
 	// balance on ForeignBridge should have increased
 	let balance_payload = foreign.functions().balances().input(Address::from("0x00a329c0648769a73afac7f9381e08fb43dbea72"));
-	println!("balance_payload: {}", balance_payload.to_hex());
 
 	let future = foreign_eth.call(web3::types::CallRequest{
 		from: None,
@@ -241,14 +192,14 @@ fn test_basic_deposit_then_withdraw() {
 		data: Some(web3::types::Bytes(balance_payload)),
 	}, None);
 
-	println!("waiting for future");
 	let response = event_loop.run(future).unwrap();
 	let balance = U256::from(response.0.as_slice());
-	assert_eq!(balance, U256::from(100000));
+	assert_eq!(
+        balance,
+        U256::from(100000),
+        "balance on ForeignBridge should have increased");
 
 	println!("\nconfirmed that deposit reached foreign\n");
-
-	thread::sleep(Duration::from_millis(10000));
 
 	// withdraw
 	let transfer_payload = foreign.functions()
@@ -268,8 +219,7 @@ fn test_basic_deposit_then_withdraw() {
 	});
 	let response = event_loop.run(future).unwrap();
 
-	println!("\ntransfer to home transaction sent\n");
-
+	println!("\nForeignBridge.transferHomeViaRelay transaction sent. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
 
 	// test that withdraw completed
