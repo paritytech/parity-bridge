@@ -14,7 +14,7 @@ matrix:
         - sudo apt-get update -y
         - sudo apt-get install solc -y
       script:
-        - cargo test --all
+        - env BACKTRACE=1 cargo test --all
     - language: rust
       rust: beta
       cache: cargo
@@ -24,7 +24,7 @@ matrix:
         - sudo apt-get update -y
         - sudo apt-get install solc -y
       script:
-        - cargo test --all
+        - env BACKTRACE=1 cargo test --all
     - language: rust
       rust: nightly
       cache: cargo
@@ -34,7 +34,7 @@ matrix:
         - sudo apt-get update -y
         - sudo apt-get install solc -y
       script:
-        - cargo test --all
+        - env BACKTRACE=1 cargo test --all
     - language: rust
       rust: stable
       cache: cargo
@@ -49,7 +49,7 @@ matrix:
         - export PATH=${HOME}/bin:${PATH}
         - cd integration-tests
       script:
-        - cargo run
+        - env BACKTRACE=1 cargo run
     - language: node_js
       node_js: node
       cache: yarn
