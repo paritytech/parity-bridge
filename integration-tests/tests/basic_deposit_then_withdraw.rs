@@ -3,20 +3,16 @@
 
 extern crate tempdir;
 extern crate ethereum_types;
-extern crate rustc_hex;
 extern crate web3;
 extern crate tokio_core;
 extern crate bridge;
-extern crate futures;
 
-use std::process::{Command, Child};
+use std::process::Command;
 use std::time::Duration;
 use std::thread;
 use std::path::Path;
-use futures::Future;
 
 use tokio_core::reactor::Core;
-use rustc_hex::ToHex;
 
 use web3::transports::ipc::Ipc;
 use web3::api::Namespace;
@@ -65,7 +61,7 @@ fn test_basic_deposit_then_withdraw() {
 	if Path::new(TMP_PATH).exists() {
 		std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
 	}
-	let tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
+	let _tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
 
 	println!("\nbuild the bridge cli executable so we can run it later\n");
 	assert!(Command::new("cargo")
@@ -177,7 +173,6 @@ fn test_basic_deposit_then_withdraw() {
 	let foreign_eth = web3::api::Eth::new(foreign_transport);
 	let home_transport = Ipc::with_event_loop("home.ipc", &event_loop.handle())
 		.expect("failed to connect to home.ipc");
-	let home = bridge::contracts::home::HomeBridge::default();
 	let home_eth = web3::api::Eth::new(home_transport);
 
 	// balance on ForeignBridge should have increased
@@ -217,7 +212,7 @@ fn test_basic_deposit_then_withdraw() {
 		condition: None,
 		nonce: None,
 	});
-	let response = event_loop.run(future).unwrap();
+	event_loop.run(future).unwrap();
 
 	println!("\nForeignBridge.transferHomeViaRelay transaction sent. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
