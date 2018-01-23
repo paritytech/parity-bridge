@@ -294,7 +294,9 @@ contract ForeignBridge {
         return true;
     }
 
-    // part of ERC20 standard responsible for giving others spending rights
+    // following is the part of ForeignBridge that is concerned
+    // with the part of the ERC20 standard responsible for giving others spending rights
+    // and spending others tokens
 
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 
@@ -325,7 +327,8 @@ contract ForeignBridge {
         return true;
     }
 
-    // following is the part of ForeignBridge that is concerned
+    // following is the part of ForeignBridge that is
+    // no longer part of ERC20 and is concerned with
     // with moving tokens from and to HomeBridge
 
     struct SignaturesCollection {
