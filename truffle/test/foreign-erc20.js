@@ -46,7 +46,7 @@ contract('ForeignBridge', function(accounts) {
     return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
 	  contract = instance;
 
-	  // deposit something so we can use it
+	  // deposit something so we can transfer it
 	  return contract.deposit(owner, web3.toWei(3, "ether"), hash, {from: authorities[0]});
 	}).then(function(result) {
 
