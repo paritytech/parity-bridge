@@ -58,6 +58,15 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
 	  assert(false, "transfer without allowance should fail");
 
+	  // transfer 0 without allowance should work
+      return contract.transferFrom(owner, receiver, 0, {from: spender});
+	}).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
+      assert.equal(owner, result.logs[0].args.from);
+      assert.equal(receiver, result.logs[0].args.to);
+      assert.equal(0, result.logs[0].args.tokens);
+
 	}, function(err) {
 	  return contract.approve(spender, web3.toWei(4, "ether"), {from: owner});
 	}).then(function(result) {
@@ -77,7 +86,6 @@ contract('ForeignBridge', function(accounts) {
 	}, function(err) {
 	  return contract.approve(spender, web3.toWei(2, "ether"), {from: owner});
 	}).then(function(result) {
-	  console.log(result);
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("Approval", result.logs[0].event, "Event name should be Approval");
       assert.equal(owner, result.logs[0].args.tokenOwner);
@@ -94,6 +102,11 @@ contract('ForeignBridge', function(accounts) {
 	}, function(err) {
       return contract.transferFrom(owner, receiver, web3.toWei(2, "ether"), {from: spender});
     }).then(function(result) {
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("Transfer", result.logs[0].event, "Event name should be Transfer");
+      assert.equal(owner, result.logs[0].args.from);
+      assert.equal(receiver, result.logs[0].args.to);
+      assert.equal(web3.toWei(2, "ether"), result.logs[0].args.tokens);
 
       return contract.balanceOf(owner);
     }).then(function(result) {
