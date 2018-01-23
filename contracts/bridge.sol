@@ -413,7 +413,7 @@ contract ForeignBridge {
     /// which transfers `value - relayCost` to `recipient` completing the transfer.
     function transferHomeViaRelay(address recipient, uint value) public {
         require(balances[msg.sender] >= value);
-        // fails if value == 0
+        // don't allow 0 value transfers to home
         require(value > 0);
 
         balances[msg.sender] -= value;
