@@ -282,7 +282,7 @@ contract ForeignBridge {
     /// Transfer `value` to `recipient` on this `foreign` chain.
     ///
     /// does not affect `home` chain. does not do a relay.
-    /// note that t
+    /// note that as specificed in ERC20 this doesn't fail if tokens == 0
     function transfer(address recipient, uint tokens) public returns (bool) {
         require(balances[msg.sender] >= tokens);
         // fails if there is an overflow
