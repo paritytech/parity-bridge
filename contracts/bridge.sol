@@ -273,41 +273,12 @@ contract ForeignBridge {
     /// Event created on money transfer
     event Transfer(address indexed from, address indexed to, uint tokens);
 
-    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
-
     function name() public pure returns (string) {
         return "ParityBridgeForeignBridge";
     }
 
     function balanceOf(address tokenOwner) public view returns (uint) {
         return balances[tokenOwner];
-    }
-
-    function transferFrom(address from, address to, uint tokens) public returns (bool) {
-        // `from` has enough tokens
-        require(balances[from] >= tokens);
-        // `sender` is allowed to move `tokens` from `from`
-        require(allowed[from][msg.sender] >= tokens);
-
-        balances[to] += tokens;
-        balances[from] -= tokens;
-        allowed[from][msg.sender] -= tokens;
-
-        Transfer(from, to, tokens);
-        return true;
-    }
-
-    // Allow `spender` to withdraw from your account, multiple times, up to the `tokens` amount.
-    // If this function is called again it overwrites the current allowance with _value.
-    function approve(address spender, uint tokens) public returns (bool) {
-        allowed[msg.sender][spender] = tokens;
-        Approval(msg.sender, spender, tokens);
-        return true;
-    }
-
-    // returns how much `spender` is allowed to spend of `owner`s tokens
-    function allowance(address owner, address spender) public view returns (uint256) {
-        return allowed[owner][spender];
     }
 
     /// Transfer `value` to `recipient` on this `foreign` chain.
@@ -325,8 +296,39 @@ contract ForeignBridge {
         return true;
     }
 
+    // part of ERC20 standard responsible for giving others spending rights
 
-    // following is the part of ForeignBridge that is concerned with moving tokens from and to HomeBridge
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+
+    // Allow `spender` to withdraw from your account, multiple times, up to the `tokens` amount.
+    // If this function is called again it overwrites the current allowance with _value.
+    function approve(address spender, uint tokens) public returns (bool) {
+        allowed[msg.sender][spender] = tokens;
+        Approval(msg.sender, spender, tokens);
+        return true;
+    }
+
+    // returns how much `spender` is allowed to spend of `owner`s tokens
+    function allowance(address owner, address spender) public view returns (uint256) {
+        return allowed[owner][spender];
+    }
+
+    function transferFrom(address from, address to, uint tokens) public returns (bool) {
+        // `from` has enough tokens
+        require(balances[from] >= tokens);
+        // `sender` is allowed to move `tokens` from `from`
+        require(allowed[from][msg.sender] >= tokens);
+
+        balances[to] += tokens;
+        balances[from] -= tokens;
+        allowed[from][msg.sender] -= tokens;
+
+        Transfer(from, to, tokens);
+        return true;
+    }
+
+    // following is the part of ForeignBridge that is concerned
+    // with moving tokens from and to HomeBridge
 
     struct SignaturesCollection {
         /// Signed message.
@@ -393,6 +395,7 @@ contract ForeignBridge {
         // TODO: this may cause troubles if requiredSignatures len is changed
         if (deposits[hash].length == requiredSignatures) {
             balances[recipient] += value;
+            // mints tokens
             totalSupply += value;
             Deposit(recipient, value);
         }
@@ -413,6 +416,7 @@ contract ForeignBridge {
         require(balances[recipient] + value > balances[recipient]);
 
         balances[msg.sender] -= value;
+        // burns tokens
         totalSupply -= value;
         Withdraw(recipient, value);
     }
