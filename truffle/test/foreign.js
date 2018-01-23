@@ -227,10 +227,17 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       return meta.transferHomeViaRelay(userAccount2, value2, { from: userAccount });
     }).then(function(result) {
-      assert.equal(1, result.logs.length, "Exactly one event should be created");
-      assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
-      assert.equal(userAccount2, result.logs[0].args.recipient, "Event recipient should be equal to transaction recipient");
-      assert.equal(value2, result.logs[0].args.value, "Event value should match transaction value");
+      assert.equal(2, result.logs.length)
+
+      assert.equal("Transfer", result.logs[0].event);
+      assert.equal(userAccount, result.logs[0].args.from);
+      assert.equal("0x0000000000000000000000000000000000000000", result.logs[0].args.to);
+      assert.equal(value2, result.logs[0].args.tokens);
+
+      assert.equal("Withdraw", result.logs[1].event, "Event name should be Withdraw");
+      assert.equal(userAccount2, result.logs[1].args.recipient, "Event recipient should be equal to transaction recipient");
+      assert.equal(value2, result.logs[1].args.value, "Event value should match transaction value");
+
       return Promise.all([
         meta.balances.call(userAccount),
         meta.balances.call(userAccount2)

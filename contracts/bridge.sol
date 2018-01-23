@@ -423,6 +423,10 @@ contract ForeignBridge {
         balances[msg.sender] -= value;
         // burns tokens
         totalSupply -= value;
+        // in line with the transfer event from `0x0` on token creation
+        // recommended by ERC20 (see implementation of `deposit` above)
+        // we trigger a Transfer event to `0x0` on token destruction
+        Transfer(msg.sender, 0x0, value);
         Withdraw(recipient, value);
     }
 
