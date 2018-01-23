@@ -264,7 +264,7 @@ contract ForeignBridge {
 
     uint public totalSupply;
 
-    string public name = "ParityBridgeForeignBridge";
+    string public name = "ForeignBridge";
 
     /// maps addresses to their token balances
     mapping (address => uint) public balances;
