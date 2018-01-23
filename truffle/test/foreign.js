@@ -48,10 +48,17 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      assert.equal(1, result.logs.length, "Exactly one event should be created");
-      assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
-      assert.equal(userAccount, result.logs[0].args.recipient, "Event recipient should be transaction sender");
-      assert.equal(value, result.logs[0].args.value, "Event value should match deposited ether");
+      assert.equal(2, result.logs.length)
+
+      assert.equal("Transfer", result.logs[0].event);
+      assert.equal("0x0000000000000000000000000000000000000000", result.logs[0].args.from);
+      assert.equal(userAccount, result.logs[0].args.to);
+      assert.equal(value, result.logs[0].args.tokens);
+
+      assert.equal("Deposit", result.logs[1].event);
+      assert.equal(userAccount, result.logs[1].args.recipient);
+      assert.equal(value, result.logs[1].args.value);
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(value, result, "Contract balance should change");
@@ -76,10 +83,16 @@ contract('ForeignBridge', function(accounts) {
       assert.equal(web3.toWei(0, "ether"), result, "Contract balance should not change yet");
       return meta.deposit(userAccount, value, hash, { from: authorities[1] });
     }).then(function(result) {
-      assert.equal(1, result.logs.length, "Exactly one event should be created");
-      assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
-      assert.equal(userAccount, result.logs[0].args.recipient, "Event recipient should be transaction sender");
-      assert.equal(value, result.logs[0].args.value, "Event value should match deposited ether");
+      assert.equal(2, result.logs.length)
+
+      assert.equal("Transfer", result.logs[0].event);
+      assert.equal("0x0000000000000000000000000000000000000000", result.logs[0].args.from);
+      assert.equal(userAccount, result.logs[0].args.to);
+      assert.equal(value, result.logs[0].args.tokens);
+
+      assert.equal("Deposit", result.logs[1].event, "Event name should be Deposit");
+      assert.equal(userAccount, result.logs[1].args.recipient, "Event recipient should be transaction sender");
+      assert.equal(value, result.logs[1].args.value, "Event value should match deposited ether");
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(value, result, "Contract balance should change");
@@ -141,10 +154,17 @@ contract('ForeignBridge', function(accounts) {
       assert.equal(0, result.logs.length, "Misbehaving authority should be ignored");
       return meta.deposit(userAccount, value, hash, { from: authorities[2] })
     }).then(function(result) {
-      assert.equal(1, result.logs.length, "Exactly one event should be created");
-      assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
-      assert.equal(userAccount, result.logs[0].args.recipient, "Event recipient should be transaction sender");
-      assert.equal(value, result.logs[0].args.value, "Event value should match transaction value");
+      assert.equal(2, result.logs.length)
+
+      assert.equal("Transfer", result.logs[0].event);
+      assert.equal("0x0000000000000000000000000000000000000000", result.logs[0].args.from);
+      assert.equal(userAccount, result.logs[0].args.to);
+      assert.equal(value, result.logs[0].args.tokens);
+
+      assert.equal("Deposit", result.logs[1].event, "Event name should be Deposit");
+      assert.equal(userAccount, result.logs[1].args.recipient, "Event recipient should be transaction sender");
+      assert.equal(value, result.logs[1].args.value, "Event value should match transaction value");
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(value, result, "Contract balance should change");

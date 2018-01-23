@@ -398,6 +398,10 @@ contract ForeignBridge {
             balances[recipient] += value;
             // mints tokens
             totalSupply += value;
+            // ERC20 specifies: a token contract which creates new tokens
+            // SHOULD trigger a Transfer event with the _from address
+            // set to 0x0 when tokens are created.
+            Transfer(0x0, recipient, value);
             Deposit(recipient, value);
         }
     }
