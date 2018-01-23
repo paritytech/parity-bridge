@@ -264,6 +264,8 @@ contract ForeignBridge {
 
     uint public totalSupply;
 
+    string public name = "ParityBridgeForeignBridge";
+
     /// maps addresses to their token balances
     mapping (address => uint) public balances;
 
@@ -272,10 +274,6 @@ contract ForeignBridge {
 
     /// Event created on money transfer
     event Transfer(address indexed from, address indexed to, uint tokens);
-
-    function name() public pure returns (string) {
-        return "ParityBridgeForeignBridge";
-    }
 
     function balanceOf(address tokenOwner) public view returns (uint) {
         return balances[tokenOwner];
