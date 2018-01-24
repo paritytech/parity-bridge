@@ -389,7 +389,7 @@ contract ForeignBridge {
         // Protection from misbehaving authority
         var hash = keccak256(recipient, value, transactionHash);
 
-        // Duplicated deposits
+        // don't allow authority to confirm deposit twice
         require(!Helpers.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
