@@ -259,7 +259,7 @@ contract HomeBridge {
 
 
 contract ForeignBridge {
-    // following is the part of ForeignBridge that implements an ERC20 token
+    // following is the part of ForeignBridge that implements an ERC20 token.
     // ERC20 spec: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
 
     uint public totalSupply;
