@@ -11,6 +11,7 @@ use contracts::{home, foreign};
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
+use rustc_hex::ToHex;
 
 /// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
@@ -37,6 +38,7 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
 	if collected_signatures.authority != my_address.0 {
+		info!("bridge not responsible for relaying transaction to home. tx hash: {}", log.transaction_hash.unwrap());
 		// this authority is not responsible for relaying this transaction.
 		// someone else will relay this transaction to home.
 		return Ok(None);
@@ -90,7 +92,10 @@ fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message
 pub enum WithdrawRelayState<T: Transport> {
 	Wait,
 	FetchMessagesSignatures {
-		future: Join<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>, JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>>,
+		future: Join<
+			JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
+			JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>
+		>,
 		block: u64,
 	},
 	FetchMessageValueSufficient {
@@ -141,13 +146,17 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 			let next_state = match self.state {
 				WithdrawRelayState::Wait => {
 					let item = try_stream!(self.logs.poll());
+					info!("got {} new signed withdraws to relay", item.logs.len());
 					let assignments = item.logs
 						.into_iter()
-						.map(|log| signatures_payload(
+						.map(|log| {
+							 info!("collected signature is ready for relay: tx hash: {}", log.transaction_hash.unwrap());
+							 signatures_payload(
 								&self.app.foreign_bridge,
 								self.app.config.authorities.required_signatures,
 								self.app.config.foreign.account.clone(),
-								log))
+								log)
+						})
 						.collect::<error::Result<Vec<_>>>()?;
 
 					let (signatures, messages): (Vec<_>, Vec<_>) = assignments.into_iter()
@@ -176,18 +185,40 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.map(|calls| join_all(calls))
 						.collect::<Vec<_>>();
 
-					// wait for fetching of messages and signatures to complete
+					info!("fetching messages and signatures");
 					WithdrawRelayState::FetchMessagesSignatures {
 						future: join_all(message_calls).join(join_all(signature_calls)),
 						block: item.to,
 					}
 				},
 				WithdrawRelayState::FetchMessagesSignatures { ref mut future, block } => {
-					let (messages, signatures) = try_ready!(future.poll());
-					assert_eq!(messages.len(), signatures.len());
+					let (messages_raw, signatures_raw) = try_ready!(future.poll());
+					info!("fetching messages and signatures complete");
+					assert_eq!(messages_raw.len(), signatures_raw.len());
 
 					let app = &self.app;
 					let home_contract = &self.home_contract;
+
+					let messages = messages_raw
+						.iter()
+						.map(|message| {
+							app.foreign_bridge.functions().message().output(message.0.as_slice()).map(Bytes)
+						})
+						.collect::<ethabi::Result<Vec<_>>>()
+						.map_err(error::Error::from)?;
+
+					let signatures = signatures_raw
+						.iter()
+						.map(|signatures|
+							signatures.iter().map(
+								|signature| {
+									app.foreign_bridge.functions().signature().output(signature.0.as_slice()).map(Bytes)
+								}
+							)
+							.collect::<ethabi::Result<Vec<_>>>()
+							.map_err(error::Error::from)
+						)
+						.collect::<error::Result<Vec<_>>>()?;
 
 					let message_value_sufficient_payloads = messages
 						.iter()
@@ -204,6 +235,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						})
 						.collect::<Vec<_>>();
 
+					info!("fetching whether message values are sufficent");
 					WithdrawRelayState::FetchMessageValueSufficient {
 						future: join_all(message_value_sufficient_payloads),
 						messages,
@@ -218,6 +250,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					block
 				} => {
 					let message_value_sufficient = try_ready!(future.poll());
+					info!("fetching whether message values are sufficent complete");
 
 					let app = &self.app;
 					let home_contract = &self.home_contract;
@@ -227,12 +260,16 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.zip(message_value_sufficient.into_iter())
 						// ignore those messages that don't have sufficient
 						// value to pay for the relay gas cost
-						.filter(|&(_, ref is_message_value_sufficient)| {
+						.filter(|&((ref message, _), ref is_message_value_sufficient)| {
 							// TODO [snd] this is ugly.
 							// in the future ethabi should return a bool
 							// for `is_message_value_sufficient`
 							// since the contract function returns a bool
-							U256::from(is_message_value_sufficient.0.as_slice()) == U256::from(1)
+							let is_sufficient = U256::from(is_message_value_sufficient.0.as_slice()) == U256::from(1);
+							if !is_sufficient {
+								info!("value in message is not sufficient to cover relay costs. ignoring. message: {}", message.0.to_hex());
+							}
+							is_sufficient
 						})
 						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
 						.map(|payload| TransactionRequest {
@@ -251,7 +288,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								app.config.home.request_timeout)
 						})
 						.collect::<Vec<_>>();
-					// wait for relays to complete
+					info!("relaying {} withdraws", relays.len());
 					WithdrawRelayState::RelayWithdraws {
 						future: join_all(relays),
 						block,
@@ -259,10 +296,14 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 				},
 				WithdrawRelayState::RelayWithdraws { ref mut future, block } => {
 					let _ = try_ready!(future.poll());
+					info!("relaying withdraws complete");
 					WithdrawRelayState::Yield(Some(block))
 				},
 				WithdrawRelayState::Yield(ref mut block) => match block.take() {
-					None => WithdrawRelayState::Wait,
+					None => {
+						info!("waiting for signed withdraws to relay");
+						WithdrawRelayState::Wait
+					},
 					some => return Ok(some.into()),
 				}
 			};

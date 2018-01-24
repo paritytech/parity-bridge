@@ -32,8 +32,10 @@ fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> 
 	Ok(result.into())
 }
 
-fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_payload: Bytes, signature: H520) -> Bytes {
-	foreign.functions().submit_signature().input(signature.to_vec(), withdraw_payload.0).into()
+fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_message: Bytes, signature: H520) -> Bytes {
+	assert_eq!(signature.0.len(), 65);
+	assert_eq!(withdraw_message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	foreign.functions().submit_signature().input(signature.0.to_vec(), withdraw_message.0).into()
 }
 
 /// State of withdraw confirmation.
@@ -88,9 +90,13 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 			let next_state = match self.state {
 				WithdrawConfirmState::Wait => {
 					let item = try_stream!(self.logs.poll());
+					info!("got {} new withdraws to sign", item.logs.len());
 					let withdraws = item.logs
 						.into_iter()
-						.map(|log| withdraw_confirm_sign_payload(&self.app.foreign_bridge, log))
+						.map(|log| {
+							 info!("withdraw is ready for signature submission. tx hash {}", log.transaction_hash.unwrap());
+							 withdraw_confirm_sign_payload(&self.app.foreign_bridge, log)
+						})
 						.collect::<Result<Vec<_>, _>>()?;
 
 					let requests = withdraws.clone()
@@ -102,6 +108,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						})
 						.collect::<Vec<_>>();
 
+					info!("signing");
 					WithdrawConfirmState::SignWithdraws {
 						future: join_all(requests),
 						withdraws: withdraws,
@@ -110,13 +117,14 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 				},
 				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut withdraws, block } => {
 					let signatures = try_ready!(future.poll());
+					info!("signing complete");
 					// borrow checker...
 					let app = &self.app;
 					let foreign_contract = &self.foreign_contract;
 					let confirmations = withdraws
 						.drain(ops::RangeFull)
 						.zip(signatures.into_iter())
-						.map(|(withdraw, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw, signature))
+						.map(|(withdraw_message, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature))
 						.map(|payload| TransactionRequest {
 							from: app.config.foreign.account.clone(),
 							to: Some(foreign_contract.clone()),
@@ -128,12 +136,14 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 							condition: None,
 						})
 						.map(|request| {
+							info!("submitting signature");
 							app.timer.timeout(
 								api::send_transaction(&app.connections.foreign, request),
 								app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();
 
+					info!("submitting {} signatures", confirmations.len());
 					WithdrawConfirmState::ConfirmWithdraws {
 						future: join_all(confirmations),
 						block,
@@ -141,10 +151,14 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 				},
 				WithdrawConfirmState::ConfirmWithdraws { ref mut future, block } => {
 					let _ = try_ready!(future.poll());
+					info!("submitting signatures complete");
 					WithdrawConfirmState::Yield(Some(block))
 				},
 				WithdrawConfirmState::Yield(ref mut block) => match block.take() {
-					None => WithdrawConfirmState::Wait,
+					None => {
+						info!("waiting for new withdraws that should get signed");
+						WithdrawConfirmState::Wait
+					},
 					some => return Ok(some.into()),
 				}
 			};
