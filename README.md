@@ -8,11 +8,12 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-bridge between two ethereum blockchains, `home` and `foreign`.
+the parity bridge connects two ethereum blockchains, `home` and `foreign`.
 
 ### current functionality
 
-the bridge allows users to deposit ether into a smart contract on `home` and get it on `foreign` in form of a token balance.
+the bridge allows users to deposit ether into a smart contract on `home`
+and get it on `foreign` in form of an ERC20 token.
 it also allows users to withdraw their tokens on `foreign` and get the equivalent ether on `home`.
 on `foreign` users can freely transfer tokens between each other.
 
