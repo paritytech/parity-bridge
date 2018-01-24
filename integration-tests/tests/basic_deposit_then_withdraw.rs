@@ -60,6 +60,10 @@ fn parity_foreign_command() -> Command {
 	command
 }
 
+fn address_from_str(string: &'static str) -> web3::types::Address {
+	web3::types::Address::from(&Address::from(string).0[..])
+}
+
 #[test]
 fn test_basic_deposit_then_withdraw() {
 	if Path::new(TMP_PATH).exists() {
@@ -74,7 +78,7 @@ fn test_basic_deposit_then_withdraw() {
 		.arg("build")
 		.status()
 		.expect("failed to build bridge cli")
-        .success());
+		.success());
 
 	// start a parity node that represents the home chain
 	let mut parity_home = parity_home_command()
@@ -89,6 +93,13 @@ fn test_basic_deposit_then_withdraw() {
 	// give the clients time to start up
 	thread::sleep(Duration::from_millis(3000));
 
+	// A address containing a lot of tokens (0x00a329c0648769a73afac7f9381e08fb43dbea72) should be
+	// automatically added with a password being an empty string.
+	// source: https://paritytech.github.io/wiki/Private-development-chain.html
+	let user_address = "0x00a329c0648769a73afac7f9381e08fb43dbea72";
+
+	let authority_address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e";
+
 	// create authority account on home
 	let exit_status = Command::new("curl")
 		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
@@ -98,6 +109,7 @@ fn test_basic_deposit_then_withdraw() {
 		.status()
 		.expect("failed to create authority account on home");
 	assert!(exit_status.success());
+	// TODO [snd] assert that created address matches authority_address
 
 	// create authority account on foreign
 	let exit_status = Command::new("curl")
@@ -108,6 +120,7 @@ fn test_basic_deposit_then_withdraw() {
 		.status()
 		.expect("failed to create/unlock authority account on foreign");
 	assert!(exit_status.success());
+	// TODO [snd] assert that created address matches authority_address
 
 	// give the operations time to complete
 	thread::sleep(Duration::from_millis(5000));
@@ -121,14 +134,14 @@ fn test_basic_deposit_then_withdraw() {
 
 	// start a parity node that represents the home chain with accounts unlocked
 	let mut parity_home = parity_home_command()
-		.arg("--unlock").arg("0x00a329c0648769a73afac7f9381e08fb43dbea72,0x00bd138abd70e2f00903268f3db08f2d25677c9e")
+		.arg("--unlock").arg(format!("{},{}", user_address, authority_address))
 		.arg("--password").arg("password.txt")
 		.spawn()
 		.expect("failed to spawn parity home node");
 
 	// start a parity node that represents the foreign chain with accounts unlocked
 	let mut parity_foreign = parity_foreign_command()
-		.arg("--unlock").arg("0x00a329c0648769a73afac7f9381e08fb43dbea72,0x00bd138abd70e2f00903268f3db08f2d25677c9e")
+		.arg("--unlock").arg(format!("{},{}", user_address, authority_address))
 		.arg("--password").arg("password.txt")
 		.spawn()
 		.expect("failed to spawn parity foreign node");
@@ -149,15 +162,18 @@ fn test_basic_deposit_then_withdraw() {
 	// give the bridge time to start up and deploy the contracts
 	thread::sleep(Duration::from_millis(10000));
 
-	println!("\ndeposit ether into HomeBridge\n");
+	let home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+	let foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 
-	// user deposits into HomeBridge
+	println!("\nuser deposits ether into HomeBridge\n");
+
+	// TODO [snd] use rpc client here instead of curl
 	let exit_status = Command::new("curl")
-		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{
-			"from": "0x00a329c0648769a73afac7f9381e08fb43dbea72",
-			"to": "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f",
+		.arg("--data").arg(format!(r#"{{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{{
+			"from": "{}",
+			"to": "{}",
 			"value": "0x186a0"
-		}],"id":0}"#)
+		}}],"id":0}}"#, user_address, home_contract_address))
 		.arg("-H").arg("Content-Type: application/json")
 		.arg("-X").arg("POST")
 		.arg("localhost:8550")
@@ -168,7 +184,7 @@ fn test_basic_deposit_then_withdraw() {
 	println!("\ndeposit into home sent. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
 
-    // connect for foreign and home via IPC
+	// connect to foreign and home via IPC
 	let mut event_loop = Core::new().unwrap();
 	let foreign_transport = Ipc::with_event_loop("foreign.ipc", &event_loop.handle())
 		.expect("failed to connect to foreign.ipc");
@@ -178,12 +194,30 @@ fn test_basic_deposit_then_withdraw() {
 		.expect("failed to connect to home.ipc");
 	let home_eth = web3::api::Eth::new(home_transport);
 
-	// balance on ForeignBridge should have increased
-	let balance_payload = foreign.functions().balances().input(Address::from("0x00a329c0648769a73afac7f9381e08fb43dbea72"));
+	// totalSupply on ForeignBridge should have increased
+	let total_supply_payload = foreign.functions().total_supply().input();
 
 	let future = foreign_eth.call(web3::types::CallRequest{
 		from: None,
-		to: web3::types::Address::from(&Address::from("0xebd3944af37ccc6b67ff61239ac4fef229c8f69f").0[..]),
+		to: address_from_str(foreign_contract_address),
+		gas: None,
+		gas_price: None,
+		value: None,
+		data: Some(web3::types::Bytes(total_supply_payload)),
+	}, None);
+
+	let response = event_loop.run(future).unwrap();
+	assert_eq!(
+		U256::from(response.0.as_slice()),
+		U256::from(100000),
+		"totalSupply on ForeignBridge should have increased");
+
+	// balance on ForeignBridge should have increased
+	let balance_payload = foreign.functions().balance_of().input(Address::from(user_address));
+
+	let future = foreign_eth.call(web3::types::CallRequest{
+		from: None,
+		to: address_from_str(foreign_contract_address),
 		gas: None,
 		gas_price: None,
 		value: None,
@@ -193,21 +227,21 @@ fn test_basic_deposit_then_withdraw() {
 	let response = event_loop.run(future).unwrap();
 	let balance = U256::from(response.0.as_slice());
 	assert_eq!(
-        balance,
-        U256::from(100000),
-        "balance on ForeignBridge should have increased");
+		balance,
+		U256::from(100000),
+		"balance on ForeignBridge should have increased");
 
 	println!("\nconfirmed that deposit reached foreign\n");
 
-	// withdraw
+	println!("\nuser executes ForeignBridge.transferHomeViaRelay\n");
 	let transfer_payload = foreign.functions()
 		.transfer_home_via_relay()
 		.input(
-			Address::from("0x00aa39d30f0d20ff03a22ccfc30b7efbfca597c2"),
+			Address::from(user_address),
 			U256::from(100000));
 	let future = foreign_eth.send_transaction(web3::types::TransactionRequest{
-		from: web3::types::Address::from(&Address::from("0x00a329c0648769a73afac7f9381e08fb43dbea72").0[..]),
-		to: Some(web3::types::Address::from(&Address::from("0xebd3944af37ccc6b67ff61239ac4fef229c8f69f").0[..])),
+		from: address_from_str(user_address),
+		to: Some(address_from_str(foreign_contract_address)),
 		gas: None,
 		gas_price: None,
 		value: None,
@@ -221,7 +255,7 @@ fn test_basic_deposit_then_withdraw() {
 	thread::sleep(Duration::from_millis(10000));
 
 	// test that withdraw completed
-	let future = home_eth.balance(web3::types::Address::from(&Address::from("0x00aa39d30f0d20ff03a22ccfc30b7efbfca597c2").0[..]), None);
+	let future = home_eth.balance(address_from_str(user_address), None);
 	println!("waiting for future");
 	let balance = event_loop.run(future).unwrap();
 	assert!(balance > web3::types::U256::from(0));
