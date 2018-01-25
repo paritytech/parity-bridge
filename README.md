@@ -64,6 +64,8 @@ by `value`.
 
 ### build
 
+requires `solc` to be in `$PATH`. [installation instructions](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+
 ```
 cargo build -p bridge-cli --release
 ```
