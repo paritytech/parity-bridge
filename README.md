@@ -64,6 +64,8 @@ by `value`.
 
 ### build
 
+requires `solc` to be in `$PATH`. [installation instructions](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+
 ```
 cargo build -p bridge-cli --release
 ```
@@ -207,7 +209,7 @@ checked_withdraw_confirm = 121
 
 ### truffle tests
 
-[requires yarn to be installed](https://yarnpkg.com/lang/en/docs/install/)
+requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
 
 ```
 cd truffle
