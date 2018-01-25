@@ -209,7 +209,7 @@ checked_withdraw_confirm = 121
 
 ### truffle tests
 
-[requires yarn to be installed](https://yarnpkg.com/lang/en/docs/install/)
+requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
 
 ```
 cd truffle
