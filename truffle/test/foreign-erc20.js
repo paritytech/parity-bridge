@@ -226,4 +226,28 @@ contract('ForeignBridge', function(accounts) {
     }, function(err) {
     })
   })
+
+  it("transferFrom that results in overflow should fail", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var userAccount = accounts[2];
+	var spenderAccount = accounts[3];
+    var recipientAccount = accounts[4];
+    var maxValue = web3.toWei("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "wei");
+    var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+      meta = instance;
+      return meta.deposit(recipientAccount, maxValue, hash, { from: authorities[0] });
+    }).then(function(result) {
+      return meta.deposit(userAccount, 1, hash, { from: authorities[0] });
+    }).then(function(result) {
+	  return meta.approve(spenderAccount, 1, {from: userAccount});
+    }).then(function(result) {
+      return meta.transferFrom(userAccount, recipientAccount, 1, { from: spenderAccount });
+    }).then(function(result) {
+      assert(false, "transfer should fail");
+    }, function(err) {
+    })
+  })
 })

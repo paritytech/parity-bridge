@@ -321,6 +321,8 @@ contract ForeignBridge {
         require(balances[from] >= tokens);
         // `sender` is allowed to move `tokens` from `from`
         require(allowed[from][msg.sender] >= tokens);
+        // fails if there is an overflow
+        require(balances[to] + tokens >= balances[to]);
 
         balances[to] += tokens;
         balances[from] -= tokens;
