@@ -98,28 +98,29 @@ yarn test
 
 ### build
 
-requires `solc` to be in `$PATH`. [installation instructions](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+requires `rust` and `cargo`: [installation instructions.](https://www.rust-lang.org/en-US/install.html)
+
+requires `solc` to be in `$PATH`: [installation instructions.](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+
+assuming you've cloned the bridge (`git clone git@github.com:paritytech/parity-bridge.git`)
+and are in the project directory (`cd parity-bridge`) run:
 
 ```
 cargo build -p bridge-cli --release
 ```
 
-### cli options
+to install copy `../target/release/bridge` into a folder that's in your `$PATH`.
+
+### run
 
 ```
-Ethereum-Kovan bridge.
-    Copyright 2017 Parity Technologies (UK) Limited
-
-Usage:
-    bridge --config <config> --database <database>
-    bridge -h | --help
-
-Options:
-    -h, --help           Display help message and exit.
+bridge --config config.toml --database db.toml
 ```
 
 - `--config` - location of the configuration file. configuration file must exist
-- `--database` - location of the database file. if there is no file at specified location, new bridge contracts will be deployed and new database will be created
+- `--database` - location of the database file.
+  if there is no file at specified location, new bridge contracts will be deployed
+  and new database will be created
 
 ### configuration [file example](./examples/config.toml)
 
