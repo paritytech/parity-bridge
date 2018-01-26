@@ -269,12 +269,13 @@ contract ForeignBridge {
     /// maps addresses to their token balances
     mapping (address => uint) public balances;
 
-    // Owner of account approves the transfer of an amount by another account
+    // owner of account approves the transfer of an amount by another account
     mapping(address => mapping (address => uint)) allowed;
 
     /// Event created on money transfer
     event Transfer(address indexed from, address indexed to, uint tokens);
 
+    // returns the ERC20 token balance of the given address
     function balanceOf(address tokenOwner) public view returns (uint) {
         return balances[tokenOwner];
     }
@@ -282,7 +283,7 @@ contract ForeignBridge {
     /// Transfer `value` to `recipient` on this `foreign` chain.
     ///
     /// does not affect `home` chain. does not do a relay.
-    /// note that as specificed in ERC20 this doesn't fail if tokens == 0
+    /// as specificed in ERC20 this doesn't fail if tokens == 0.
     function transfer(address recipient, uint tokens) public returns (bool) {
         require(balances[msg.sender] >= tokens);
         // fails if there is an overflow
@@ -298,10 +299,12 @@ contract ForeignBridge {
     // with the part of the ERC20 standard responsible for giving others spending rights
     // and spending others tokens
 
+    // created when `approve` is executed to mark that
+    // `tokenOwner` has approved `spender` to spend `tokens` of his tokens
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 
-    // Allow `spender` to withdraw from your account, multiple times, up to the `tokens` amount.
-    // If this function is called again it overwrites the current allowance with _value.
+    // allow `spender` to withdraw from your account, multiple times, up to the `tokens` amount.
+    // calling this function repeatedly overwrites the current allowance.
     function approve(address spender, uint tokens) public returns (bool) {
         allowed[msg.sender][spender] = tokens;
         Approval(msg.sender, spender, tokens);
