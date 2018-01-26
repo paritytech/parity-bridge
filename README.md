@@ -8,17 +8,27 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-the parity bridge connects two ethereum blockchains, `home` and `foreign`.
+the bridge is an
+[ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md)
+contract that is backed by ether on **another** ethereum blockchain.
 
-### current functionality
+given a bridge between two chains
+users can freely convert any amount of ether
+one one chain into the same amount of ERC20 tokens on the other and back.
+the bridge securely relays these conversions.
 
-the bridge allows users to deposit ether into a smart contract on `home`
-and get it on `foreign` in form of an ERC20 token.
-it also allows users to withdraw their tokens on `foreign` and get the equivalent ether on `home`.
-on `foreign` users can freely transfer tokens between each other.
+**the bridge can solve scaling issues:**
+by deploying a [proof-of-authority](https://paritytech.github.io/wiki/Proof-of-Authority-Chains.html)
+network and bridging it to mainnet users can convert their mainnet ether
+into ERC20 tokens on the PoA chain
+and there transfer them with much lower transaction fees,
+faster block times and unaffected by mainnet congestion.
 
-`foreign` is assumed to use PoA (proof of authority) consensus.
-relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
+at any point can the users withdraw their tokens worth of ether on the mainnet.
+
+parity is using the bridge project to prototype
+the system that will eventually connect ethereum and other non-parachains to
+[polkadot](https://polkadot.io/)
 
 ### next steps
 
@@ -26,42 +36,51 @@ relays between the chains happen in a byzantine fault tolerant way using the aut
 2. make bridge work with contract-based dynamic validator set
 3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
-### eventual goals
+### current functionality
 
-connect ethereum to polkadot
+the bridge connects two chains `home` and `foreign`.
 
-### deposit ether into `HomeBridge` and get it in form of a token balance on `ForeignBridge`
+when users deposit ether into the `HomeBridge` contract on `home`
+they get the same amount of ERC20 tokens on `foreign`.
+
+they can use `ForeignBridge` as they would use any ERC20 token.
+
+to convert their `foreign` ERC20 into ether on `home`
+users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, value)`.
+
+`foreign` is assumed to use PoA (proof of authority) consensus.
+relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
+
+### `home` ether -> `foreign` ERC20
 
 `sender` deposits `value` into `HomeBridge`.
 the `HomeBridge` fallback function emits `Deposit(sender, value)`.
-for each `Deposit` event on `HomeBridge` every authority makes a transaction
+
+for each `Deposit` event on `HomeBridge` every authority executes
 `ForeignBridge.deposit(sender, value, transactionHash)`.
+
 once there are `ForeignBridge.requiredSignatures` such transactions
 with identical arguments and from distinct authorities then
-`ForeignBridge.balances(sender)` is increased by `value` and
-`ForeignBridge.Deposit(sender, value)` is emitted.
+`ForeignBridge.balanceOf(sender)` is increased by `value`.
 
-### withdraw balance on `ForeignBridge` and get it as ether on `home` chain
+### `foreign` ERC20 -> `home` ether
 
 `sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
 which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
+
 for each `ForeignBridge.Withdraw` every bridge authority creates a message containg
 `value`, `recipient` and the `transactionHash` of the transaction containing the `ForeignBridge.Withdraw` event,
-signs the message and makes a transaction `ForeignBridge.submitSignature(signature, message)`.
+signs the message and executes `ForeignBridge.submitSignature(signature, message)`.
 this collection of signatures on `foreign` is necessary because transactions are free
 for authorities on `foreign`, since they are the authorities of `foreign`, but not free on `home`.
+
 once `ForeignBridge.requiredSignatures` signatures by distinct authorities are collected
 a `ForeignBridge.CollectedSignatures(authorityThatSubmittedLastSignature, messageHash)` event is emitted.
+
 everyone (usually `authorityThatSubmittedLastSignature`) can then call `ForeignBridge.message(messageHash)` and
 `ForeignBridge.signature(messageHash, 0..requiredSignatures)`
 to look up the message and signatures and execute `HomeBridge.withdraw(vs, rs, ss, message)`
 and complete the withdraw.
-
-### transfer on `foreign`
-
-`sender` executes `ForeignBridge.transferLocal(recipient, value)`
-which checks and reduces `ForeignBridge.balances(sender)` and increases `ForeignBridge.balances(recipient)`
-by `value`.
 
 ### build
 
