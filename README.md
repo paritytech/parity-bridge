@@ -82,7 +82,7 @@ everyone (usually `authorityThatSubmittedLastSignature`) can then call `ForeignB
 to look up the message and signatures and execute `HomeBridge.withdraw(vs, rs, ss, message)`
 and complete the withdraw.
 
-`HomeBridge.withdraw(vs, rs, ss, message)` recovers the addresses for the signatures,
+`HomeBridge.withdraw(vs, rs, ss, message)` recovers the addresses from the signatures,
 checks that enough authorities in its authority list have signed and
 finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
 to `recipient`.
