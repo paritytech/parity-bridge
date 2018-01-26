@@ -9,7 +9,7 @@
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
 the bridge is an
-[ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md)
+[ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 contract that is backed by ether on **another** ethereum blockchain.
 
 given a bridge between two chains
@@ -24,16 +24,16 @@ into ERC20 tokens on the PoA chain
 and there transfer them with much lower transaction fees,
 faster block times and unaffected by mainnet congestion.
 
-at any point can the users withdraw their tokens worth of ether on the mainnet.
+the users can withdraw their tokens worth of ether on the mainnet at any point.
 
 parity is using the bridge project to prototype
 the system that will eventually connect ethereum and other non-parachains to
-[polkadot](https://polkadot.io/)
+[polkadot](https://polkadot.io/).
 
 ### next steps
 
-1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the immutable set of bridge authorities
-2. make bridge work with contract-based dynamic validator set
+1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the fixed set of bridge authorities
+2. make the bridge work with contract-based dynamic validator sets
 3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
 ### current functionality
@@ -43,7 +43,7 @@ the bridge connects two chains `home` and `foreign`.
 when users deposit ether into the `HomeBridge` contract on `home`
 they get the same amount of ERC20 tokens on `foreign`.
 
-they can use `ForeignBridge` as they would use any ERC20 token.
+[they can use `ForeignBridge` as they would use any ERC20 token.](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 
 to convert their `foreign` ERC20 into ether on `home`
 users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, value)`.
@@ -51,7 +51,7 @@ users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, 
 `foreign` is assumed to use PoA (proof of authority) consensus.
 relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
 
-### `home` ether -> `foreign` ERC20
+### highlevel explanation of home ether -> foreign ERC20 relay
 
 `sender` deposits `value` into `HomeBridge`.
 the `HomeBridge` fallback function emits `Deposit(sender, value)`.
@@ -63,7 +63,7 @@ once there are `ForeignBridge.requiredSignatures` such transactions
 with identical arguments and from distinct authorities then
 `ForeignBridge.balanceOf(sender)` is increased by `value`.
 
-### `foreign` ERC20 -> `home` ether
+### highlevel explanation of foreign ERC20 -> home ether relay
 
 `sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
 which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
@@ -81,6 +81,20 @@ everyone (usually `authorityThatSubmittedLastSignature`) can then call `ForeignB
 `ForeignBridge.signature(messageHash, 0..requiredSignatures)`
 to look up the message and signatures and execute `HomeBridge.withdraw(vs, rs, ss, message)`
 and complete the withdraw.
+
+`HomeBridge.withdraw(vs, rs, ss, message)` recovers the addresses for the signatures,
+checks that enough authorities in its authority list have signed and
+finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
+to `recipient`.
+
+### run truffle smart contract tests
+
+requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
+
+```
+cd truffle
+yarn test
+```
 
 ### build
 
@@ -226,15 +240,6 @@ checked_withdraw_confirm = 121
 ### withdraw
 
 ![withdraw](./res/withdraw.png)
-
-### truffle tests
-
-requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
-
-```
-cd truffle
-yarn test
-```
 
 ### recipient pays relay cost to relaying authority
 
