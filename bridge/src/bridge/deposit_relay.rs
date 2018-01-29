@@ -73,6 +73,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 			let next_state = match self.state {
 				DepositRelayState::Wait => {
 					let item = try_stream!(self.logs.poll());
+					info!("got {} new deposits to relay", item.logs.len());
 					let deposits = item.logs
 						.into_iter()
 						.map(|log| deposit_relay_payload(&self.app.home_bridge, &self.app.foreign_bridge, log))
@@ -95,6 +96,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						})
 						.collect::<Vec<_>>();
 
+					info!("relaying {} deposits", deposits.len());
 					DepositRelayState::RelayDeposits {
 						future: join_all(deposits),
 						block: item.to,
@@ -102,6 +104,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 				},
 				DepositRelayState::RelayDeposits { ref mut future, block } => {
 					let _ = try_ready!(future.poll());
+					info!("deposit relay completed");
 					DepositRelayState::Yield(Some(block))
 				},
 				DepositRelayState::Yield(ref mut block) => match block.take() {

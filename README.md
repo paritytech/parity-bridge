@@ -8,84 +8,118 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-bridge between two ethereum blockchains, `home` and `foreign`.
+the bridge is an
+[ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
+contract that is backed by ether on **another** ethereum blockchain.
+
+users can convert ether
+one one chain into the same amount of ERC20 tokens on the other and back.
+the bridge securely relays these conversions.
+
+**the bridge can solve scaling issues:**
+by deploying a [proof-of-authority](https://paritytech.github.io/wiki/Proof-of-Authority-Chains.html)
+network and bridging it to mainnet users can convert their mainnet ether
+into ERC20 tokens on the PoA chain
+and there transfer them with much lower transaction fees,
+faster block times and unaffected by mainnet congestion.
+
+the users can withdraw their tokens worth of ether on the mainnet at any point.
+
+parity is using the bridge project to prototype
+the system that will eventually connect ethereum and other non-parachains to
+[polkadot](https://polkadot.io/).
+
+### next steps
+
+1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the fixed set of bridge authorities
+2. make the bridge work with contract-based dynamic validator sets
+3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
 ### current functionality
 
-the bridge allows users to deposit ether into a smart contract on `home` and get it on `foreign` in form of a token balance.
-it also allows users to withdraw their tokens on `foreign` and get the equivalent ether on `home`.
-on `foreign` users can freely transfer tokens between each other.
+the bridge connects two chains `home` and `foreign`.
+
+when users deposit ether into the `HomeBridge` contract on `home`
+they get the same amount of ERC20 tokens on `foreign`.
+
+[they can use `ForeignBridge` as they would use any ERC20 token.](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
+
+to convert their `foreign` ERC20 into ether on `home`
+users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, value)`.
 
 `foreign` is assumed to use PoA (proof of authority) consensus.
 relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
 
-### next steps
-
-1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the immutable set of bridge authorities
-2. make bridge work with contract-based dynamic validator set
-3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
-
-### eventual goals
-
-connect ethereum to polkadot
-
-### deposit ether into `HomeBridge` and get it in form of a token balance on `ForeignBridge`
+### highlevel explanation of home ether -> foreign ERC20 relay
 
 `sender` deposits `value` into `HomeBridge`.
 the `HomeBridge` fallback function emits `Deposit(sender, value)`.
-for each `Deposit` event on `HomeBridge` every authority makes a transaction
+
+for each `Deposit` event on `HomeBridge` every authority executes
 `ForeignBridge.deposit(sender, value, transactionHash)`.
+
 once there are `ForeignBridge.requiredSignatures` such transactions
 with identical arguments and from distinct authorities then
-`ForeignBridge.balances(sender)` is increased by `value` and
-`ForeignBridge.Deposit(sender, value)` is emitted.
+`ForeignBridge.balanceOf(sender)` is increased by `value`.
 
-### withdraw balance on `ForeignBridge` and get it as ether on `home` chain
+### highlevel explanation of foreign ERC20 -> home ether relay
 
 `sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
 which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
+
 for each `ForeignBridge.Withdraw` every bridge authority creates a message containg
 `value`, `recipient` and the `transactionHash` of the transaction containing the `ForeignBridge.Withdraw` event,
-signs the message and makes a transaction `ForeignBridge.submitSignature(signature, message)`.
+signs the message and executes `ForeignBridge.submitSignature(signature, message)`.
 this collection of signatures on `foreign` is necessary because transactions are free
 for authorities on `foreign`, since they are the authorities of `foreign`, but not free on `home`.
+
 once `ForeignBridge.requiredSignatures` signatures by distinct authorities are collected
 a `ForeignBridge.CollectedSignatures(authorityThatSubmittedLastSignature, messageHash)` event is emitted.
+
 everyone (usually `authorityThatSubmittedLastSignature`) can then call `ForeignBridge.message(messageHash)` and
 `ForeignBridge.signature(messageHash, 0..requiredSignatures)`
 to look up the message and signatures and execute `HomeBridge.withdraw(vs, rs, ss, message)`
 and complete the withdraw.
 
-### transfer on `foreign`
+`HomeBridge.withdraw(vs, rs, ss, message)` recovers the addresses from the signatures,
+checks that enough authorities in its authority list have signed and
+finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
+to `recipient`.
 
-`sender` executes `ForeignBridge.transferLocal(recipient, value)`
-which checks and reduces `ForeignBridge.balances(sender)` and increases `ForeignBridge.balances(recipient)`
-by `value`.
+### run truffle smart contract tests
+
+requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
+
+```
+cd truffle
+yarn test
+```
 
 ### build
 
-requires `solc` to be in `$PATH`. [installation instructions](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+requires `rust` and `cargo`: [installation instructions.](https://www.rust-lang.org/en-US/install.html)
+
+requires `solc` to be in `$PATH`: [installation instructions.](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+
+assuming you've cloned the bridge (`git clone git@github.com:paritytech/parity-bridge.git`)
+and are in the project directory (`cd parity-bridge`) run:
 
 ```
 cargo build -p bridge-cli --release
 ```
 
-### cli options
+to install copy `../target/release/bridge` into a folder that's in your `$PATH`.
+
+### run
 
 ```
-Ethereum-Kovan bridge.
-    Copyright 2017 Parity Technologies (UK) Limited
-
-Usage:
-    bridge --config <config> --database <database>
-    bridge -h | --help
-
-Options:
-    -h, --help           Display help message and exit.
+bridge --config config.toml --database db.toml
 ```
 
 - `--config` - location of the configuration file. configuration file must exist
-- `--database` - location of the database file. if there is no file at specified location, new bridge contracts will be deployed and new database will be created
+- `--database` - location of the database file.
+  if there is no file at specified location, new bridge contracts will be deployed
+  and new database will be created
 
 ### configuration [file example](./examples/config.toml)
 
@@ -206,15 +240,6 @@ checked_withdraw_confirm = 121
 ### withdraw
 
 ![withdraw](./res/withdraw.png)
-
-### truffle tests
-
-requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
-
-```
-cd truffle
-yarn test
-```
 
 ### recipient pays relay cost to relaying authority
 
