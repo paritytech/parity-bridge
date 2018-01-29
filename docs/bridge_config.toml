@@ -1,0 +1,30 @@
+estimated_gas_cost_of_withdraw = 100000
+
+[home]
+account = "TODO insert authority address"
+ipc = "TODO insert path to IPC socket for parity node connected to home and with home.account unlocked"
+required_confirmations = 20
+
+[home.contract]
+bin = "../compiled_contracts/HomeBridge.bin"
+
+[foreign]
+account = "TODO insert authority address"
+ipc = "TODO insert path to IPC socket for parity node connected to foreign and with foreign.account unlocked"
+required_confirmations = 20
+
+[foreign.contract]
+bin = "../compiled_contracts/ForeignBridge.bin"
+
+[authorities]
+accounts = [
+	{TODO insert authority addresses here}
+]
+required_signatures = {TODO insert a number that is the majority of authorities.accounts}
+
+[transactions]
+home_deploy = { gas = 1000000 }
+foreign_deploy = { gas = 3000000 }
+deposit_relay = { gas = 200000 }
+withdraw_relay = { gas = 100000 }
+withdraw_confirm = { gas = 300000 }
