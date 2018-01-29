@@ -23,8 +23,8 @@ accounts = [
 required_signatures = 1
 
 [transactions]
-home_deploy = { gas = 3000000 }
+home_deploy = { gas = 1000000 }
 foreign_deploy = { gas = 3000000 }
-deposit_relay = { gas = 3000000 }
-withdraw_relay = { gas = 3000000 }
-withdraw_confirm = { gas = 3000000 }
+deposit_relay = { gas = 200000 }
+withdraw_relay = { gas = 100000 }
+withdraw_confirm = { gas = 300000 }
