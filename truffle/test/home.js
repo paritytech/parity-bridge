@@ -14,6 +14,9 @@ contract('HomeBridge', function(accounts) {
       estimatedGasCostOfWithdraw
     ).then(function(instance) {
       meta = instance;
+      return web3.eth.getTransaction(instance.transactionHash);
+    }).then(function(transaction) {
+      console.log("estimated gas cost of HomeBridge deploy =", transaction.gas);
       return meta.requiredSignatures.call();
     }).then(function(result) {
       assert.equal(requiredSignatures, result, "Contract has invalid number of requiredSignatures");
