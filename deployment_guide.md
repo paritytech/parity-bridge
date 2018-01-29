@@ -3,23 +3,69 @@
 this guide assumes that you are one of the authorities of
 a PoA chain `foreign` and want to use the bridge to connect
 `foreign` to another chain `home`.
+this will create an ERC20 token on `foreign` that is backed by
+ether on `home`.
 
-since the authorities one authority has to go ahead and
-deploy
+since the authorities all use the same contracts on `foreign` and `home`
+one authority has to go ahead and
+deploy them.
 
-we call this the leading authority
+we call this the **leading authority**.
 
 if the process is done correctly the other non-leading authorities don't have to trust
 the leading authority.
 
-## deployment guide for the leading authority
+upfront you must know the addresses of the authorities
+es well as the number of required_signatures
 
-install parity 1.8.6 on the machine
+## deployment guide for any authority
+
+given you are an authority with 
+
+[install parity 1.8.7](https://github.com/paritytech/parity/releases/tag/v1.8.7)
+
+start a parity node `home_node` that connects to `foreign`.
+
+assuming `foreign = kovan`:
+```
+parity \
+  --chain kovan
+  --ipc-path bridge_foreign.ipc
+  --no-jsonrpc
+  --unlock {authority_address}
+  --password {path to file containing password for authority address}
+```
+
+start a parity node that connects to `foreign`.
+that has the authority address unlocked.
+let's call it `foreign_node`
+
+## configure the bridge
+
+[bridge_config.toml]
+
+you only need to fill in
 
 setup a config file
 
 it should show something like this
 that it
+
+resolve all the `TODO`s in the bridge file.
+
+## start the bridge
+
+```
+env bridge --config --database
+```
+
+## deployment guide for the leading authority
+
+[finish these steps first]
+
+start the bridge.
+
+it should 
 
 confirmations????
 
@@ -44,8 +90,6 @@ verify the contracts deployed to `home_contract_address` and
 https://etherscan.io/verifyContract so the other authorities
 can verify that you did an honest deploy without having to trust you.
 
-[start the bridge process](
-
 give the database file to the other authorities.
 for example by posting it as a gist.
 the database file doesn't contain any sensitive information.
@@ -54,11 +98,6 @@ ask the other authorities to follow [this guide]()
 
 ensure the process keeps running. else the bridge won't function.
 (outside the scope of this guide, your devops team knows what to do).
-
-## start the bridge
-
-
-
 
 ## the bridge requires two
 
