@@ -10,9 +10,9 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
-      return web3.eth.getTransaction(instance.transactionHash);
+      return web3.eth.getTransactionReceipt(instance.transactionHash);
     }).then(function(transaction) {
-      console.log("estimated gas cost of ForeignBridge deploy =", transaction.gas);
+      console.log("estimated gas cost of ForeignBridge deploy =", transaction.gasUsed);
       return meta.requiredSignatures.call();
     }).then(function(result) {
       assert.equal(requiredSignatures, result, "Contract has invalid number of requiredSignatures");
