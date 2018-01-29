@@ -12,8 +12,7 @@ the bridge is an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 contract that is backed by ether on **another** ethereum blockchain.
 
-given a bridge between two chains
-users can freely convert any amount of ether
+users can convert ether
 one one chain into the same amount of ERC20 tokens on the other and back.
 the bridge securely relays these conversions.
 
