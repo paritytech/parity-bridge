@@ -65,6 +65,10 @@ contract('HomeBridge', function(accounts) {
       assert.equal("Deposit", result.logs[0].event, "Event name should be Deposit");
       assert.equal(userAccount, result.logs[0].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[0].args.value, "Event value should match deposited ether");
+
+      return web3.eth.getTransactionReceipt(result.tx);
+    }).then(function(transaction) {
+      console.log("estimated gas cost of HomeBridge fallback function =", transaction.gasUsed);
     })
   })
 
