@@ -52,7 +52,7 @@ users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, 
 `foreign` is assumed to use PoA (proof of authority) consensus.
 relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
 
-### highlevel explanation of home ether -> foreign ERC20 relay
+### high level explanation of home ether -> foreign ERC20 relay
 
 `sender` deposits `value` into `HomeBridge`.
 the `HomeBridge` fallback function emits `Deposit(sender, value)`.
@@ -64,16 +64,16 @@ once there are `ForeignBridge.requiredSignatures` such transactions
 with identical arguments and from distinct authorities then
 `ForeignBridge.balanceOf(sender)` is increased by `value`.
 
-### highlevel explanation of foreign ERC20 -> home ether relay
+### high level explanation of foreign ERC20 -> home ether relay
 
 `sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
 which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
 
-for each `ForeignBridge.Withdraw` every bridge authority creates a message containg
-`value`, `recipient` and the `transactionHash` of the transaction containing the `ForeignBridge.Withdraw` event,
-signs the message and executes `ForeignBridge.submitSignature(signature, message)`.
-this collection of signatures on `foreign` is necessary because transactions are free
-for authorities on `foreign`, since they are the authorities of `foreign`, but not free on `home`.
+for every `ForeignBridge.Withdraw`, every bridge authority creates a message containing
+`value`, `recipient` and the `transactionHash` of the transaction referenced by the `ForeignBridge.Withdraw` event;
+signs that message and executes `ForeignBridge.submitSignature(signature, message)`.
+this collection of signatures is on `foreign` because transactions are free for the authorities on `foreign`, 
+but not free on `home`.
 
 once `ForeignBridge.requiredSignatures` signatures by distinct authorities are collected
 a `ForeignBridge.CollectedSignatures(authorityThatSubmittedLastSignature, messageHash)` event is emitted.
@@ -146,9 +146,9 @@ bin = "contracts/KovanBridge.bin"
 
 [authorities]
 accounts = [
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421",
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421",
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421"
+    "0x006e27b6a72e1f34c626762f3c4761547aff1421",
+    "0x006e27b6a72e1f34c626762f3c4761547aff1421",
+    "0x006e27b6a72e1f34c626762f3c4761547aff1421"
 ]
 required_signatures = 2
 
@@ -221,7 +221,7 @@ checked_withdraw_confirm = 121
 - `foreign_deploy` - block number at which foreign contract has been deployed
 - `checked_deposit_relay` - number of the last block for which an authority has relayed deposits to the foreign
 - `checked_withdraw_relay` - number of the last block for which an authority has relayed withdraws to the home
-- `checked_withdraw_confirm` - number of the last block for which an authirty has confirmed withdraw
+- `checked_withdraw_confirm` - number of the last block for which an authority has confirmed withdraw
 
 ### example run
 
@@ -255,8 +255,8 @@ that shuts down an attack that enabled exhaustion of authorities funds on `home`
 read on for a more thorough explanation.
 
 parity-bridge connects a value-bearing ethereum blockchain `home`
-(initally the ethereum foundation chain)
-to a non-value-bearing PoA ethereum blockchain `foreign` (initally the kovan testnet).
+(initially the ethereum foundation chain)
+to a non-value-bearing PoA ethereum blockchain `foreign` (initially the kovan testnet).
 
 value-bearing means that the ether on that chain has usable value in the sense that
 in order to obtain it one has to either mine it (trade in electricity)
