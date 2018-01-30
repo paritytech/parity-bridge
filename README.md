@@ -10,15 +10,15 @@
 
 the bridge is an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
-contract that is backed by ether on **another** ethereum blockchain.
+contract on one ethereum-based blockchain that is backed by ether on **another** ethereum-based blockchain.
 
 users can convert ether
-one one chain into the same amount of ERC20 tokens on the other and back.
+on one chain into the same amount of ERC20 tokens on the other and back.
 the bridge securely relays these conversions.
 
-**the bridge can solve scaling issues:**
+**the bridge can mitigate scaling issues:**
 by deploying a [proof-of-authority](https://paritytech.github.io/wiki/Proof-of-Authority-Chains.html)
-network and bridging it to mainnet users can convert their mainnet ether
+network and bridging it to the Ethereum Foundation network ('mainnet') users can convert their mainnet ether
 into ERC20 tokens on the PoA chain
 and there transfer them with much lower transaction fees,
 faster block times and unaffected by mainnet congestion.
