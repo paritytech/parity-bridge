@@ -217,14 +217,17 @@ contract HomeBridge {
         return estimatedGasCostOfWithdraw * tx.gasprice;
     }
 
-    /// Used to withdraw money from the contract.
-    ///
-    /// message contains:
-    /// withdrawal recipient (bytes20)
-    /// withdrawal value (uint)
-    /// foreign transaction hash (bytes32) // to avoid transaction duplication
-    ///
-    /// NOTE that anyone can call withdraw provided they have the message and required signatures!
+    /// final step of a withdraw.
+    /// checks that `requiredSignatures` `authorities` have signed of on the `message`.
+    /// then transfers `value` to `recipient` (both extracted from `message`).
+    /// see message library above for a breakdown of the `message` contents.
+    /// `vs`, `rs`, `ss` are the components of the signatures.
+
+    /// anyone can call this, provided they have the message and required signatures!
+    /// only the `authorities` can create these signatures.
+    /// `requiredSignatures` authorities can sign arbitrary `message`s
+    /// transfering any ether `value` out of this contract to `recipient`.
+    /// bridge users must trust a majority of `requiredSignatures` of the `authorities`.
     function withdraw(uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
         require(message.length == 84);
         address recipient = Message.getRecipient(message);
