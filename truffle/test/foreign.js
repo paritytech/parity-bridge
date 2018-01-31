@@ -5,9 +5,10 @@ contract('ForeignBridge', function(accounts) {
   it("should deploy contract", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.requiredSignatures.call();
     }).then(function(result) {
@@ -20,7 +21,7 @@ contract('ForeignBridge', function(accounts) {
 
   it("should fail to deploy contract with not enough required signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return ForeignBridge.new(0, authorities).then(function(_) {
+    return ForeignBridge.new(0, authorities, 0).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -29,7 +30,7 @@ contract('ForeignBridge', function(accounts) {
 
   it("should fail to deploy contract with to many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return ForeignBridge.new(3, authorities).then(function(_) {
+    return ForeignBridge.new(3, authorities, 0).then(function(_) {
       assert(false, "Contract should fail to deploy");
     }, function(err) {
       // do nothing
@@ -39,12 +40,13 @@ contract('ForeignBridge', function(accounts) {
   it("should allow a single authority to confirm a deposit", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -68,12 +70,13 @@ contract('ForeignBridge', function(accounts) {
   it("should require 2 authorities to confirm deposit", function() {
     var meta;
     var requiredSignatures = 2;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -102,12 +105,13 @@ contract('ForeignBridge', function(accounts) {
   it("should not be possible to do same deposit twice for same authority", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(_) {
@@ -121,12 +125,13 @@ contract('ForeignBridge', function(accounts) {
   it("should not allow non-authorities to execute deposit", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: userAccount });
     }).then(function(result) {
@@ -138,13 +143,14 @@ contract('ForeignBridge', function(accounts) {
   it("should ignore misbehaving authority when confirming deposit", function() {
     var meta;
     var requiredSignatures = 2;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1], accounts[2]];
     var userAccount = accounts[3];
     var invalidValue = web3.toWei(2, "ether");
     var value = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -174,13 +180,14 @@ contract('ForeignBridge', function(accounts) {
   it("should not allow user to transfer value they don't have to home", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(4, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -194,13 +201,14 @@ contract('ForeignBridge', function(accounts) {
   it("should fail to transfer 0 value to home", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(0, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -214,18 +222,20 @@ contract('ForeignBridge', function(accounts) {
   it("should allow user to trigger withdraw", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
     var userAccount2 = accounts[3];
     var value = web3.toWei(3, "ether");
     var value2 = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       // top up balance so we can transfer
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(userAccount2, value2, { from: userAccount });
+      var homeGasPrice = 1000;
+      return meta.transferHomeViaRelay(userAccount2, value2, homeGasPrice, { from: userAccount });
     }).then(function(result) {
       assert.equal(2, result.logs.length)
 
@@ -252,9 +262,12 @@ contract('ForeignBridge', function(accounts) {
     var meta;
     var signature;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
-    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    var recipientAccount = accounts[2];
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
@@ -277,9 +290,12 @@ contract('ForeignBridge', function(accounts) {
   it("should successfully submit signature but not trigger CollectedSignatures event", function() {
     var meta;
     var requiredSignatures = 2;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
-    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    var recipientAccount = accounts[2];
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
@@ -294,10 +310,13 @@ contract('ForeignBridge', function(accounts) {
     var signatures_for_message = [];
     var signatures_for_message2 = [];
     var requiredSignatures = 2;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
-    var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    var recipientAccount = accounts[2];
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
+    var message2 = helpers.createMessage(recipientAccount, web3.toBigNumber(2000), transactionHash, web3.toBigNumber(2000));
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return Promise.all([
         helpers.sign(authorities[0], message),
@@ -350,9 +369,10 @@ contract('ForeignBridge', function(accounts) {
   it("should not be possible to submit to short message", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
@@ -367,10 +387,11 @@ contract('ForeignBridge', function(accounts) {
   it("should not be possible to submit different message then the signed one", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     var message2 = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111112";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
@@ -385,9 +406,10 @@ contract('ForeignBridge', function(accounts) {
   it("should not be possible to submit signature signed by different authority", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
@@ -402,10 +424,11 @@ contract('ForeignBridge', function(accounts) {
   it("should not be possible to submit signature twice", function() {
     var meta;
     var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var message = "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111";
     var signature;
-    return ForeignBridge.new(requiredSignatures, authorities).then(function(instance) {
+    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
     }).then(function(result) {

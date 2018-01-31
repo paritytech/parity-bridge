@@ -149,7 +149,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message,
-        {from: authorities[0]}
+        {from: userAccount, gasPrice: 1000}
       );
     }).then(function(result) {
       console.log("estimated gas cost of HomeBridge.withdraw =", result);
@@ -160,8 +160,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message,
-        // anyone can call withdraw (provided they have the message and required signatures)
-        {from: userAccount}
+        {from: userAccount, gasPrice: 1000}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -215,8 +214,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message,
-        // anyone can call withdraw (provided they have the message and required signatures)
-        { from: relayerAccount }
+        { from: relayerAccount, gasPrice: 1000 }
       );
     }).then(function(result) {
       transactionResult = result;
@@ -291,8 +289,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message,
-        // anyone can call withdraw (provided they have the message and required signatures)
-        { from: relayerAccount }
+        { from: relayerAccount, gasPrice: 1000 }
       );
     }).then(function(result) {
       assert(false, "withdraw if value <= estimatedGasCostOfWithdraw should fail");
@@ -332,7 +329,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message1,
-        {from: authorities[0]}
+        {from: authorities[0], gasPrice: 1000}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -348,7 +345,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message2,
-        {from: authorities[0]}
+        {from: authorities[0], gasPrice: 1000}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -389,7 +386,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message1,
-        {from: authorities[0]}
+        {from: authorities[0], gasPrice: 1000}
       );
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -405,7 +402,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message2,
-        {from: authorities[0]}
+        {from: authorities[0], gasPrice: 1000}
       );
     }).then(function(result) {
       assert(false, "should fail");
@@ -440,7 +437,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.r],
         [vrs.s],
         message.substr(0, 83),
-        {from: authorities[0]}
+        {from: authorities[0], gasPrice: 1000}
       );
     }).then(function(result) {
       assert(false, "should fail");
@@ -486,7 +483,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {from: userAccount}
+        {from: userAccount, gasPrice: 1000}
       );
     }).then(function(result) {
       assert(false, "withdraw should fail");
@@ -529,7 +526,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {from: userAccount}
+        {from: userAccount, gasPrice: 1000}
       );
     }).then(function(result) {
       assert(false, "should fail");
@@ -572,7 +569,7 @@ contract('HomeBridge', function(accounts) {
         [vrs.s, vrs.s],
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
-        {from: userAccount}
+        {from: userAccount, gasPrice: 1000}
       );
     }).then(function(result) {
       assert(false, "should fail");
