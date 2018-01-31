@@ -58,7 +58,7 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 /// returns the payload for a call to `HomeBridge.isMessageValueSufficientToCoverRelay(message)`
 /// for the given `message`
 fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	assert_eq!(message.0.len(), 116, "ForeignBridge never accepts messages with len != 116 bytes; qed");
 	home
 		.functions()
 		.is_message_value_sufficient_to_cover_relay()
@@ -68,7 +68,7 @@ fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) ->
 /// returns the payload for a transaction to `HomeBridge.withdraw(r, s, v, message)`
 /// for the given `signatures` (r, s, v) and `message`
 fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	assert_eq!(message.0.len(), 116, "ForeignBridge never accepts messages with len != 116 bytes; qed");
 	let mut v_vec = Vec::new();
 	let mut r_vec = Vec::new();
 	let mut s_vec = Vec::new();

@@ -25,16 +25,16 @@ fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> 
 	};
 	let withdraw_log = foreign.events().withdraw().parse_log(raw_log)?;
 	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
-	let mut result = vec![0u8; 84];
+	let mut result = vec![0u8; 116];
 	result[0..20].copy_from_slice(&withdraw_log.recipient);
 	result[20..52].copy_from_slice(&H256::from(withdraw_log.value));
 	result[52..84].copy_from_slice(&hash);
+	result[84..116].copy_from_slice(&withdraw_log.home_gas_price);
 	Ok(result.into())
 }
 
 fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_message: Bytes, signature: H520) -> Bytes {
-	assert_eq!(signature.0.len(), 65);
-	assert_eq!(withdraw_message.0.len(), 84, "ForeignBridge never accepts messages with len != 84 bytes; qed");
+	assert_eq!(withdraw_message.0.len(), 116, "ForeignBridge never accepts messages with len != 116 bytes; qed");
 	foreign.functions().submit_signature().input(signature.0.to_vec(), withdraw_message.0).into()
 }
 

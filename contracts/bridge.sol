@@ -107,6 +107,7 @@ library Message {
     // offset 32: 20 bytes :: address - recipient address
     // offset 52: 32 bytes :: uint (little endian) - value
     // offset 84: 32 bytes :: bytes32 - transaction hash
+    // offset 116: 32 bytes :: uint (little endian) - home gas price
 
     // bytes 1 to 32 are 0 because message length is stored as little endian.
     // mload always reads 32 bytes.
@@ -145,6 +146,15 @@ library Message {
         }
         return hash;
     }
+
+    function getHomeGasPrice(bytes message) internal pure returns (uint) {
+        uint gasPrice;
+        // solium-disable-next-line security/no-inline-assembly
+        assembly {
+            gasPrice := mload(add(message, 116))
+        }
+        return gasPrice;
+    }
 }
 
 
@@ -160,6 +170,10 @@ library MessageTest {
 
     function getTransactionHash(bytes message) public pure returns (bytes32) {
         return Message.getTransactionHash(message);
+    }
+
+    function getHomeGasPrice(bytes message) public pure returns (uint) {
+        return Message.getHomeGasPrice(message);
     }
 }
 
@@ -232,7 +246,7 @@ contract HomeBridge {
     /// transfering any ether `value` out of this contract to `recipient`.
     /// bridge users must trust a majority of `requiredSignatures` of the `authorities`.
     function withdraw(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) public {
-        require(message.length == 84);
+        require(message.length == 116);
 
         // check that at least `requiredSignatures` `authorities` have signed `message`
         Helpers.verifySignatures(message, vs, rs, ss, authorities, requiredSignatures);
@@ -240,6 +254,17 @@ contract HomeBridge {
         address recipient = Message.getRecipient(message);
         uint value = Message.getValue(message);
         bytes32 hash = Message.getTransactionHash(message);
+        uint homeGasPrice = Message.getHomeGasPrice(message);
+
+        // if the recipient calls `withdraw` they can choose the gas price freely.
+        // if anyone else calls `withdraw` they have to use the gas price
+        // `homeGasPrice` specified by the user initiating the withdraw.
+        // this is a security mechanism designed to shut down
+        // malicious senders setting extremely high gas prices
+        // and effectively burning recipients withdrawn value.
+        // see https://github.com/paritytech/parity-bridge/issues/112
+        // for further explanation.
+        require((recipient == msg.sender) || (tx.gasprice == homeGasPrice));
 
         // The following two statements guard against reentry into this function.
         // Duplicated withdraw or reentry.
@@ -247,12 +272,7 @@ contract HomeBridge {
         // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
 
-        // this fails if `value` is not even enough to cover the relay cost.
-        // Authorities simply IGNORE withdraws where `value` can’t relay cost.
-        // Think of it as `value` getting burned entirely on the relay with no value left to pay out the recipient.
-        require(isMessageValueSufficientToCoverRelay(message));
-
-        uint estimatedWeiCostOfWithdraw = getWithdrawRelayCost();
+        uint estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * homeGasPrice;
 
         // charge recipient for relay cost
         uint valueRemainingAfterSubtractingCost = value - estimatedWeiCostOfWithdraw;
@@ -360,6 +380,8 @@ contract ForeignBridge {
     /// Must be less than number of authorities.
     uint public requiredSignatures;
 
+    uint public estimatedGasCostOfWithdraw;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -373,20 +395,22 @@ contract ForeignBridge {
     event Deposit(address recipient, uint value);
 
     /// Event created on money withdraw.
-    event Withdraw(address recipient, uint value);
+    event Withdraw(address recipient, uint value, uint homeGasPrice);
 
     /// Collected signatures which should be relayed to home chain.
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
 
     function ForeignBridge(
         uint _requiredSignatures,
-        address[] _authorities
+        address[] _authorities,
+        uint _estimatedGasCostOfWithdraw
     ) public
     {
         require(_requiredSignatures != 0);
         require(_requiredSignatures <= _authorities.length);
         requiredSignatures = _requiredSignatures;
         authorities = _authorities;
+        estimatedGasCostOfWithdraw = _estimatedGasCostOfWithdraw;
     }
 
     /// require that sender is an authority
@@ -430,10 +454,13 @@ contract ForeignBridge {
     /// once `requiredSignatures` are collected a `CollectedSignatures` event will be emitted.
     /// an authority will pick up `CollectedSignatures` an call `HomeBridge.withdraw`
     /// which transfers `value - relayCost` to `recipient` completing the transfer.
-    function transferHomeViaRelay(address recipient, uint value) public {
+    function transferHomeViaRelay(address recipient, uint value, uint homeGasPrice) public {
         require(balances[msg.sender] >= value);
         // don't allow 0 value transfers to home
         require(value > 0);
+
+        uint estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * homeGasPrice;
+        require(value >= estimatedWeiCostOfWithdraw);
 
         balances[msg.sender] -= value;
         // burns tokens
@@ -442,7 +469,7 @@ contract ForeignBridge {
         // recommended by ERC20 (see implementation of `deposit` above)
         // we trigger a Transfer event to `0x0` on token destruction
         Transfer(msg.sender, 0x0, value);
-        Withdraw(recipient, value);
+        Withdraw(recipient, value, homeGasPrice);
     }
 
     /// Should be used as sync tool
@@ -457,8 +484,9 @@ contract ForeignBridge {
         // Validate submited signatures
         require(MessageSigning.recoverAddressFromSignedMessage(signature, message) == msg.sender);
 
-        // Valid withdraw message must have 84 bytes
-        require(message.length == 84);
+        require(signature.length == 65);
+        // Valid withdraw message must have 116 bytes
+        require(message.length == 116);
         var hash = keccak256(message);
 
         // Duplicated signatures
