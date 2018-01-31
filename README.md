@@ -33,7 +33,7 @@ the system that will eventually connect ethereum and other non-parachains to
 
 ### next steps
 
-1. deploy to bridge **ethereum** and **kovan** with the kovan authorities being the fixed set of bridge authorities
+1. deploy to bridge **ethereum** and **kovan** (bridge authorities TBD)
 2. make the bridge work with contract-based dynamic validator sets
 3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
