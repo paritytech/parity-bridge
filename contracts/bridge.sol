@@ -35,6 +35,25 @@ library Helpers {
         } while (currentValue != 0);
         return string(result);
     }
+
+    /// Multisig authority validation
+    function verifySignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) internal pure {
+        // not enough signatures
+        require(requiredSignatures <= vs.length);
+
+        var hash = MessageSigning.hashMessage(message);
+        var encountered = new address[](addresses.length);
+
+        for (uint i = 0; i < requiredSignatures; i++) {
+            var a = ecrecover(hash, vs[i], rs[i], ss[i]);
+            // only signatures by addresses in `addresses` are allowed
+            require(addressArrayContains(addresses, a));
+            // duplicate signatures are not allowed
+            require(!addressArrayContains(encountered, a));
+            encountered[i] = a;
+        }
+    }
+
 }
 
 
@@ -170,22 +189,6 @@ contract HomeBridge {
     /// Event created on money withdraw.
     event Withdraw (address recipient, uint value);
 
-    /// Multisig authority validation
-    modifier allAuthorities(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) {
-        var hash = MessageSigning.hashMessage(message);
-        var used = new address[](requiredSignatures);
-
-        require(requiredSignatures <= vs.length);
-
-        for (uint i = 0; i < requiredSignatures; i++) {
-            var a = ecrecover(hash, vs[i], rs[i], ss[i]);
-            require(Helpers.addressArrayContains(authorities, a));
-            require(!Helpers.addressArrayContains(used, a));
-            used[i] = a;
-        }
-        _;
-    }
-
     /// Constructor.
     function HomeBridge(
         uint requiredSignaturesParam,
@@ -228,8 +231,12 @@ contract HomeBridge {
     /// `requiredSignatures` authorities can sign arbitrary `message`s
     /// transfering any ether `value` out of this contract to `recipient`.
     /// bridge users must trust a majority of `requiredSignatures` of the `authorities`.
-    function withdraw(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) public allAuthorities(vs, rs, ss, message) {
+    function withdraw(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) public {
         require(message.length == 84);
+
+        // check that at least `requiredSignatures` `authorities` have signed `message`
+        Helpers.verifySignatures(message, vs, rs, ss, authorities, requiredSignatures);
+
         address recipient = Message.getRecipient(message);
         uint value = Message.getValue(message);
         bytes32 hash = Message.getTransactionHash(message);
