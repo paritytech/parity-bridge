@@ -171,14 +171,14 @@ contract HomeBridge {
     event Withdraw (address recipient, uint value);
 
     /// Multisig authority validation
-    modifier allAuthorities(uint8[] v, bytes32[] r, bytes32[] s, bytes message) {
+    modifier allAuthorities(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) {
         var hash = MessageSigning.hashMessage(message);
         var used = new address[](requiredSignatures);
 
-        require(requiredSignatures <= v.length);
+        require(requiredSignatures <= vs.length);
 
         for (uint i = 0; i < requiredSignatures; i++) {
-            var a = ecrecover(hash, v[i], r[i], s[i]);
+            var a = ecrecover(hash, vs[i], rs[i], ss[i]);
             require(Helpers.addressArrayContains(authorities, a));
             require(!Helpers.addressArrayContains(used, a));
             used[i] = a;
@@ -228,7 +228,7 @@ contract HomeBridge {
     /// `requiredSignatures` authorities can sign arbitrary `message`s
     /// transfering any ether `value` out of this contract to `recipient`.
     /// bridge users must trust a majority of `requiredSignatures` of the `authorities`.
-    function withdraw(uint8[] v, bytes32[] r, bytes32[] s, bytes message) public allAuthorities(v, r, s, message) {
+    function withdraw(uint8[] vs, bytes32[] rs, bytes32[] ss, bytes message) public allAuthorities(vs, rs, ss, message) {
         require(message.length == 84);
         address recipient = Message.getRecipient(message);
         uint value = Message.getValue(message);
