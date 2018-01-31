@@ -238,7 +238,8 @@ fn test_basic_deposit_then_withdraw() {
 		.transfer_home_via_relay()
 		.input(
 			Address::from(user_address),
-			U256::from(100000));
+			U256::from(100000),
+			U256::from(1));
 	let future = foreign_eth.send_transaction(web3::types::TransactionRequest{
 		from: address_from_str(user_address),
 		to: Some(address_from_str(foreign_contract_address)),
