@@ -15,11 +15,11 @@ pub struct MockedRequest {
 	pub params: Vec<rpc::Value>,
 }
 
-impl From<(&'static str, &'static str)> for MockedRequest {
-	fn from(a: (&'static str, &'static str)) -> Self {
+impl From<(&'static str, serde_json::Value)> for MockedRequest {
+	fn from(a: (&'static str, serde_json::Value)) -> Self {
 		MockedRequest {
 			method: a.0.to_owned(),
-			params: serde_json::from_str(a.1).unwrap(),
+			params: a.1.as_array().unwrap().clone()
 		}
 	}
 }
@@ -28,7 +28,7 @@ impl From<(&'static str, &'static str)> for MockedRequest {
 pub struct MockedTransport {
 	pub requests: Cell<usize>,
 	pub expected_requests: Vec<MockedRequest>,
-	pub mocked_responses: Vec<&'static str>,
+	pub mocked_responses: Vec<serde_json::Value>,
 }
 
 impl Transport for MockedTransport {
@@ -46,7 +46,7 @@ impl Transport for MockedTransport {
 
 	fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
 		let response = self.mocked_responses.iter().nth(self.requests.get() - 1).expect("missing response");
-		let f = futures::finished(serde_json::from_str(response).expect("invalid response"));
+		let f = futures::finished(response.clone());
 		Box::new(f)
 	}
 }
