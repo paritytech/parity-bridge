@@ -7,7 +7,7 @@ use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionReq
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
-use contracts::{home, foreign};
+use contracts::{home, foreign, MESSAGE_LENGTH, SIGNATURE_LENGTH};
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
@@ -58,7 +58,7 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 /// returns the payload for a call to `HomeBridge.isMessageValueSufficientToCoverRelay(message)`
 /// for the given `message`
 fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), 116, "ForeignBridge never accepts messages with len != 116 bytes; qed");
+	assert_eq!(message.0.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
 	home
 		.functions()
 		.is_message_value_sufficient_to_cover_relay()
@@ -68,12 +68,12 @@ fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) ->
 /// returns the payload for a transaction to `HomeBridge.withdraw(r, s, v, message)`
 /// for the given `signatures` (r, s, v) and `message`
 fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), 116, "ForeignBridge never accepts messages with len != 116 bytes; qed");
+	assert_eq!(message.0.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
 	let mut v_vec = Vec::new();
 	let mut r_vec = Vec::new();
 	let mut s_vec = Vec::new();
 	for signature in signatures {
-		assert_eq!(signature.0.len(), 65, "ForeignBridge never accepts signatures with len != 65 bytes; qed");
+		assert_eq!(signature.0.len(), SIGNATURE_LENGTH, "ForeignBridge never accepts signatures with len != {} bytes; qed", SIGNATURE_LENGTH);
 		let mut r = [0u8; 32];
 		let mut s= [0u8; 32];
 		let mut v = [0u8; 32];
@@ -364,10 +364,10 @@ mod tests {
 	fn test_withdraw_relay_payload() {
 		let home = home::HomeBridge::default();
 		let signatures: Vec<Bytes> = vec![
-			vec![0x11; 65].into(),
-			vec![0x22; 65].into(),
+			vec![0x11; SIGNATURE_LENGTH].into(),
+			vec![0x22; SIGNATURE_LENGTH].into(),
 		];
-		let message: Bytes = vec![0x33; 84].into();
+		let message: Bytes = vec![0x33; MESSAGE_LENGTH].into();
 
 		let payload = withdraw_relay_payload(&home, &signatures, &message);
 		let expected: Bytes = "9ce318f6000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001100000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000002111111111111111111111111111111111111111111111111111111111111111122222222222222222222222222222222222222222222222222222222222222220000000000000000000000000000000000000000000000000000000000000002111111111111111111111111111111111111111111111111111111111111111122222222222222222222222222222222222222222222222222222222222222220000000000000000000000000000000000000000000000000000000000000054333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333000000000000000000000000".from_hex().unwrap().into();
