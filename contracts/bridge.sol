@@ -222,18 +222,6 @@ contract HomeBridge {
         Deposit(msg.sender, msg.value);
     }
 
-    /// to be called by authorities to check
-    /// whether they withdraw message should be relayed or whether it
-    /// is too low to cover the cost of calling withdraw and can be ignored
-    function isMessageValueSufficientToCoverRelay(bytes message) public view returns (bool) {
-        return Message.getValue(message) > getWithdrawRelayCost();
-    }
-
-    /// an upper bound to the cost of relaying a withdraw by calling HomeBridge.withdraw
-    function getWithdrawRelayCost() public view returns (uint) {
-        return estimatedGasCostOfWithdraw * tx.gasprice;
-    }
-
     /// final step of a withdraw.
     /// checks that `requiredSignatures` `authorities` have signed of on the `message`.
     /// then transfers `value` to `recipient` (both extracted from `message`).
