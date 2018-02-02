@@ -8,34 +8,20 @@ use web3::Transport;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream, ApiCall};
 use app::App;
-use contracts::{foreign, MESSAGE_LENGTH};
+use contracts::foreign;
 use util::web3_filter;
 use database::Database;
 use error::Error;
+use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
 
 fn withdraws_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
 	let filter = foreign.events().withdraw().create_filter();
 	web3_filter(filter, address)
 }
 
-fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes, Error> {
-	let raw_log = RawLog {
-		topics: log.topics,
-		data: log.data.0,
-	};
-	let withdraw_log = foreign.events().withdraw().parse_log(raw_log)?;
-	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
-	let mut result = vec![0u8; MESSAGE_LENGTH];
-	result[0..20].copy_from_slice(&withdraw_log.recipient);
-	result[20..52].copy_from_slice(&H256::from(withdraw_log.value));
-	result[52..84].copy_from_slice(&hash);
-	result[84..MESSAGE_LENGTH].copy_from_slice(&withdraw_log.home_gas_price);
-	Ok(result.into())
-}
-
-fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_message: Bytes, signature: H520) -> Bytes {
-	assert_eq!(withdraw_message.0.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
-	foreign.functions().submit_signature().input(signature.0.to_vec(), withdraw_message.0).into()
+fn withdraw_submit_signature_payload(foreign: &foreign::ForeignBridge, withdraw_message: Vec<u8>, signature: H520) -> Bytes {
+	assert_eq!(withdraw_message.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
+	foreign.functions().submit_signature().input(signature.0.to_vec(), withdraw_message).into()
 }
 
 /// State of withdraw confirmation.
@@ -44,7 +30,7 @@ enum WithdrawConfirmState<T: Transport> {
 	Wait,
 	/// Signing withdraws.
 	SignWithdraws {
-		withdraws: Vec<Bytes>,
+		messages: Vec<Vec<u8>>,
 		future: JoinAll<Vec<Timeout<ApiCall<H520, T::Out>>>>,
 		block: u64,
 	},
@@ -91,19 +77,19 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 				WithdrawConfirmState::Wait => {
 					let item = try_stream!(self.logs.poll());
 					info!("got {} new withdraws to sign", item.logs.len());
-					let withdraws = item.logs
+					let withdraw_messages = item.logs
 						.into_iter()
 						.map(|log| {
 							 info!("withdraw is ready for signature submission. tx hash {}", log.transaction_hash.unwrap());
-							 withdraw_confirm_sign_payload(&self.app.foreign_bridge, log)
+							 Ok(MessageToMainnet::from_log(log)?.to_bytes())
 						})
-						.collect::<Result<Vec<_>, _>>()?;
+						.collect::<Result<Vec<_>, Error>>()?;
 
-					let requests = withdraws.clone()
+					let requests = withdraw_messages.clone()
 						.into_iter()
-						.map(|bytes| {
+						.map(|message| {
 							self.app.timer.timeout(
-								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, bytes),
+								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, message),
 								self.app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();
@@ -111,20 +97,22 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 					info!("signing");
 					WithdrawConfirmState::SignWithdraws {
 						future: join_all(requests),
-						withdraws: withdraws,
+						messages: withdraw_messages,
 						block: item.to,
 					}
 				},
-				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut withdraws, block } => {
+				WithdrawConfirmState::SignWithdraws { ref mut future, ref mut messages, block } => {
 					let signatures = try_ready!(future.poll());
 					info!("signing complete");
 					// borrow checker...
 					let app = &self.app;
 					let foreign_contract = &self.foreign_contract;
-					let confirmations = withdraws
+					let confirmations = messages
 						.drain(ops::RangeFull)
 						.zip(signatures.into_iter())
-						.map(|(withdraw_message, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature))
+						.map(|(withdraw_message, signature)| {
+							 withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature)
+						})
 						.map(|payload| TransactionRequest {
 							from: app.config.foreign.account,
 							to: Some(foreign_contract.clone()),

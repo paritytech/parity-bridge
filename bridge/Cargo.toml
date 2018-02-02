@@ -18,6 +18,8 @@ ethabi-derive = "5.0"
 ethabi-contract = "5.0"
 rustc-hex = "1.0"
 log = "0.3"
+ethereum-types = { git = "https://github.com/paritytech/primitives.git" }
+pretty_assertions = "0.2.1"
 
 [dev-dependencies]
 tempdir = "0.3"

@@ -7,11 +7,12 @@ use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionReq
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
-use contracts::{home, foreign, MESSAGE_LENGTH, SIGNATURE_LENGTH};
+use contracts::{home, foreign, SIGNATURE_LENGTH};
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
-use rustc_hex::ToHex;
+use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
+use helpers;
 
 /// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
@@ -55,16 +56,6 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 	}))
 }
 
-/// returns the payload for a call to `HomeBridge.isMessageValueSufficientToCoverRelay(message)`
-/// for the given `message`
-fn message_value_sufficient_payload(home: &home::HomeBridge, message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
-	home
-		.functions()
-		.is_message_value_sufficient_to_cover_relay()
-		.input(message.0.clone()).into()
-}
-
 /// returns the payload for a transaction to `HomeBridge.withdraw(r, s, v, message)`
 /// for the given `signatures` (r, s, v) and `message`
 fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
@@ -95,12 +86,6 @@ pub enum WithdrawRelayState<T: Transport> {
 			JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
 			JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>
 		>,
-		block: u64,
-	},
-	FetchMessageValueSufficient {
-		future: JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
-		messages: Vec<Bytes>,
-		signatures: Vec<Vec<Bytes>>,
 		block: u64,
 	},
 	RelayWithdraws {
@@ -219,74 +204,31 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						)
 						.collect::<error::Result<Vec<_>>>()?;
 
-					let message_value_sufficient_payloads = messages
-						.iter()
-						.map(|message| {
-							message_value_sufficient_payload(
-								&app.home_bridge,
-								message
-							)
-						})
-						.map(|payload| {
-							app.timer.timeout(
-								api::call(&app.connections.home, home_contract.clone(), payload),
-								app.config.home.request_timeout)
-						})
-						.collect::<Vec<_>>();
-
-					info!("fetching whether message values are sufficent");
-					WithdrawRelayState::FetchMessageValueSufficient {
-						future: join_all(message_value_sufficient_payloads),
-						messages,
-						signatures,
-						block,
-					}
-				},
-				WithdrawRelayState::FetchMessageValueSufficient {
-					ref mut future,
-					ref messages,
-					ref signatures,
-					block
-				} => {
-					let message_value_sufficient = try_ready!(future.poll());
-					info!("fetching whether message values are sufficent complete");
-
-					let app = &self.app;
-					let home_contract = &self.home_contract;
-
 					let relays = messages.into_iter()
 						.zip(signatures.into_iter())
-						.zip(message_value_sufficient.into_iter())
-						// ignore those messages that don't have sufficient
-						// value to pay for the relay gas cost
-						.filter(|&((ref message, _), ref is_message_value_sufficient)| {
-							// TODO [snd] this is ugly.
-							// in the future ethabi should return a bool
-							// for `is_message_value_sufficient`
-							// since the contract function returns a bool
-							let is_sufficient = U256::from(is_message_value_sufficient.0.as_slice()) == U256::from(1);
-							if !is_sufficient {
-								info!("value in message is not sufficient to cover relay costs. ignoring. message: {}", message.0.to_hex());
-							}
-							is_sufficient
-						})
-						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
-						.map(|payload| TransactionRequest {
-							from: app.config.home.account,
-							to: Some(home_contract.clone()),
-							gas: Some(app.config.txs.withdraw_relay.gas.into()),
-							gas_price: Some(app.config.txs.withdraw_relay.gas_price.into()),
-							value: None,
-							data: Some(payload),
-							nonce: None,
-							condition: None,
-						})
-						.map(|request| {
+						.map(|(message, signatures)| {
+							let payload = withdraw_relay_payload(
+								&app.home_bridge,
+								&signatures,
+								&message);
+							let request = TransactionRequest {
+								from: app.config.home.account.clone(),
+								to: Some(home_contract.clone()),
+								gas: Some(app.config.txs.withdraw_relay.gas.into()),
+								gas_price: Some(
+									helpers::u256_to_web3(
+										MessageToMainnet::from_bytes(message.0.as_slice()).mainnet_gas_price)),
+								value: None,
+								data: Some(payload),
+								nonce: None,
+								condition: None,
+							};
 							app.timer.timeout(
 								api::send_transaction(&app.connections.home, request),
 								app.config.home.request_timeout)
 						})
 						.collect::<Vec<_>>();
+
 					info!("relaying {} withdraws", relays.len());
 					WithdrawRelayState::RelayWithdraws {
 						future: join_all(relays),
@@ -315,7 +257,8 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 mod tests {
 	use rustc_hex::FromHex;
 	use web3::types::{Log, Bytes};
-	use contracts::{home, foreign};
+	use contracts::{home, foreign, SIGNATURE_LENGTH};
+	use message_to_mainnet::MESSAGE_LENGTH;
 	use super::{signatures_payload, withdraw_relay_payload};
 
 	#[test]
