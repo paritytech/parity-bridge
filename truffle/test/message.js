@@ -31,4 +31,12 @@ contract("Message", function() {
       assert.equal(result, transactionHash);
     })
   })
+
+  it("should extract homeGasPrice", function() {
+    return Message.new().then(function(instance) {
+      return instance.getHomeGasPrice.call(message)
+    }).then(function(result) {
+      assert(result.equals(homeGasPrice));
+    })
+  })
 })
