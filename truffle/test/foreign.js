@@ -234,7 +234,6 @@ contract('ForeignBridge', function(accounts) {
       // top up balance so we can transfer
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      var homeGasPrice = 1000;
       return meta.transferHomeViaRelay(userAccount2, value2, homeGasPrice, { from: userAccount });
     }).then(function(result) {
       assert.equal(2, result.logs.length)
@@ -266,7 +265,8 @@ contract('ForeignBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var recipientAccount = accounts[2];
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
-    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
+    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, homeGasPrice);
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
@@ -294,7 +294,8 @@ contract('ForeignBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var recipientAccount = accounts[2];
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
-    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
+    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, homeGasPrice);
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return helpers.sign(authorities[0], message);
@@ -314,8 +315,9 @@ contract('ForeignBridge', function(accounts) {
     var authorities = [accounts[0], accounts[1]];
     var recipientAccount = accounts[2];
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
-    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, web3.toBigNumber(1000));
-    var message2 = helpers.createMessage(recipientAccount, web3.toBigNumber(2000), transactionHash, web3.toBigNumber(2000));
+    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, homeGasPrice);
+    var message2 = helpers.createMessage(recipientAccount, web3.toBigNumber(2000), transactionHash, homeGasPrice);
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return Promise.all([
