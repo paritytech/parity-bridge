@@ -33,18 +33,17 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 	// convert web3::Log to ethabi::RawLog since ethabi events can
 	// only be parsed from the latter
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
 		data: log.data.0,
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
-	if collected_signatures.authority_responsible_for_relay != my_address.0 {
+	if collected_signatures.authority_responsible_for_relay != my_address.0.into() {
 		info!("bridge not responsible for relaying transaction to home. tx hash: {}", log.transaction_hash.unwrap());
 		// this authority is not responsible for relaying this transaction.
 		// someone else will relay this transaction to home.
 		return Ok(None);
 	}
 	let signature_payloads = (0..required_signatures).into_iter()
-		.map(|index| ethabi::util::pad_u32(index))
 		.map(|index| foreign.functions().signature().input(collected_signatures.message_hash, index))
 		.map(Into::into)
 		.collect();
@@ -117,7 +116,7 @@ pub fn create_withdraw_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Data
 		request_timeout: app.config.foreign.request_timeout,
 		poll_interval: app.config.foreign.poll_interval,
 		confirmations: app.config.foreign.required_confirmations,
-		filter: collected_signatures_filter(&app.foreign_bridge, init.foreign_contract_address.clone()),
+		filter: collected_signatures_filter(&app.foreign_bridge, init.foreign_contract_address),
 	};
 
 	WithdrawRelay {
@@ -273,7 +272,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						})
 						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
 						.map(|payload| TransactionRequest {
-							from: app.config.home.account.clone(),
+							from: app.config.home.account,
 							to: Some(home_contract.clone()),
 							gas: Some(app.config.txs.withdraw_relay.gas.into()),
 							gas_price: Some(app.config.txs.withdraw_relay.gas_price.into()),

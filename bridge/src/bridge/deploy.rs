@@ -6,7 +6,7 @@ use web3::types::{TransactionRequest};
 use app::App;
 use database::Database;
 use error::{Error, ErrorKind};
-use {api, ethabi};
+use api;
 
 pub enum Deployed {
 	/// No existing database found. Deployed new contracts.
@@ -44,13 +44,13 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 					Err(ErrorKind::MissingFile(_)) => {
 						let main_data = self.app.home_bridge.constructor(
 							self.app.config.home.contract.bin.clone().0,
-							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+							self.app.config.authorities.required_signatures,
 							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>(),
-							ethabi::util::pad_u32(self.app.config.estimated_gas_cost_of_withdraw)
+							self.app.config.estimated_gas_cost_of_withdraw
 						);
 						let test_data = self.app.foreign_bridge.constructor(
 							self.app.config.foreign.contract.bin.clone().0,
-							ethabi::util::pad_u32(self.app.config.authorities.required_signatures),
+							self.app.config.authorities.required_signatures,
 							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
 						);
 

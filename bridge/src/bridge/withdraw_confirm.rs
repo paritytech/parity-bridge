@@ -3,7 +3,7 @@ use std::ops;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
 use tokio_timer::Timeout;
-use ethabi::RawLog;
+use ethabi::{RawLog, Hash};
 use web3::Transport;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream, ApiCall};
@@ -20,14 +20,14 @@ fn withdraws_filter(foreign: &foreign::ForeignBridge, address: Address) -> Filte
 
 fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes, Error> {
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
 		data: log.data.0,
 	};
 	let withdraw_log = foreign.events().withdraw().parse_log(raw_log)?;
 	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
 	let mut result = vec![0u8; 84];
 	result[0..20].copy_from_slice(&withdraw_log.recipient);
-	result[20..52].copy_from_slice(&withdraw_log.value);
+	result[20..52].copy_from_slice(&Hash::from(withdraw_log.value));
 	result[52..84].copy_from_slice(&hash);
 	Ok(result.into())
 }
@@ -126,7 +126,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.zip(signatures.into_iter())
 						.map(|(withdraw_message, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature))
 						.map(|payload| TransactionRequest {
-							from: app.config.foreign.account.clone(),
+							from: app.config.foreign.account,
 							to: Some(foreign_contract.clone()),
 							gas: Some(app.config.txs.withdraw_confirm.gas.into()),
 							gas_price: Some(app.config.txs.withdraw_confirm.gas_price.into()),

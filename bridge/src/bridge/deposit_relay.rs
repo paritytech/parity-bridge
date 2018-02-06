@@ -19,7 +19,7 @@ fn deposits_filter(home: &home::HomeBridge, address: Address) -> FilterBuilder {
 
 fn deposit_relay_payload(home: &home::HomeBridge, foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes> {
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
 		data: log.data.0,
 	};
 	let deposit_log = home.events().deposit().parse_log(raw_log)?;
