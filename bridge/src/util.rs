@@ -7,7 +7,7 @@ fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
 	if t.is_empty() {
 		None
 	} else {
-		Some(t.into_iter().map(|x| H256(x.0)).collect())
+		Some(t)
 	}
 }
 

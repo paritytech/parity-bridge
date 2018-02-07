@@ -121,8 +121,8 @@ pub fn create_withdraw_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Data
 
 	WithdrawRelay {
 		logs: api::log_stream(app.connections.foreign.clone(), app.timer.clone(), logs_init),
-		home_contract: init.home_contract_address.clone(),
-		foreign_contract: init.foreign_contract_address.clone(),
+		home_contract: init.home_contract_address,
+		foreign_contract: init.foreign_contract_address,
 		state: WithdrawRelayState::Wait,
 		app,
 	}
@@ -153,7 +153,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 							 signatures_payload(
 								&self.app.foreign_bridge,
 								self.app.config.authorities.required_signatures,
-								self.app.config.foreign.account.clone(),
+								self.app.config.foreign.account,
 								log)
 						})
 						.collect::<error::Result<Vec<_>>>()?;

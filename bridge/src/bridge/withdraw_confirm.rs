@@ -3,7 +3,7 @@ use std::ops;
 use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all};
 use tokio_timer::Timeout;
-use ethabi::{RawLog, Hash};
+use ethabi::RawLog;
 use web3::Transport;
 use web3::types::{H256, H520, Address, TransactionRequest, Log, Bytes, FilterBuilder};
 use api::{self, LogStream, ApiCall};
@@ -20,14 +20,14 @@ fn withdraws_filter(foreign: &foreign::ForeignBridge, address: Address) -> Filte
 
 fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes, Error> {
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
+		topics: log.topics,
 		data: log.data.0,
 	};
 	let withdraw_log = foreign.events().withdraw().parse_log(raw_log)?;
 	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
 	let mut result = vec![0u8; 84];
 	result[0..20].copy_from_slice(&withdraw_log.recipient);
-	result[20..52].copy_from_slice(&Hash::from(withdraw_log.value));
+	result[20..52].copy_from_slice(&H256::from(withdraw_log.value));
 	result[52..84].copy_from_slice(&hash);
 	Ok(result.into())
 }
@@ -68,7 +68,7 @@ pub fn create_withdraw_confirm<T: Transport + Clone>(app: Arc<App<T>>, init: &Da
 
 	WithdrawConfirm {
 		logs: api::log_stream(app.connections.foreign.clone(), app.timer.clone(), logs_init),
-		foreign_contract: init.foreign_contract_address.clone(),
+		foreign_contract: init.foreign_contract_address,
 		state: WithdrawConfirmState::Wait,
 		app,
 	}
@@ -103,7 +103,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.into_iter()
 						.map(|bytes| {
 							self.app.timer.timeout(
-								api::sign(&self.app.connections.foreign, self.app.config.foreign.account.clone(), bytes),
+								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, bytes),
 								self.app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();

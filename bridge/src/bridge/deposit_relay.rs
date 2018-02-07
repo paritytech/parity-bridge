@@ -19,7 +19,7 @@ fn deposits_filter(home: &home::HomeBridge, address: Address) -> FilterBuilder {
 
 fn deposit_relay_payload(home: &home::HomeBridge, foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes> {
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
+		topics: log.topics,
 		data: log.data.0,
 	};
 	let deposit_log = home.events().deposit().parse_log(raw_log)?;
@@ -47,11 +47,11 @@ pub fn create_deposit_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Datab
 		request_timeout: app.config.home.request_timeout,
 		poll_interval: app.config.home.poll_interval,
 		confirmations: app.config.home.required_confirmations,
-		filter: deposits_filter(&app.home_bridge, init.home_contract_address.clone()),
+		filter: deposits_filter(&app.home_bridge, init.home_contract_address),
 	};
 	DepositRelay {
 		logs: api::log_stream(app.connections.home.clone(), app.timer.clone(), logs_init),
-		foreign_contract: init.foreign_contract_address.clone(),
+		foreign_contract: init.foreign_contract_address,
 		state: DepositRelayState::Wait,
 		app,
 	}
@@ -80,7 +80,7 @@ impl<T: Transport> Stream for DepositRelay<T> {
 						.collect::<Result<Vec<_>>>()?
 						.into_iter()
 						.map(|payload| TransactionRequest {
-							from: self.app.config.foreign.account.clone(),
+							from: self.app.config.foreign.account,
 							to: Some(self.foreign_contract.clone()),
 							gas: Some(self.app.config.txs.deposit_relay.gas.into()),
 							gas_price: Some(self.app.config.txs.deposit_relay.gas_price.into()),

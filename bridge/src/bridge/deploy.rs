@@ -45,13 +45,13 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						let main_data = self.app.home_bridge.constructor(
 							self.app.config.home.contract.bin.clone().0,
 							self.app.config.authorities.required_signatures,
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>(),
+							self.app.config.authorities.accounts.clone(),
 							self.app.config.estimated_gas_cost_of_withdraw
 						);
 						let test_data = self.app.foreign_bridge.constructor(
 							self.app.config.foreign.contract.bin.clone().0,
 							self.app.config.authorities.required_signatures,
-							self.app.config.authorities.accounts.iter().map(|a| a.0.clone()).collect::<Vec<_>>()
+							self.app.config.authorities.accounts.clone(),
 						);
 
 						let main_tx_request = TransactionRequest {
