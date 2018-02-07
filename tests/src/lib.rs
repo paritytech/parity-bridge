@@ -9,6 +9,7 @@ extern crate pretty_assertions;
 use std::cell::Cell;
 use web3::Transport;
 
+#[derive(Debug, Clone)]
 pub struct MockedRequest {
 	pub method: String,
 	pub params: Vec<rpc::Value>,
@@ -23,6 +24,7 @@ impl From<(&'static str, &'static str)> for MockedRequest {
 	}
 }
 
+#[derive(Debug, Clone)]
 pub struct MockedTransport {
 	pub requests: Cell<usize>,
 	pub expected_requests: Vec<MockedRequest>,

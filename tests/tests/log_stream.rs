@@ -259,7 +259,7 @@ test_transport_stream! {
 		from: 0xb,
 		to: 0x1006,
 		logs: vec![Log {
-			address: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+			address: "0000000000000000000000000000000000000001".into(),
 			topics: vec![],
 			data: vec![0x10].into(),
 			log_type: "".into(),
@@ -292,7 +292,7 @@ test_transport_stream! {
 		from: 0xb,
 		to: 0x1006,
 		logs: vec![Log {
-			address: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+			address: "0000000000000000000000000000000000000001".into(),
 			topics: vec![],
 			data: vec![0x10].into(),
 			log_type: "".into(),
@@ -306,13 +306,13 @@ test_transport_stream! {
 		from: 0x1008,
 		to: 0x1008,
 		logs: vec![Log {
-			address: "0x0000000000000000000000000000000000000002".parse().unwrap(),
+			address: "0000000000000000000000000000000000000002".into(),
 			topics: vec![],
 			data: vec![0x20].into(),
 			log_type: "".into(),
 			..Default::default()
 		}, Log {
-			address: "0x0000000000000000000000000000000000000002".parse().unwrap(),
+			address: "0000000000000000000000000000000000000002".into(),
 			topics: vec![],
 			data: vec![0x30].into(),
 			log_type: "".into(),

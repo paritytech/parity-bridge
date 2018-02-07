@@ -321,14 +321,14 @@ mod tests {
 	#[test]
 	fn test_signatures_payload() {
 		let foreign = foreign::ForeignBridge::default();
-		let my_address = "0xaff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap();
+		let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccc".into();
 
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 
 		let log = Log {
 			data: data.into(),
-			topics: vec!["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".parse().unwrap()],
-			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			topics: vec!["eb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".into()],
+			transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
 			..Default::default()
 		};
 
@@ -345,14 +345,14 @@ mod tests {
 	#[test]
 	fn test_signatures_payload_not_ours() {
 		let foreign = foreign::ForeignBridge::default();
-		let my_address = "0xaff3454fce5edbc8cca8697c15331677e6ebcccd".parse().unwrap();
+		let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccd".into();
 
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 
 		let log = Log {
 			data: data.into(),
-			topics: vec!["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".parse().unwrap()],
-			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			topics: vec!["eb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".into()],
+			transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
 			..Default::default()
 		};
 

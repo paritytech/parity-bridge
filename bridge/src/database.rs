@@ -74,8 +74,8 @@ checked_withdraw_confirm = 121
 "#;
 
 		let expected = Database {
-			home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-			foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+			home_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+			foreign_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
 			home_deploy: 100,
 			foreign_deploy: 101,
 			checked_deposit_relay: 120,

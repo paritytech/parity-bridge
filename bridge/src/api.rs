@@ -88,7 +88,7 @@ pub struct LogStreamInit {
 	pub filter: FilterBuilder,
 	pub request_timeout: Duration,
 	pub poll_interval: Duration,
-	pub confirmations: u64,
+	pub confirmations: usize,
 }
 
 /// Contains all logs matching `LogStream` filter in inclusive range `[from, to]`.
@@ -137,7 +137,7 @@ pub struct LogStream<T: Transport> {
 	state: LogStreamState<T>,
 	after: u64,
 	filter: FilterBuilder,
-	confirmations: u64,
+	confirmations: usize,
 	request_timeout: Duration,
 }
 
@@ -154,7 +154,7 @@ impl<T: Transport> Stream for LogStream<T> {
 				},
 				LogStreamState::FetchBlockNumber(ref mut future) => {
 					let last_block = try_ready!(future.poll()).low_u64();
-					let last_confirmed_block = last_block.saturating_sub(self.confirmations);
+					let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 					if last_confirmed_block > self.after {
 						let from = self.after + 1;
 						let filter = self.filter.clone()

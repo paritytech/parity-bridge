@@ -9,15 +9,15 @@ test_app_stream! {
 	name => withdraw_confirm_basic,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
 	txs => Transactions::default(),
@@ -47,15 +47,15 @@ test_app_stream! {
 		..Database::default()
 	},
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 1;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
 	txs => Transactions::default(),
@@ -85,20 +85,20 @@ test_app_stream! {
 	name => withdraw_confirm_contract_address,
 	database => Database {
 		checked_withdraw_confirm: 0x00F5,
-		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+		foreign_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
 		..Database::default()
 	},
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
 	txs => Transactions::default(),
@@ -128,20 +128,20 @@ test_app_stream! {
 	name => withdraw_confirm_payload_gas,
 	database => Database {
 		checked_withdraw_confirm: 0x00F5,
-		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+		foreign_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
 		..Database::default()
 	},
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x00000000000000000000000000000000000000F1",
-			"0x00000000000000000000000000000000000000F2",
+			"00000000000000000000000000000000000000F1",
+			"00000000000000000000000000000000000000F2",
 		],
 		signatures => 1;
 	txs => Transactions {
@@ -182,20 +182,20 @@ test_app_stream! {
 test_app_stream! {
 	name => withdraw_confirm_payload_multiple,
 	database => Database {
-		home_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7".parse().unwrap(),
-		foreign_contract_address: "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8".parse().unwrap(),
+		home_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
+		foreign_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
 		..Database::default()
 	},
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x00000000000000000000000000000000000000F1",
-			"0x00000000000000000000000000000000000000F2",
+			"00000000000000000000000000000000000000F1",
+			"00000000000000000000000000000000000000F2",
 		],
 		signatures => 1;
 	txs => Transactions {
