@@ -33,18 +33,17 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 	// convert web3::Log to ethabi::RawLog since ethabi events can
 	// only be parsed from the latter
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
 		data: log.data.0,
 	};
 	let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
-	if collected_signatures.authority_responsible_for_relay != my_address.0 {
+	if collected_signatures.authority_responsible_for_relay != my_address.0.into() {
 		info!("bridge not responsible for relaying transaction to home. tx hash: {}", log.transaction_hash.unwrap());
 		// this authority is not responsible for relaying this transaction.
 		// someone else will relay this transaction to home.
 		return Ok(None);
 	}
 	let signature_payloads = (0..required_signatures).into_iter()
-		.map(|index| ethabi::util::pad_u32(index))
 		.map(|index| foreign.functions().signature().input(collected_signatures.message_hash, index))
 		.map(Into::into)
 		.collect();
@@ -117,13 +116,13 @@ pub fn create_withdraw_relay<T: Transport + Clone>(app: Arc<App<T>>, init: &Data
 		request_timeout: app.config.foreign.request_timeout,
 		poll_interval: app.config.foreign.poll_interval,
 		confirmations: app.config.foreign.required_confirmations,
-		filter: collected_signatures_filter(&app.foreign_bridge, init.foreign_contract_address.clone()),
+		filter: collected_signatures_filter(&app.foreign_bridge, init.foreign_contract_address),
 	};
 
 	WithdrawRelay {
 		logs: api::log_stream(app.connections.foreign.clone(), app.timer.clone(), logs_init),
-		home_contract: init.home_contract_address.clone(),
-		foreign_contract: init.foreign_contract_address.clone(),
+		home_contract: init.home_contract_address,
+		foreign_contract: init.foreign_contract_address,
 		state: WithdrawRelayState::Wait,
 		app,
 	}
@@ -154,7 +153,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 							 signatures_payload(
 								&self.app.foreign_bridge,
 								self.app.config.authorities.required_signatures,
-								self.app.config.foreign.account.clone(),
+								self.app.config.foreign.account,
 								log)
 						})
 						.collect::<error::Result<Vec<_>>>()?;
@@ -273,7 +272,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						})
 						.map(|((message, signatures), _)| withdraw_relay_payload(&app.home_bridge, &signatures, message))
 						.map(|payload| TransactionRequest {
-							from: app.config.home.account.clone(),
+							from: app.config.home.account,
 							to: Some(home_contract.clone()),
 							gas: Some(app.config.txs.withdraw_relay.gas.into()),
 							gas_price: Some(app.config.txs.withdraw_relay.gas_price.into()),
@@ -322,14 +321,14 @@ mod tests {
 	#[test]
 	fn test_signatures_payload() {
 		let foreign = foreign::ForeignBridge::default();
-		let my_address = "0xaff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap();
+		let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccc".into();
 
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 
 		let log = Log {
 			data: data.into(),
-			topics: vec!["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".parse().unwrap()],
-			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			topics: vec!["eb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".into()],
+			transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
 			..Default::default()
 		};
 
@@ -346,14 +345,14 @@ mod tests {
 	#[test]
 	fn test_signatures_payload_not_ours() {
 		let foreign = foreign::ForeignBridge::default();
-		let my_address = "0xaff3454fce5edbc8cca8697c15331677e6ebcccd".parse().unwrap();
+		let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccd".into();
 
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 
 		let log = Log {
 			data: data.into(),
-			topics: vec!["0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".parse().unwrap()],
-			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			topics: vec!["eb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c".into()],
+			transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
 			..Default::default()
 		};
 

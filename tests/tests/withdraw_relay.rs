@@ -12,15 +12,15 @@ test_app_stream! {
 	name => withdraw_relay_no_log_no_relay,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
 	txs => Transactions::default(),
@@ -51,15 +51,15 @@ test_app_stream! {
 	name => withdraw_relay_single_log_authority_not_responsible_no_relay,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 1;
 	txs => Transactions::default(),
@@ -83,15 +83,15 @@ test_app_stream! {
 	name => withdraw_relay_single_log_sufficient_value_relay,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0xaff3454fce5edbc8cca8697c15331677e6ebcccc",
+		account => "aff3454fce5edbc8cca8697c15331677e6ebcccc",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 2;
 	txs => Transactions::default(),
@@ -136,15 +136,15 @@ test_app_stream! {
 	name => withdraw_relay_single_log_insufficient_value_no_relay,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0xaff3454fce5edbc8cca8697c15331677e6ebcccc",
+		account => "aff3454fce5edbc8cca8697c15331677e6ebcccc",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 2;
 	txs => Transactions::default(),
@@ -185,15 +185,15 @@ test_app_stream! {
 	name => withdraw_relay_explicit_gas,
 	database => Database::default(),
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0xaff3454fce5edbc8cca8697c15331677e6ebcccc",
+		account => "aff3454fce5edbc8cca8697c15331677e6ebcccc",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 2;
 	txs => Transactions {
@@ -242,20 +242,20 @@ test_app_stream! {
 test_app_stream! {
 	name => withdraw_relay_single_explicit_contract_addresses,
 	database => Database {
-		home_contract_address: "0x00000000000000000000000000000000000000dd".parse().unwrap(),
-		foreign_contract_address: "0x00000000000000000000000000000000000000ee".parse().unwrap(),
+		home_contract_address: "00000000000000000000000000000000000000dd".into(),
+		foreign_contract_address: "00000000000000000000000000000000000000ee".into(),
 		..Default::default()
 	},
 	home =>
-		account => "0x0000000000000000000000000000000000000001",
+		account => "0000000000000000000000000000000000000001",
 		confirmations => 12;
 	foreign =>
-		account => "0xaff3454fce5edbc8cca8697c15331677e6ebcccc",
+		account => "aff3454fce5edbc8cca8697c15331677e6ebcccc",
 		confirmations => 12;
 	authorities =>
 		accounts => [
-			"0x0000000000000000000000000000000000000001",
-			"0x0000000000000000000000000000000000000002",
+			"0000000000000000000000000000000000000001",
+			"0000000000000000000000000000000000000002",
 		],
 		signatures => 2;
 	txs => Transactions::default(),

@@ -20,14 +20,14 @@ fn withdraws_filter(foreign: &foreign::ForeignBridge, address: Address) -> Filte
 
 fn withdraw_confirm_sign_payload(foreign: &foreign::ForeignBridge, log: Log) -> Result<Bytes, Error> {
 	let raw_log = RawLog {
-		topics: log.topics.into_iter().map(|t| t.0).collect(),
+		topics: log.topics,
 		data: log.data.0,
 	};
 	let withdraw_log = foreign.events().withdraw().parse_log(raw_log)?;
 	let hash = log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
 	let mut result = vec![0u8; 84];
 	result[0..20].copy_from_slice(&withdraw_log.recipient);
-	result[20..52].copy_from_slice(&withdraw_log.value);
+	result[20..52].copy_from_slice(&H256::from(withdraw_log.value));
 	result[52..84].copy_from_slice(&hash);
 	Ok(result.into())
 }
@@ -68,7 +68,7 @@ pub fn create_withdraw_confirm<T: Transport + Clone>(app: Arc<App<T>>, init: &Da
 
 	WithdrawConfirm {
 		logs: api::log_stream(app.connections.foreign.clone(), app.timer.clone(), logs_init),
-		foreign_contract: init.foreign_contract_address.clone(),
+		foreign_contract: init.foreign_contract_address,
 		state: WithdrawConfirmState::Wait,
 		app,
 	}
@@ -103,7 +103,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.into_iter()
 						.map(|bytes| {
 							self.app.timer.timeout(
-								api::sign(&self.app.connections.foreign, self.app.config.foreign.account.clone(), bytes),
+								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, bytes),
 								self.app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();
@@ -126,7 +126,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.zip(signatures.into_iter())
 						.map(|(withdraw_message, signature)| withdraw_submit_signature_payload(&app.foreign_bridge, withdraw_message, signature))
 						.map(|payload| TransactionRequest {
-							from: app.config.foreign.account.clone(),
+							from: app.config.foreign.account,
 							to: Some(foreign_contract.clone()),
 							gas: Some(app.config.txs.withdraw_confirm.gas.into()),
 							gas_price: Some(app.config.txs.withdraw_confirm.gas_price.into()),
@@ -181,8 +181,8 @@ mod tests {
 		let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
 		let log = Log {
 			data: data.into(),
-			topics: vec!["0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()],
-			transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
+			topics: vec!["884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()],
+			transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
 			..Default::default()
 		};
 
@@ -196,7 +196,7 @@ mod tests {
 		let foreign = foreign::ForeignBridge::default();
 
 		let message: Bytes = "aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap().into();
-		let signature = "0x8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".parse().unwrap();
+		let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".into();
 
 		let payload = withdraw_submit_signature_payload(&foreign, message, signature);
 		let expected: Bytes = "630cea8e000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000418697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364000000000000000000000000".from_hex().unwrap().into();

@@ -8,7 +8,7 @@ use error::{ResultExt, Error};
 use {toml};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
-const DEFAULT_CONFIRMATIONS: u64 = 12;
+const DEFAULT_CONFIRMATIONS: usize = 12;
 const DEFAULT_TIMEOUT: u64 = 5;
 
 /// Application config.
@@ -57,7 +57,7 @@ pub struct Node {
 	pub ipc: PathBuf,
 	pub request_timeout: Duration,
 	pub poll_interval: Duration,
-	pub required_confirmations: u64,
+	pub required_confirmations: usize,
 }
 
 impl Node {
@@ -154,7 +154,7 @@ mod load {
 		pub ipc: PathBuf,
 		pub request_timeout: Option<u64>,
 		pub poll_interval: Option<u64>,
-		pub required_confirmations: Option<u64>,
+		pub required_confirmations: Option<usize>,
 	}
 
 	#[derive(Deserialize)]
@@ -230,7 +230,7 @@ home_deploy = { gas = 20 }
 		let mut expected = Config {
 			txs: Transactions::default(),
 			home: Node {
-				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
+				account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
 				ipc: "/home.ipc".into(),
 				contract: ContractConfig {
 					bin: include_str!("../../compiled_contracts/HomeBridge.bin").from_hex().unwrap().into(),
@@ -240,7 +240,7 @@ home_deploy = { gas = 20 }
 				required_confirmations: 100,
 			},
 			foreign: Node {
-				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+				account: "0000000000000000000000000000000000000001".into(),
 				contract: ContractConfig {
 					bin: include_str!("../../compiled_contracts/ForeignBridge.bin").from_hex().unwrap().into(),
 				},
@@ -251,9 +251,9 @@ home_deploy = { gas = 20 }
 			},
 			authorities: Authorities {
 				accounts: vec![
-					"0x0000000000000000000000000000000000000001".parse().unwrap(),
-					"0x0000000000000000000000000000000000000002".parse().unwrap(),
-					"0x0000000000000000000000000000000000000003".parse().unwrap(),
+					"0000000000000000000000000000000000000001".into(),
+					"0000000000000000000000000000000000000002".into(),
+					"0000000000000000000000000000000000000003".into(),
 				],
 				required_signatures: 2,
 			},
@@ -299,7 +299,7 @@ required_signatures = 2
 		let expected = Config {
 			txs: Transactions::default(),
 			home: Node {
-				account: "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
+				account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_str!("../../compiled_contracts/HomeBridge.bin").from_hex().unwrap().into(),
@@ -309,7 +309,7 @@ required_signatures = 2
 				required_confirmations: 12,
 			},
 			foreign: Node {
-				account: "0x0000000000000000000000000000000000000001".parse().unwrap(),
+				account: "0000000000000000000000000000000000000001".into(),
 				ipc: "".into(),
 				contract: ContractConfig {
 					bin: include_str!("../../compiled_contracts/ForeignBridge.bin").from_hex().unwrap().into(),
@@ -320,9 +320,9 @@ required_signatures = 2
 			},
 			authorities: Authorities {
 				accounts: vec![
-					"0x0000000000000000000000000000000000000001".parse().unwrap(),
-					"0x0000000000000000000000000000000000000002".parse().unwrap(),
-					"0x0000000000000000000000000000000000000003".parse().unwrap(),
+					"0000000000000000000000000000000000000001".into(),
+					"0000000000000000000000000000000000000002".into(),
+					"0000000000000000000000000000000000000003".into(),
 				],
 				required_signatures: 2,
 			},
