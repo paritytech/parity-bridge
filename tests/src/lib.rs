@@ -157,6 +157,8 @@ macro_rules! test_app_stream {
 			let stream = $init_stream(app, &$db);
 			let res = stream.collect().wait();
 
+			assert_eq!($expected, res.unwrap());
+
 			assert_eq!(
 				home.expected_requests.len(),
 				home.requests.get(),
@@ -172,8 +174,6 @@ macro_rules! test_app_stream {
 				foreign.expected_requests.len(),
 				foreign.requests.get()
 			);
-
-			assert_eq!($expected, res.unwrap());
 		}
 	}
 }
