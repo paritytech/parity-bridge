@@ -10,3 +10,6 @@ jsonrpc-core = "8.0"
 web3 = { git = "https://github.com/tomusdrw/rust-web3", branch = "bridge" }
 serde_json = "1.0"
 pretty_assertions = "0.2.1"
+ethabi = "5.0"
+ethereum-types = { git = "https://github.com/paritytech/primitives.git" }
+rustc-hex = "1.0"

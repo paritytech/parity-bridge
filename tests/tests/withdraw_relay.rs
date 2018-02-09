@@ -1,9 +1,13 @@
 extern crate futures;
+#[macro_use]
+extern crate serde_json;
 extern crate bridge;
 #[macro_use]
 extern crate tests;
 
 use bridge::bridge::create_withdraw_relay;
+
+const COLLECTED_SIGNATURES_TOPIC: &str = "0xeb043d149eedb81369bec43d4c3a3a53087debc88d2525f13bfaa3eecda28b5c";
 
 // 1 signature required. relay polled twice.
 // no CollectedSignatures on ForeignBridge.
