@@ -194,9 +194,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								from: app.config.home.account.clone(),
 								to: Some(home_contract.clone()),
 								gas: Some(app.config.txs.withdraw_relay.gas.into()),
-								gas_price: Some(
-									helpers::u256_to_web3(
-										MessageToMainnet::from_bytes(message.0.as_slice()).mainnet_gas_price)),
+								gas_price: Some(MessageToMainnet::from_bytes(message.0.as_slice()).mainnet_gas_price),
 								value: None,
 								data: Some(payload),
 								nonce: None,
