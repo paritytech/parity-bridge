@@ -21,6 +21,9 @@ extern crate log;
 extern crate ethereum_types;
 #[macro_use]
 extern crate pretty_assertions;
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
 
 #[macro_use]
 mod macros;

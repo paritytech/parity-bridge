@@ -7,6 +7,8 @@ use ethabi;
 
 pub const SIGNATURE_LENGTH: usize = 65;
 
+/// an ECDSA signature consisting of `v`, `r` and `s`
+#[derive(PartialEq, Debug)]
 pub struct Signature {
 	pub v: u8,
 	pub r: H256,
@@ -46,5 +48,43 @@ impl Signature {
 
 	pub fn to_payload(&self) -> Vec<u8> {
 		ethabi::encode(&[ethabi::Token::Bytes(self.to_bytes())])
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use quickcheck::TestResult;
+	use super::*;
+
+	quickcheck! {
+		fn quickcheck_signature_roundtrips(v: u8, r_raw: Vec<u8>, s_raw: Vec<u8>) -> TestResult {
+			if r_raw.len() != 32 || s_raw.len() != 32 {
+				return TestResult::discard();
+			}
+
+			let r: H256 = r_raw.as_slice().into();
+			let s: H256 = s_raw.as_slice().into();
+			let signature = Signature { v, r, s };
+			assert_eq!(v, signature.v);
+			assert_eq!(r, signature.r);
+			assert_eq!(s, signature.s);
+
+			let bytes = signature.to_bytes();
+			assert_eq!(v, Signature::v_from_bytes(bytes.as_slice()));
+			assert_eq!(r, Signature::r_from_bytes(bytes.as_slice()));
+			assert_eq!(s, Signature::s_from_bytes(bytes.as_slice()));
+
+			let signature2 = Signature::from_bytes(bytes.as_slice());
+			assert_eq!(signature, signature2);
+
+			let payload = signature.to_payload();
+			let mut tokens = ethabi::decode(&[ethabi::ParamType::Bytes], payload.as_slice())
+				.unwrap();
+			let decoded = tokens.pop().unwrap().to_bytes().unwrap();
+
+			assert_eq!(signature, Signature::from_bytes(decoded.as_slice()));
+
+			TestResult::passed()
+		}
 	}
 }
