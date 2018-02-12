@@ -214,7 +214,7 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var chargerAccount = accounts[4];
     var value = estimatedGasCostOfWithdraw;
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
 
     return HomeBridge.new(
@@ -261,7 +261,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message1 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
     var message2 = helpers.createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3", homeGasPrice);
 
@@ -319,7 +319,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message1 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
     var message2 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
 
@@ -377,7 +377,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
 
     return HomeBridge.new(
@@ -413,7 +413,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
     // make message too short
     message = message.substr(0, 83);
@@ -459,7 +459,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
 
     return HomeBridge.new(
@@ -503,7 +503,7 @@ contract('HomeBridge', function(accounts) {
     var userAccount = accounts[2];
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
-    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var homeGasPrice = web3.toBigNumber(10000);
     var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
 
     return HomeBridge.new(
