@@ -1,8 +1,7 @@
 use ethereum_types::{Address, U256, H256};
 use contracts::foreign::events::Withdraw;
-use rustc_hex::ToHex;
 use web3::types::Log;
-use ethabi::RawLog;
+use ethabi;
 use error::Error;
 
 pub struct MessageToMainnet {
@@ -28,7 +27,7 @@ impl MessageToMainnet {
 
 	/// construct a message from a `Withdraw` that was logged on `foreign`
 	pub fn from_log(web3_log: Log) -> Result<Self, Error> {
-		let ethabi_raw_log = RawLog {
+		let ethabi_raw_log = ethabi::RawLog {
 			topics: web3_log.topics,
 			data: web3_log.data.0,
 		};
@@ -54,7 +53,7 @@ impl MessageToMainnet {
 		return result;
 	}
 
-	pub fn to_hex(&self) -> String {
-		format!("0x{}", self.to_bytes().to_hex())
+	pub fn to_payload(&self) -> Vec<u8> {
+		ethabi::encode(&[ethabi::Token::Bytes(self.to_bytes())])
 	}
 }
