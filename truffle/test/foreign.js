@@ -229,6 +229,7 @@ contract('ForeignBridge', function(accounts) {
     var value = web3.toWei(3, "ether");
     var value2 = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
+    var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       // top up balance so we can transfer
