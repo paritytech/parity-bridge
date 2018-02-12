@@ -234,9 +234,9 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 mod tests {
 	use rustc_hex::FromHex;
 	use web3::types::{Log, Bytes};
-	use contracts::{home, foreign, SIGNATURE_LENGTH};
+	use contracts::{home, foreign};
 	use message_to_mainnet::MESSAGE_LENGTH;
-	use super::{signatures_payload, withdraw_relay_payload};
+	use super::signatures_payload;
 
 	#[test]
 	fn test_signatures_payload() {
