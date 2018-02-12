@@ -4,6 +4,7 @@ use web3::types::Log;
 use ethabi;
 use error::Error;
 
+#[derive(PartialEq, Debug)]
 pub struct MessageToMainnet {
 	pub recipient: Address,
 	pub value: U256,
@@ -55,5 +56,47 @@ impl MessageToMainnet {
 
 	pub fn to_payload(&self) -> Vec<u8> {
 		ethabi::encode(&[ethabi::Token::Bytes(self.to_bytes())])
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use quickcheck::TestResult;
+	use super::*;
+
+	quickcheck! {
+		fn quickcheck_message_to_mainnet_roundtrips_to_bytes(
+			recipient_raw: Vec<u8>,
+			value_raw: u64,
+			sidenet_transaction_hash_raw: Vec<u8>,
+			mainnet_gas_price_raw: u64
+		) -> TestResult {
+			if recipient_raw.len() != 20 || sidenet_transaction_hash_raw.len() != 32 {
+				return TestResult::discard();
+			}
+
+			let recipient: Address = recipient_raw.as_slice().into();
+			let value: U256 = value_raw.into();
+			let sidenet_transaction_hash: H256 = sidenet_transaction_hash_raw.as_slice().into();
+			let mainnet_gas_price: U256 = mainnet_gas_price_raw.into();
+
+			let message = MessageToMainnet {
+				recipient,
+				value,
+				sidenet_transaction_hash,
+				mainnet_gas_price
+			};
+
+			let bytes = message.to_bytes();
+			assert_eq!(message, MessageToMainnet::from_bytes(bytes.as_slice()));
+
+			let payload = message.to_payload();
+			let mut tokens = ethabi::decode(&[ethabi::ParamType::Bytes], payload.as_slice())
+				.unwrap();
+			let decoded = tokens.pop().unwrap().to_bytes().unwrap();
+			assert_eq!(message, MessageToMainnet::from_bytes(decoded.as_slice()));
+
+			TestResult::passed()
+		}
 	}
 }
