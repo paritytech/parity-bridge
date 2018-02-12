@@ -17,11 +17,11 @@ impl MessageToMainnet {
 	pub fn from_bytes(bytes: &[u8]) -> Self {
 		assert_eq!(bytes.len(), MESSAGE_LENGTH);
 
-		MessageToMainnet {
+		Self {
 			recipient: bytes[0..20].into(),
-			value: bytes[20..52].into(),
+			value: U256::from_little_endian(&bytes[20..52]),
 			sidenet_transaction_hash: bytes[52..84].into(),
-			mainnet_gas_price: bytes[84..MESSAGE_LENGTH].into(),
+			mainnet_gas_price: U256::from_little_endian(&bytes[84..MESSAGE_LENGTH]),
 		}
 	}
 
