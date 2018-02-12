@@ -7,12 +7,12 @@ use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionReq
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
-use contracts::{home, foreign, SIGNATURE_LENGTH};
+use contracts::{home, foreign};
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
 use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
-use helpers;
+use signature::{Signature, SIGNATURE_LENGTH};
 
 /// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
@@ -54,28 +54,6 @@ fn signatures_payload(foreign: &foreign::ForeignBridge, required_signatures: u32
 		signature_payloads,
 		message_payload,
 	}))
-}
-
-/// returns the payload for a transaction to `HomeBridge.withdraw(r, s, v, message)`
-/// for the given `signatures` (r, s, v) and `message`
-fn withdraw_relay_payload(home: &home::HomeBridge, signatures: &[Bytes], message: &Bytes) -> Bytes {
-	assert_eq!(message.0.len(), MESSAGE_LENGTH, "ForeignBridge never accepts messages with len != {} bytes; qed", MESSAGE_LENGTH);
-	let mut v_vec = Vec::new();
-	let mut r_vec = Vec::new();
-	let mut s_vec = Vec::new();
-	for signature in signatures {
-		assert_eq!(signature.0.len(), SIGNATURE_LENGTH, "ForeignBridge never accepts signatures with len != {} bytes; qed", SIGNATURE_LENGTH);
-		let mut r = [0u8; 32];
-		let mut s= [0u8; 32];
-		let mut v = [0u8; 32];
-		r.copy_from_slice(&signature.0[0..32]);
-		s.copy_from_slice(&signature.0[32..64]);
-		v[31] = signature.0[64];
-		v_vec.push(v);
-		s_vec.push(s);
-		r_vec.push(r);
-	}
-	home.functions().withdraw().input(v_vec, r_vec, s_vec, message.0.clone()).into()
 }
 
 /// state of the withdraw relay state machine
@@ -207,10 +185,11 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 					let relays = messages.into_iter()
 						.zip(signatures.into_iter())
 						.map(|(message, signatures)| {
-							let payload = withdraw_relay_payload(
-								&app.home_bridge,
-								&signatures,
-								&message);
+							let payload: Bytes = app.home_bridge.functions().withdraw().input(
+								signatures.iter().map(|x| Signature::v_from_bytes(x.0.as_slice())),
+								signatures.iter().map(|x| Signature::r_from_bytes(x.0.as_slice()).0),
+								signatures.iter().map(|x| Signature::s_from_bytes(x.0.as_slice()).0),
+								message.clone().0).into();
 							let request = TransactionRequest {
 								from: app.config.home.account.clone(),
 								to: Some(home_contract.clone()),

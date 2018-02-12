@@ -34,4 +34,4 @@ pub mod database;
 pub mod error;
 pub mod util;
 pub mod message_to_mainnet;
-pub mod helpers;
+pub mod signature;
