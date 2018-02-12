@@ -89,7 +89,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
 						.into_iter()
 						.map(|message| {
 							self.app.timer.timeout(
-								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, message),
+								api::sign(&self.app.connections.foreign, self.app.config.foreign.account, Bytes(message)),
 								self.app.config.foreign.request_timeout)
 						})
 						.collect::<Vec<_>>();

@@ -29,17 +29,17 @@ impl MessageToMainnet {
 	/// construct a message from a `Withdraw` that was logged on `foreign`
 	pub fn from_log(web3_log: Log) -> Result<Self, Error> {
 		let ethabi_raw_log = RawLog {
-			topics: web3_log.topics.into_iter().map(|t| t.0).collect(),
+			topics: web3_log.topics,
 			data: web3_log.data.0,
 		};
 		let withdraw_log = Withdraw::default().parse_log(ethabi_raw_log)?;
 		// TODO [snd] replace expect by result
 		let hash = web3_log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
 		Ok(Self {
-			recipient: withdraw_log.recipient.into(),
-			value: withdraw_log.value.into(),
+			recipient: withdraw_log.recipient.0.into(),
+			value: U256(withdraw_log.value.0),
 			sidenet_transaction_hash: hash.to_vec().as_slice().into(),
-			mainnet_gas_price: withdraw_log.home_gas_price.into(),
+			mainnet_gas_price: U256(withdraw_log.home_gas_price.0),
 		})
 	}
 
