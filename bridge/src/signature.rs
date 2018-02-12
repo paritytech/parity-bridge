@@ -74,14 +74,12 @@ mod test {
 			assert_eq!(r, Signature::r_from_bytes(bytes.as_slice()));
 			assert_eq!(s, Signature::s_from_bytes(bytes.as_slice()));
 
-			let signature2 = Signature::from_bytes(bytes.as_slice());
-			assert_eq!(signature, signature2);
+			assert_eq!(signature, Signature::from_bytes(bytes.as_slice()));
 
 			let payload = signature.to_payload();
 			let mut tokens = ethabi::decode(&[ethabi::ParamType::Bytes], payload.as_slice())
 				.unwrap();
 			let decoded = tokens.pop().unwrap().to_bytes().unwrap();
-
 			assert_eq!(signature, Signature::from_bytes(decoded.as_slice()));
 
 			TestResult::passed()
