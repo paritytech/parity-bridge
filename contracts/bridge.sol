@@ -479,7 +479,6 @@ contract ForeignBridge {
         // Validate submited signatures
         require(MessageSigning.recoverAddressFromSignedMessage(signature, message) == msg.sender);
 
-        require(signature.length == 65);
         // Valid withdraw message must have 116 bytes
         require(message.length == 116);
         var hash = keccak256(message);
