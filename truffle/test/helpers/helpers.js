@@ -107,3 +107,8 @@ function range(start, end) {
   return result;
 }
 module.exports.range = range;
+
+// just used to signal/document that we're explicitely ignoring/expecting an error
+function ignoreExpectedError() {
+}
+module.exports.ignoreExpectedError = ignoreExpectedError;
