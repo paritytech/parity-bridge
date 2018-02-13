@@ -3,14 +3,10 @@ var Helpers = artifacts.require("HelpersTest");
 // testing helpers
 var helpers = require("./helpers/helpers");
 
-contract("Helpers", function() {
+contract("Helpers", function(accounts) {
   it("`addressArrayContains` should function correctly", function() {
-    var addresses = [
-      "0xd4f04f18d253f831e5b9bcfde7f20450562e03da",
-      "0x46ee1abbcd7215364174f84c3cbc4770d45966e9",
-      "0x5ef98710ff315ded660fe757bf7a861114287c1e",
-    ];
-    var otherAddress = "0x006e27b6a72e1f34c626762f3c4761547aff1421";
+    var addresses = accounts.slice(0, 3);
+    var otherAddress = accounts[3];
     var library;
     return Helpers.new().then(function(instance) {
       library = instance;
