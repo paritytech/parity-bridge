@@ -239,7 +239,7 @@ contract('HomeBridge', function(accounts) {
         message,
         {from: userAccount, gasPrice: usedGasPrice}
       ).then(function() {
-        assert(false, "withdraw should fail if used gas price != requested gas price"
+        assert(false, "withdraw should fail if used gas price != requested gas price");
       }, helpers.ignoreExpectedError)
     })
   })
