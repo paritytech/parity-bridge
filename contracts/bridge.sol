@@ -36,7 +36,10 @@ library Helpers {
         return string(result);
     }
 
-    /// Multisig authority validation
+    /// reverts unless signatures (whose components are in `vs`, `rs`, `ss`)
+    /// contain `requiredSignatures` distinct correct signatures
+    /// where signer is in `addresses`
+    /// that signed `message`
     function verifySignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) internal pure {
         // not enough signatures
         require(requiredSignatures <= vs.length);
