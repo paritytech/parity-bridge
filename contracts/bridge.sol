@@ -455,7 +455,7 @@ contract ForeignBridge {
         require(value > 0);
 
         uint estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * homeGasPrice;
-        require(value >= estimatedWeiCostOfWithdraw);
+        require(value > estimatedWeiCostOfWithdraw);
 
         balances[msg.sender] -= value;
         // burns tokens
