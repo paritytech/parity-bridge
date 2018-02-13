@@ -81,7 +81,7 @@ contract("Helpers", function(accounts) {
     })
   })
 
-  it("`verifySignatures` should pass for 1 required signature", function() {
+  it("`hasEnoughValidSignatures` should pass for 1 required signature", function() {
     var library;
     var signature;
     var requiredSignatures = 1;
@@ -99,14 +99,16 @@ contract("Helpers", function(accounts) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message,
         [vrs.v],
         [vrs.r],
         [vrs.s],
 		authorities,
 		requiredSignatures
-	  )
+	  ).then(function(result) {
+		assert(result, "should return true");
+	  })
 	})
   })
 
@@ -141,14 +143,16 @@ contract("Helpers", function(accounts) {
       vrs[1] = helpers.signatureToVRS(signatures[1]);
       vrs[2] = helpers.signatureToVRS(signatures[2]);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message,
         [vrs[0].v, vrs[1].v, vrs[2].v],
         [vrs[0].r, vrs[1].r, vrs[2].r],
         [vrs[0].s, vrs[1].s, vrs[2].s],
 		authorities,
 		requiredSignatures
-	  )
+	  ).then(function(result) {
+		assert(result, "should return true");
+	  })
 	})
   })
 
@@ -172,16 +176,16 @@ contract("Helpers", function(accounts) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message2,
         [vrs.v],
         [vrs.r],
         [vrs.s],
 		authorities,
 		requiredSignatures
-      ).then(function() {
-        assert(false, "should fail");
-      }, helpers.ignoreExpectedError)
+      ).then(function(result) {
+        assert.equal(result, false, "should return false");
+	  })
 	})
   })
 
@@ -203,16 +207,16 @@ contract("Helpers", function(accounts) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message,
         [vrs.v],
         [vrs.r],
         [vrs.s],
 		authorities,
 		requiredSignatures
-      ).then(function() {
-        assert(false, "should fail");
-      }, helpers.ignoreExpectedError)
+      ).then(function(result) {
+        assert.equal(result, false, "should return false");
+	  })
 	})
   })
 
@@ -234,16 +238,16 @@ contract("Helpers", function(accounts) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message,
         [vrs.v],
         [vrs.r],
         [vrs.s],
 		authorities,
 		requiredSignatures
-      ).then(function() {
-        assert(false, "should fail");
-      }, helpers.ignoreExpectedError)
+      ).then(function(result) {
+        assert.equal(result, false, "should return false");
+	  })
 	})
   })
 
@@ -265,16 +269,16 @@ contract("Helpers", function(accounts) {
       signature = result;
       var vrs = helpers.signatureToVRS(signature);
 
-	  return library.verifySignatures.call(
+	  return library.hasEnoughValidSignatures.call(
 		message,
         [vrs.v, vrs.v],
         [vrs.r, vrs.r],
         [vrs.s, vrs.r],
 		authorities,
 		requiredSignatures
-      ).then(function() {
-        assert(false, "should fail");
-      }, helpers.ignoreExpectedError)
+      ).then(function(result) {
+        assert.equal(result, false, "should return false");
+	  })
 	})
   })
 })

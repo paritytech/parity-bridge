@@ -36,25 +36,32 @@ library Helpers {
         return string(result);
     }
 
-    /// reverts unless signatures (whose components are in `vs`, `rs`, `ss`)
+    /// returns whether signatures (whose components are in `vs`, `rs`, `ss`)
     /// contain `requiredSignatures` distinct correct signatures
-    /// where signer is in `addresses`
+    /// where signer is in `allowed_signers`
     /// that signed `message`
-    function verifySignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) internal pure {
+    function hasEnoughValidSignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] allowed_signers, uint requiredSignatures) internal pure returns (bool) {
         // not enough signatures
-        require(requiredSignatures <= vs.length);
+        if (vs.length < requiredSignatures) {
+            return false;
+        }
 
         var hash = MessageSigning.hashMessage(message);
-        var encountered = new address[](addresses.length);
+        var encountered_addresses = new address[](allowed_signers.length);
 
         for (uint i = 0; i < requiredSignatures; i++) {
-            var a = ecrecover(hash, vs[i], rs[i], ss[i]);
+            var recovered_address = ecrecover(hash, vs[i], rs[i], ss[i]);
             // only signatures by addresses in `addresses` are allowed
-            require(addressArrayContains(addresses, a));
+            if (!addressArrayContains(allowed_signers, recovered_address)) {
+                return false;
+            }
             // duplicate signatures are not allowed
-            require(!addressArrayContains(encountered, a));
-            encountered[i] = a;
+            if (addressArrayContains(encountered_addresses, recovered_address)) {
+                return false;
+            }
+            encountered_addresses[i] = recovered_address;
         }
+        return true;
     }
 
 }
@@ -70,8 +77,8 @@ library HelpersTest {
         return Helpers.uintToString(inputValue);
     }
 
-    function verifySignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) public pure {
-        return Helpers.verifySignatures(message, vs, rs, ss, addresses, requiredSignatures);
+    function hasEnoughValidSignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) public pure returns (bool) {
+        return Helpers.hasEnoughValidSignatures(message, vs, rs, ss, addresses, requiredSignatures);
     }
 }
 
@@ -244,7 +251,7 @@ contract HomeBridge {
         require(message.length == 116);
 
         // check that at least `requiredSignatures` `authorities` have signed `message`
-        Helpers.verifySignatures(message, vs, rs, ss, authorities, requiredSignatures);
+        require(Helpers.hasEnoughValidSignatures(message, vs, rs, ss, authorities, requiredSignatures));
 
         address recipient = Message.getRecipient(message);
         uint value = Message.getValue(message);
