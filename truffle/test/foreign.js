@@ -181,6 +181,7 @@ contract('ForeignBridge', function(accounts) {
     var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
+    var homeGasPrice = web3.toBigNumber(10000);
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(4, "ether");
@@ -189,7 +190,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount })
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, homeGasPrice, { from: userAccount })
         .then(function() {
           assert(false, "transferHomeViaRelay should fail");
         }, helpers.ignoreExpectedError)
@@ -202,6 +203,7 @@ contract('ForeignBridge', function(accounts) {
     var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
+    var homeGasPrice = web3.toBigNumber(10000);
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(0, "ether");
@@ -210,7 +212,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount })
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, homeGasPrice, { from: userAccount })
         .then(function() {
           assert(false, "transferHomeViaRelay should fail");
         }, helpers.ignoreExpectedError)
@@ -223,6 +225,7 @@ contract('ForeignBridge', function(accounts) {
     var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
     var userAccount = accounts[2];
+    var homeGasPrice = web3.toBigNumber(10000);
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(4, "ether");
@@ -231,7 +234,7 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount })
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, homeGasPrice, { from: userAccount })
         .then(function() {
           assert(false, "transferHomeViaRelay should fail");
         }, helpers.ignoreExpectedError)
@@ -266,6 +269,7 @@ contract('ForeignBridge', function(accounts) {
       assert.equal("Withdraw", result.logs[1].event, "Event name should be Withdraw");
       assert.equal(userAccount2, result.logs[1].args.recipient, "Event recipient should be equal to transaction recipient");
       assert.equal(value2, result.logs[1].args.value, "Event value should match transaction value");
+      assert(homeGasPrice.equals(result.logs[1].args.homeGasPrice));
 
       return Promise.all([
         meta.balances.call(userAccount),
