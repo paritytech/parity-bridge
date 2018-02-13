@@ -3,11 +3,11 @@ var helpers = require("./helpers/helpers");
 
 contract('ForeignBridge', function(accounts) {
   it("totalSupply", function() {
-	  var contract;
+    var contract;
     var requiredSignatures = 1;
     var estimatedGasCostOfWithdraw = 0;
     var authorities = [accounts[0], accounts[1]];
-	  var owner = accounts[2];
+    var owner = accounts[2];
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     var value = web3.toWei(3, "ether");
 
@@ -49,7 +49,7 @@ contract('ForeignBridge', function(accounts) {
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       contract = instance;
 
-	  // deposit something so we can transfer it
+      // deposit something so we can transfer it
       return contract.deposit(owner, web3.toWei(3, "ether"), hash, {from: authorities[0]});
     }).then(function(result) {
 
@@ -61,7 +61,7 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert(false, "transfer without allowance should fail");
 
-	  // transfer 0 without allowance should work
+      // transfer 0 without allowance should work
       return contract.transferFrom(owner, receiver, 0, {from: spender});
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
