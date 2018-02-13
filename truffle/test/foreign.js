@@ -423,11 +423,12 @@ contract('ForeignBridge', function(accounts) {
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
     var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
     var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, homeGasPrice);
+    var truncatedMessage = message.substr(0, 84);
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
-      return helpers.sign(authorities[0], message);
-    }).then(function(result) {
-      return meta.submitSignature(result, message.substr(0, 84), { from: authorities[0] })
+      return helpers.sign(authorities[0], truncatedMessage);
+    }).then(function(signature) {
+      return meta.submitSignature(signature, truncatedMessage, { from: authorities[0] })
         .then(function() {
           assert(false, "submitSignature should fail for message that is too short");
         }, helpers.ignoreExpectedError)
