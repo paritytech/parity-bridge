@@ -201,6 +201,49 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
+  it("withdraw should fail if gas price != requested gas price", function() {
+    var homeBridge;
+    var signature;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    var estimatedGasCostOfWithdraw = 0;
+    var userAccount = accounts[2];
+    var recipientAccount = accounts[3];
+    var value = web3.toBigNumber(web3.toWei(1, "ether"));
+    var requestedGasPrice = web3.toBigNumber(100);
+    var usedGasPrice = web3.toBigNumber(1000);
+    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", requestedGasPrice);
+
+    return HomeBridge.new(
+      requiredSignatures,
+      authorities,
+      estimatedGasCostOfWithdraw
+    ).then(function(instance) {
+      homeBridge = instance;
+
+      // "charge" HomeBridge so we can withdraw later
+      return homeBridge.sendTransaction({
+        value: value,
+        from: userAccount
+      })
+    }).then(function(result) {
+      return helpers.sign(authorities[0], message);
+    }).then(function(result) {
+      signature = result;
+      var vrs = helpers.signatureToVRS(signature);
+
+      return homeBridge.withdraw(
+        [vrs.v],
+        [vrs.r],
+        [vrs.s],
+        message,
+        {from: userAccount, gasPrice: usedGasPrice}
+      ).then(function() {
+        assert(false, "withdraw should fail if used gas price != requested gas price"
+      }, helpers.ignoreExpectedError)
+    })
+  })
+
   it("should revert withdraw if value is insufficient to cover costs", function() {
     var homeBridge;
     var initialBalances;
