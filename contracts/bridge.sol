@@ -69,6 +69,10 @@ library HelpersTest {
     function uintToString(uint256 inputValue) public pure returns (string str) {
         return Helpers.uintToString(inputValue);
     }
+
+    function verifySignatures(bytes message, uint8[] vs, bytes32[] rs, bytes32[] ss, address[] addresses, uint requiredSignatures) public pure {
+        return Helpers.verifySignatures(message, vs, rs, ss, addresses, requiredSignatures);
+    }
 }
 
 
