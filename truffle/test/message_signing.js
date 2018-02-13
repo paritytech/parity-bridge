@@ -1,4 +1,5 @@
 var MessageSigning = artifacts.require("MessageSigningTest");
+var helpers = require("./helpers/helpers");
 
 contract("MessageSigning", function() {
   it("should recover address from signed message", function() {
@@ -32,9 +33,9 @@ contract("MessageSigning", function() {
 
     return MessageSigning.new().then(function(instance) {
       return instance.recoverAddressFromSignedMessage.call(signature, message)
-    }).then(function(result) {
-      assert(false, "should fail because signature is too short");
-    }, function(err) {
-    })
+        .then(function() {
+          assert(false, "should fail because signature is too short");
+        }, helpers.ignoreExpectedError)
+        })
   })
 })

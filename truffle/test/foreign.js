@@ -21,20 +21,18 @@ contract('ForeignBridge', function(accounts) {
 
   it("should fail to deploy contract with not enough required signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return ForeignBridge.new(0, authorities, 0).then(function(_) {
-      assert(false, "Contract should fail to deploy");
-    }, function(err) {
-      // do nothing
-    })
+    return ForeignBridge.new(0, authorities, 0)
+      .then(function() {
+        assert(false, "Contract should fail to deploy");
+      }, helpers.ignoreExpectedError)
   })
 
   it("should fail to deploy contract with to many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return ForeignBridge.new(3, authorities, 0).then(function(_) {
-      assert(false, "Contract should fail to deploy");
-    }, function(err) {
-      // do nothing
-    })
+    return ForeignBridge.new(3, authorities, 0)
+      .then(function() {
+        assert(false, "Contract should fail to deploy");
+      }, helpers.ignoreExpectedError)
   })
 
   it("should allow a single authority to confirm a deposit", function() {
@@ -115,10 +113,10 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(_) {
-      return meta.deposit(userAccount, value, hash, { from: authorities[0] });
-    }).then(function(result) {
-      assert(false, "doing same deposit twice from same authority should fail");
-    }, function(err) {
+      return meta.deposit(userAccount, value, hash, { from: authorities[0] })
+        .then(function() {
+          assert(false, "doing same deposit twice from same authority should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 
@@ -133,10 +131,10 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
-      return meta.deposit(userAccount, value, hash, { from: userAccount });
-    }).then(function(result) {
-      assert(false, "should fail");
-    }, function(err) {
+      return meta.deposit(userAccount, value, hash, { from: userAccount })
+        .then(function() {
+          assert(false, "should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 
@@ -191,10 +189,10 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
-    }).then(function(result) {
-      assert(false, "transferHomeViaRelay should fail");
-    }, function(err) {
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount })
+        .then(function() {
+          assert(false, "transferHomeViaRelay should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 
@@ -212,10 +210,10 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount });
-    }).then(function(result) {
-      assert(false, "transferHomeViaRelay should fail");
-    }, function(err) {
+      return meta.transferHomeViaRelay(recipientAccount, transferedValue, { from: userAccount })
+        .then(function() {
+          assert(false, "transferHomeViaRelay should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 
@@ -438,11 +436,10 @@ contract('ForeignBridge', function(accounts) {
       signature = result;
       return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(_) {
-      return meta.submitSignature(signature, message, { from: authorities[0] });
-    }).then(function(_) {
-      assert(false, "submitSignature should fail");
-    }, function (_) {
-      // nothing
+      return meta.submitSignature(signature, message, { from: authorities[0] })
+        .then(function() {
+          assert(false, "submitSignature should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 })

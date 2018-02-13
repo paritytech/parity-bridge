@@ -57,9 +57,11 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(0, result, "initial allowance should be 0");
 
-      return contract.transferFrom(owner, receiver, web3.toWei(1, "ether"), {from: spender});
-    }).then(function(result) {
-      assert(false, "transfer without allowance should fail");
+      return contract.transferFrom(owner, receiver, web3.toWei(1, "ether"), {from: spender})
+        .then(function() {
+          assert(false, "transfer without allowance should fail");
+        }, helpers.ignoreExpectedError)
+    }).then(function() {
 
       // transfer 0 without allowance should work
       return contract.transferFrom(owner, receiver, 0, {from: spender});
@@ -70,7 +72,7 @@ contract('ForeignBridge', function(accounts) {
       assert.equal(receiver, result.logs[0].args.to);
       assert.equal(0, result.logs[0].args.tokens);
 
-    }, function(err) {
+      // transfer should work
       return contract.approve(spender, web3.toWei(4, "ether"), {from: owner});
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -83,10 +85,12 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(web3.toWei(4, "ether"), result, "approval should set allowance");
 
-      return contract.transferFrom(owner, receiver, web3.toWei(4, "ether"), {from: spender});
-    }).then(function(result) {
-      assert(false, "transferring more than balance should fail");
-    }, function(err) {
+      return contract.transferFrom(owner, receiver, web3.toWei(4, "ether"), {from: spender})
+        .then(function() {
+          assert(false, "transferring more than balance should fail");
+        }, helpers.ignoreExpectedError)
+    }).then(function() {
+
       return contract.approve(spender, web3.toWei(2, "ether"), {from: owner});
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -99,10 +103,12 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(web3.toWei(2, "ether"), result, "approval should update allowance");
 
-      return contract.transferFrom(owner, receiver, web3.toWei(2, "ether") + 2, {from: spender});
-    }).then(function(result) {
-      assert(false, "transferring more than allowance should fail");
-    }, function(err) {
+      return contract.transferFrom(owner, receiver, web3.toWei(2, "ether") + 2, {from: spender})
+        .then(function() {
+          assert(false, "transferring more than allowance should fail");
+        }, helpers.ignoreExpectedError)
+    }).then(function() {
+
       return contract.transferFrom(owner, receiver, web3.toWei(2, "ether"), {from: spender});
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -175,11 +181,11 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(recipientAccount, transferedValue, { from: userAccount });
-    }).then(function(result) {
-      assert(false, "transfer should fail");
-    }, function(err) {
-	})
+      return meta.transfer(recipientAccount, transferedValue, { from: userAccount })
+        .then(function() {
+          assert(false, "transfer should fail");
+        }, helpers.ignoreExpectedError)
+    })
   })
 
   it("should allow transfer of 0 value according to ERC20", function() {
@@ -227,10 +233,10 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       return meta.deposit(userAccount, 1, hash, { from: authorities[0] });
     }).then(function(result) {
-      return meta.transfer(recipientAccount, 1, { from: userAccount });
-    }).then(function(result) {
-      assert(false, "transfer should fail");
-    }, function(err) {
+      return meta.transfer(recipientAccount, 1, { from: userAccount })
+        .then(function() {
+          assert(false, "transfer should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 
@@ -250,12 +256,12 @@ contract('ForeignBridge', function(accounts) {
     }).then(function(result) {
       return meta.deposit(userAccount, 1, hash, { from: authorities[0] });
     }).then(function(result) {
-	  return meta.approve(spenderAccount, 1, {from: userAccount});
+      return meta.approve(spenderAccount, 1, {from: userAccount});
     }).then(function(result) {
-      return meta.transferFrom(userAccount, recipientAccount, 1, { from: spenderAccount });
-    }).then(function(result) {
-      assert(false, "transfer should fail");
-    }, function(err) {
+      return meta.transferFrom(userAccount, recipientAccount, 1, { from: spenderAccount })
+        .then(function() {
+          assert(false, "transfer should fail");
+        }, helpers.ignoreExpectedError)
     })
   })
 })

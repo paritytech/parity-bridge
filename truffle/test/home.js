@@ -25,20 +25,18 @@ contract('HomeBridge', function(accounts) {
 
   it("should fail to deploy contract with not enough required signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return HomeBridge.new(0, authorities).then(function(_) {
-      assert(false, "Contract should fail to deploy");
-    }, function(err) {
-      // do nothing
-    })
+    return HomeBridge.new(0, authorities)
+      .then(function() {
+        assert(false, "Contract should fail to deploy");
+      }, helpers.ignoreExpectedError)
   })
 
   it("should fail to deploy contract with too many signatures", function() {
     var authorities = [accounts[0], accounts[1]];
-    return HomeBridge.new(3, authorities, 0).then(function(_) {
-      assert(false, "Contract should fail to deploy");
-    }, function(err) {
-      // do nothing
-    })
+    return HomeBridge.new(3, authorities, 0)
+      .then(function() {
+        assert(false, "Contract should fail to deploy");
+      }, helpers.ignoreExpectedError)
   })
 
   it("should create deposit event", function() {
@@ -245,11 +243,9 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message,
         { from: relayerAccount, gasPrice: homeGasPrice }
-      );
-    }).then(function(result) {
-      assert(false, "withdraw if value <= estimatedGasCostOfWithdraw should fail");
-    }, function (err) {
-      // nothing
+      ).then(function() {
+        assert(false, "withdraw if value <= estimatedGasCostOfWithdraw should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 
@@ -360,11 +356,9 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message2,
         {from: authorities[0], gasPrice: homeGasPrice}
-      );
-    }).then(function(result) {
-      assert(false, "should fail");
-    }, function (err) {
-      // nothing
+      ).then(function() {
+        assert(false, "should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 
@@ -396,11 +390,9 @@ contract('HomeBridge', function(accounts) {
         [vrs.s],
         message.substr(0, 83),
         {from: authorities[0], gasPrice: homeGasPrice}
-      );
-    }).then(function(result) {
-      assert(false, "should fail");
-    }, function (err) {
-      // nothing
+      ).then(function() {
+        assert(false, "should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 
@@ -443,10 +435,9 @@ contract('HomeBridge', function(accounts) {
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
         {from: userAccount, gasPrice: homeGasPrice}
-      );
-    }).then(function(result) {
-      assert(false, "withdraw should fail");
-    }, function(err) {
+      ).then(function() {
+        assert(false, "withdraw should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 
@@ -487,10 +478,9 @@ contract('HomeBridge', function(accounts) {
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
         {from: userAccount, gasPrice: homeGasPrice}
-      );
-    }).then(function(result) {
-      assert(false, "should fail");
-    }, function(err) {
+      ).then(function() {
+        assert(false, "should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 
@@ -531,10 +521,9 @@ contract('HomeBridge', function(accounts) {
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
         {from: userAccount, gasPrice: homeGasPrice}
-      );
-    }).then(function(result) {
-      assert(false, "should fail");
-    }, function(err) {
+      ).then(function(result) {
+        assert(false, "should fail");
+      }, helpers.ignoreExpectedError)
     })
   })
 })
