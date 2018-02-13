@@ -521,7 +521,7 @@ contract('HomeBridge', function(accounts) {
         message,
         // anyone can call withdraw (provided they have the message and required signatures)
         {from: userAccount, gasPrice: homeGasPrice}
-      ).then(function(result) {
+      ).then(function() {
         assert(false, "should fail");
       }, helpers.ignoreExpectedError)
     })
