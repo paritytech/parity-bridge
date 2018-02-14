@@ -2,8 +2,11 @@ use ethereum_types::{Address, U256, H256};
 use contracts::foreign::events::Withdraw;
 use web3::types::Log;
 use ethabi;
-use error::Error;
+use error::{Error, ErrorKind};
 
+/// the message that is relayed from side to main.
+/// contains all the information required for the relay.
+/// validators sign off on this message.
 #[derive(PartialEq, Debug)]
 pub struct MessageToMainnet {
 	pub recipient: Address,
@@ -12,9 +15,11 @@ pub struct MessageToMainnet {
 	pub mainnet_gas_price: U256,
 }
 
+/// length of a `MessageToMainnet.to_bytes()` in bytes
 pub const MESSAGE_LENGTH: usize = 116;
 
 impl MessageToMainnet {
+	/// parses message from a byte slice
 	pub fn from_bytes(bytes: &[u8]) -> Self {
 		assert_eq!(bytes.len(), MESSAGE_LENGTH);
 
@@ -26,7 +31,7 @@ impl MessageToMainnet {
 		}
 	}
 
-	/// construct a message from a `Withdraw` that was logged on `foreign`
+	/// construct a message from a `Withdraw` event that was logged on `foreign`
 	pub fn from_log(web3_log: Log) -> Result<Self, Error> {
 		let ethabi_raw_log = ethabi::RawLog {
 			topics: web3_log.topics,
@@ -43,8 +48,9 @@ impl MessageToMainnet {
 		})
 	}
 
-	/// mainly used to construct the message to be passed to
-	/// `submitSignature`
+	/// serializes message to a byte vector.
+	/// mainly used to construct the message byte vector that is then signed
+	/// and passed to `ForeignBridge.submitSignature`
 	pub fn to_bytes(&self) -> Vec<u8> {
 		let mut result = vec![0u8; MESSAGE_LENGTH];
 		result[0..20].copy_from_slice(&self.recipient.0[..]);
@@ -54,6 +60,7 @@ impl MessageToMainnet {
 		return result;
 	}
 
+	/// serializes message to an ethabi payload
 	pub fn to_payload(&self) -> Vec<u8> {
 		ethabi::encode(&[ethabi::Token::Bytes(self.to_bytes())])
 	}
