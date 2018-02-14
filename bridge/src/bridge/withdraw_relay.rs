@@ -3,16 +3,16 @@ use futures::{Future, Stream, Poll};
 use futures::future::{JoinAll, join_all, Join};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{U256, H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
+use web3::types::{H256, Address, FilterBuilder, Log, Bytes, TransactionRequest};
 use ethabi::{RawLog, self};
 use app::App;
 use api::{self, LogStream, ApiCall};
-use contracts::{home, foreign};
+use contracts::foreign;
 use util::web3_filter;
 use database::Database;
 use error::{self, Error};
-use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
-use signature::{Signature, SIGNATURE_LENGTH};
+use message_to_mainnet::MessageToMainnet;
+use signature::Signature;
 
 /// returns a filter for `ForeignBridge.CollectedSignatures` events
 fn collected_signatures_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
@@ -234,8 +234,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 mod tests {
 	use rustc_hex::FromHex;
 	use web3::types::{Log, Bytes};
-	use contracts::{home, foreign};
-	use message_to_mainnet::MESSAGE_LENGTH;
+	use contracts::foreign;
 	use super::signatures_payload;
 
 	#[test]

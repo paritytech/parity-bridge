@@ -2,7 +2,7 @@
 /// conversion from/to byte vectors.
 /// from/to v, r, s components.
 
-use ethereum_types::{Address, U256, H256};
+use ethereum_types::H256;
 use ethabi;
 
 pub const SIGNATURE_LENGTH: usize = 65;
