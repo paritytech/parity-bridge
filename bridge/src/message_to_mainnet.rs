@@ -38,8 +38,8 @@ impl MessageToMainnet {
 			data: web3_log.data.0,
 		};
 		let withdraw_log = Withdraw::default().parse_log(ethabi_raw_log)?;
-		// TODO [snd] replace expect by result
-		let hash = web3_log.transaction_hash.expect("log to be mined and contain `transaction_hash`");
+		let hash = web3_log.transaction_hash
+			.ok_or(Error::from_kind(ErrorKind::Msg("`log` must be mined and contain `transaction_hash`".into())))?;
 		Ok(Self {
 			recipient: withdraw_log.recipient.0.into(),
 			value: U256(withdraw_log.value.0),
