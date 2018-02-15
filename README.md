@@ -47,7 +47,7 @@ they get the same amount of ERC20 tokens on `foreign`.
 [they can use `ForeignBridge` as they would use any ERC20 token.](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 
 to convert their `foreign` ERC20 into ether on `home`
-users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, value)`.
+users can always call `ForeignBridge.transferHomeViaRelay(homeRecipientAddress, value, homeGasPrice)`.
 
 `foreign` is assumed to use PoA (proof of authority) consensus.
 relays between the chains happen in a byzantine fault tolerant way using the authorities of `foreign`.
@@ -66,8 +66,8 @@ with identical arguments and from distinct authorities then
 
 ### high level explanation of foreign ERC20 -> home ether relay
 
-`sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value)`
-which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value)`.
+`sender` executes `ForeignBridge.transferHomeViaRelay(recipient, value, homeGasPrice)`
+which checks and reduces `ForeignBridge.balances(sender)` by `value` and emits `ForeignBridge.Withdraw(recipient, value, homeGasPrice)`.
 
 for every `ForeignBridge.Withdraw`, every bridge authority creates a message containing
 `value`, `recipient` and the `transactionHash` of the transaction referenced by the `ForeignBridge.Withdraw` event;
@@ -273,7 +273,7 @@ pay for the gas.
 
 this opened up an attack where a malicious user could
 deposit a very small amount of wei on `HomeBridge`, get it relayed to `ForeignBridge`,
-then spam `ForeignBridge.transfer` with `1` wei withdraws.
+then spam `ForeignBridge.transferHomeViaRelay` with `1` wei withdraws.
 it would cost the attacker very little `home` chain wei and essentially
 free `foreign` testnet wei to cause the authorities to spend orders of magnitude more wei
 to relay the withdraw to `home` by executing `HomeBridge.withdraw`.
@@ -284,9 +284,13 @@ to shut down this attack `HomeBridge.withdraw` was modified so
 doing the relay.
 this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
 
-if the value withdrawn is too low to pay for the relay at current gas prices then
-bridge authorities will ignore it. one can think of it as value getting
-spent entirely on paying the relay with no value left to pay out the recipient.
+relayers can set the gas price for `HomeBridge.withdraw`.
+they could set a very high gas price resulting in a very high `cost` through which they could burn large portions of `value`.
+to shut down this attack the `homeGasPrice` param was added to `ForeignBridge.transferHomeViaRelay`.
+end users have control over the cost/latency tradeoff of their relay transaction through the `homeGasPrice`.
+relayers have to set gas price to `homeGasPrice` when calling `HomeBridge.withdraw`.
+the `recipient` for `value` is the exception and can freely choose any gas price.
+see https://github.com/paritytech/parity-bridge/issues/112 for more details.
 
 `HomeBridge.withdraw` is currently the only transaction bridge authorities execute on `home`.
 care must be taken to secure future functions that bridge authorities will execute

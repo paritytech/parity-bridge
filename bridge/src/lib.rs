@@ -18,6 +18,12 @@ extern crate ethabi_contract;
 extern crate rustc_hex;
 #[macro_use]
 extern crate log;
+extern crate ethereum_types;
+#[macro_use]
+extern crate pretty_assertions;
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
 
 #[macro_use]
 mod macros;
@@ -30,4 +36,5 @@ pub mod contracts;
 pub mod database;
 pub mod error;
 pub mod util;
-
+pub mod message_to_mainnet;
+pub mod signature;

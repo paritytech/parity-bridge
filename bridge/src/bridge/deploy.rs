@@ -52,6 +52,7 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 							self.app.config.foreign.contract.bin.clone().0,
 							self.app.config.authorities.required_signatures,
 							self.app.config.authorities.accounts.clone(),
+							self.app.config.estimated_gas_cost_of_withdraw
 						);
 
 						let main_tx_request = TransactionRequest {

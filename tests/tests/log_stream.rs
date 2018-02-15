@@ -1,4 +1,6 @@
 extern crate futures;
+#[macro_use]
+extern crate serde_json;
 extern crate web3;
 extern crate bridge;
 #[macro_use]
@@ -31,20 +33,32 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1010""#;
+		req => json!([]),
+		res => json!("0x1010");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0x1006","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0x1006",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1010""#;
+		req => json!([]),
+		res => json!("0x1010");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1011""#;
+		req => json!([]),
+		res => json!("0x1011");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x1007","limit":null,"toBlock":"0x1007","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x1007",
+			"limit": null,
+			"toBlock": "0x1007",
+			"topics": null
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -70,23 +84,35 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x17""#;
+		req => json!([]),
+		res => json!("0x17");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0xd","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0xd",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x16""#;
+		req => json!([]),
+		res => json!("0x16");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x17""#;
+		req => json!([]),
+		res => json!("0x17");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x19""#;
+		req => json!([]),
+		res => json!("0x19");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xe","limit":null,"toBlock":"0xf","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xe",
+			"limit": null,
+			"toBlock": "0xf",
+			"topics": null
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -108,17 +134,23 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x13""#;
+		req => json!([]),
+		res => json!("0x13");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x14""#;
+		req => json!([]),
+		res => json!("0x14");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x17""#;
+		req => json!([]),
+		res => json!("0x17");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0xd","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0xd",
+			"topics": null
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -148,26 +180,44 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x13""#;
+		req => json!([]),
+		res => json!("0x13");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0x13","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0x13",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x14""#;
+		req => json!([]),
+		res => json!("0x14");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x14","limit":null,"toBlock":"0x14","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x14",
+			"limit": null,
+			"toBlock": "0x14",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x14""#;
+		req => json!([]),
+		res => json!("0x14");
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x17""#;
+		req => json!([]),
+		res => json!("0x17");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x15","limit":null,"toBlock":"0x17","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x15",
+			"limit": null,
+			"toBlock": "0x17",
+			"topics": null
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -193,17 +243,29 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x13""#;
+		req => json!([]),
+		res => json!("0x13");
 	"eth_getLogs" =>
-		req => r#"[{"address":["0x1111111111111111111111111111111111111111"],"fromBlock":"0xc","limit":null,"toBlock":"0x13","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": ["0x1111111111111111111111111111111111111111"],
+			"fromBlock": "0xc",
+			"limit": null,
+			"toBlock": "0x13",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x14""#;
+		req => json!([]),
+		res => json!("0x14");
 	"eth_getLogs" =>
-		req => r#"[{"address":["0x1111111111111111111111111111111111111111"],"fromBlock":"0x14","limit":null,"toBlock":"0x14","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address":["0x1111111111111111111111111111111111111111"],
+			"fromBlock": "0x14",
+			"limit": null,
+			"toBlock": "0x14",
+			"topics": null
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -229,17 +291,29 @@ test_transport_stream! {
 		logs: vec![],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x13""#;
+		req => json!([]),
+		res => json!("0x13");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xc","limit":null,"toBlock":"0x13","topics":[["0x2222222222222222222222222222222222222222222222222222222222222222"],null,null,null]}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xc",
+			"limit": null,
+			"toBlock": "0x13",
+			"topics":[["0x2222222222222222222222222222222222222222222222222222222222222222"], null, null, null]
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x14""#;
+		req => json!([]),
+		res => json!("0x14");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x14","limit":null,"toBlock":"0x14","topics":[["0x2222222222222222222222222222222222222222222222222222222222222222"],null,null,null]}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x14",
+			"limit": null,
+			"toBlock": "0x14",
+			"topics": [["0x2222222222222222222222222222222222222222222222222222222222222222"], null, null, null]
+		}]),
+		res => json!([]);
 }
 
 test_transport_stream! {
@@ -267,12 +341,22 @@ test_transport_stream! {
 		}],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1010""#;
+		req => json!([]),
+		res => json!("0x1010");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0x1006","topics":null}]"#,
-		res =>
-			r#"[{"address":"0x0000000000000000000000000000000000000001","topics":[],"data":"0x10","type":""}]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0x1006",
+			"topics": null
+		}]),
+		res => json!([{
+			"address": "0x0000000000000000000000000000000000000001",
+			"topics": [],
+			"data": "0x10",
+			"type": ""
+		}]);
 }
 
 test_transport_stream! {
@@ -320,21 +404,57 @@ test_transport_stream! {
 		}],
 	}],
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1010""#;
+		req => json!([]),
+		res => json!("0x1010");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0xb","limit":null,"toBlock":"0x1006","topics":null}]"#,
-		res => r#"[{"address":"0x0000000000000000000000000000000000000001","topics":[],"data":"0x10","type":""}]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0xb",
+			"limit": null,
+			"toBlock": "0x1006",
+			"topics": null
+		}]),
+		res => json!([{
+			"address": "0x0000000000000000000000000000000000000001",
+			"topics": [],
+			"data": "0x10",
+			"type": ""
+		}]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1011""#;
+		req => json!([]),
+		res => json!("0x1011");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x1007","limit":null,"toBlock":"0x1007","topics":null}]"#,
-		res => r#"[]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x1007",
+			"limit": null,
+			"toBlock": "0x1007",
+			"topics": null
+		}]),
+		res => json!([]);
 	"eth_blockNumber" =>
-		req => r#"[]"#,
-		res => r#""0x1012""#;
+		req => json!([]),
+		res => json!("0x1012");
 	"eth_getLogs" =>
-		req => r#"[{"address":null,"fromBlock":"0x1008","limit":null,"toBlock":"0x1008","topics":null}]"#,
-		res => r#"[{"address":"0x0000000000000000000000000000000000000002","topics":[],"data":"0x20","type":""},{"address":"0x0000000000000000000000000000000000000002","topics":[],"data":"0x30","type":""}]"#;
+		req => json!([{
+			"address": null,
+			"fromBlock": "0x1008",
+			"limit": null,
+			"toBlock": "0x1008",
+			"topics": null
+		}]),
+		res => json!([
+			{
+				"address": "0x0000000000000000000000000000000000000002",
+				"topics": [],
+				"data": "0x20",
+				"type":""
+			},
+			{
+				"address":"0x0000000000000000000000000000000000000002",
+				"topics": [],
+				"data": "0x30",
+				"type": ""
+			}
+		]);
 }
