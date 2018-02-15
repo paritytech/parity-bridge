@@ -41,10 +41,10 @@ impl MessageToMainnet {
 		let hash = web3_log.transaction_hash
 			.ok_or(Error::from_kind(ErrorKind::Msg("`log` must be mined and contain `transaction_hash`".into())))?;
 		Ok(Self {
-			recipient: withdraw_log.recipient.0.into(),
-			value: U256(withdraw_log.value.0),
-			sidenet_transaction_hash: hash.to_vec().as_slice().into(),
-			mainnet_gas_price: U256(withdraw_log.home_gas_price.0),
+			recipient: withdraw_log.recipient,
+			value: withdraw_log.value,
+			sidenet_transaction_hash: hash,
+			mainnet_gas_price: withdraw_log.home_gas_price,
 		})
 	}
 
