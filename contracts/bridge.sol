@@ -483,14 +483,13 @@ contract ForeignBridge {
     /// withdrawal value (uint)
     /// foreign transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature(bytes signature, bytes message) public onlyAuthority() {
-        // Validate submited signatures
-        require(MessageSigning.recoverAddressFromSignedMessage(signature, message) == msg.sender);
+        // ensure that `signature` is really `message` signed by `msg.sender`
+        require(msg.sender == MessageSigning.recoverAddressFromSignedMessage(signature, message));
 
-        // Valid withdraw message must have 116 bytes
         require(message.length == 116);
         var hash = keccak256(message);
 
-        // Duplicated signatures
+        // each authority can only provide one signature per message
         require(!Helpers.addressArrayContains(signatures[hash].signed, msg.sender));
         signatures[hash].message = message;
         signatures[hash].signed.push(msg.sender);
