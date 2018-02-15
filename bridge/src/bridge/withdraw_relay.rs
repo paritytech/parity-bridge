@@ -174,10 +174,15 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.map(|signatures|
 							signatures.iter().map(
 								|signature| {
-									app.foreign_bridge.functions().signature().output(signature.0.as_slice()).map(Bytes)
+									Signature::from_bytes(
+										app.foreign_bridge
+											.functions()
+											.signature()
+											.output(signature.0.as_slice())?
+											.as_slice())
 								}
 							)
-							.collect::<ethabi::Result<Vec<_>>>()
+							.collect::<Result<Vec<_>, Error>>()
 							.map_err(error::Error::from)
 						)
 						.collect::<error::Result<Vec<_>>>()?;
@@ -186,9 +191,9 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						.zip(signatures.into_iter())
 						.map(|(message, signatures)| {
 							let payload: Bytes = app.home_bridge.functions().withdraw().input(
-								signatures.iter().map(|x| Signature::v_from_bytes(x.0.as_slice())),
-								signatures.iter().map(|x| Signature::r_from_bytes(x.0.as_slice()).0),
-								signatures.iter().map(|x| Signature::s_from_bytes(x.0.as_slice()).0),
+								signatures.iter().map(|x| x.v),
+								signatures.iter().map(|x| x.r),
+								signatures.iter().map(|x| x.s),
 								message.clone().0).into();
 							let request = TransactionRequest {
 								from: app.config.home.account,

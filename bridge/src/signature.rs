@@ -5,6 +5,8 @@
 use ethereum_types::H256;
 use ethabi;
 
+use error::Error;
+
 pub const SIGNATURE_LENGTH: usize = 65;
 
 /// an ECDSA signature consisting of `v`, `r` and `s`
@@ -16,26 +18,16 @@ pub struct Signature {
 }
 
 impl Signature {
-	pub fn from_bytes(bytes: &[u8]) -> Self {
-		assert_eq!(bytes.len(), SIGNATURE_LENGTH);
-
-		Self {
-			v: Self::v_from_bytes(bytes),
-			r: Self::r_from_bytes(bytes),
-			s: Self::s_from_bytes(bytes),
+	pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+		if bytes.len() != SIGNATURE_LENGTH {
+			bail!("`bytes`.len() must be {}", SIGNATURE_LENGTH);
 		}
-	}
 
-	pub fn v_from_bytes(bytes: &[u8]) -> u8 {
-		bytes[64]
-	}
-
-	pub fn r_from_bytes(bytes: &[u8]) -> H256 {
-		bytes[0..32].into()
-	}
-
-	pub fn s_from_bytes(bytes: &[u8]) -> H256 {
-		bytes[32..64].into()
+		Ok(Self {
+			v: bytes[64],
+			r: bytes[0..32].into(),
+			s: bytes[32..64].into(),
+		})
 	}
 
 	pub fn to_bytes(&self) -> Vec<u8> {
@@ -70,17 +62,14 @@ mod test {
 			assert_eq!(s, signature.s);
 
 			let bytes = signature.to_bytes();
-			assert_eq!(v, Signature::v_from_bytes(bytes.as_slice()));
-			assert_eq!(r, Signature::r_from_bytes(bytes.as_slice()));
-			assert_eq!(s, Signature::s_from_bytes(bytes.as_slice()));
 
-			assert_eq!(signature, Signature::from_bytes(bytes.as_slice()));
+			assert_eq!(signature, Signature::from_bytes(bytes.as_slice()).unwrap());
 
 			let payload = signature.to_payload();
 			let mut tokens = ethabi::decode(&[ethabi::ParamType::Bytes], payload.as_slice())
 				.unwrap();
 			let decoded = tokens.pop().unwrap().to_bytes().unwrap();
-			assert_eq!(signature, Signature::from_bytes(decoded.as_slice()));
+			assert_eq!(signature, Signature::from_bytes(decoded.as_slice()).unwrap());
 
 			TestResult::passed()
 		}
