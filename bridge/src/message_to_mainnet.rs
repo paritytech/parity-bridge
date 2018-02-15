@@ -2,7 +2,7 @@ use ethereum_types::{Address, U256, H256};
 use contracts::foreign::events::Withdraw;
 use web3::types::Log;
 use ethabi;
-use error::{Error, ErrorKind};
+use error::Error;
 
 /// the message that is relayed from side to main.
 /// contains all the information required for the relay.
@@ -38,8 +38,7 @@ impl MessageToMainnet {
 			data: web3_log.data.0,
 		};
 		let withdraw_log = Withdraw::default().parse_log(ethabi_raw_log)?;
-		let hash = web3_log.transaction_hash
-			.ok_or(Error::from_kind(ErrorKind::Msg("`log` must be mined and contain `transaction_hash`".into())))?;
+		let hash = web3_log.transaction_hash.ok_or_else(|| "`log` must be mined and contain `transaction_hash`")?;
 		Ok(Self {
 			recipient: withdraw_log.recipient,
 			value: withdraw_log.value,
