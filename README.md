@@ -285,7 +285,7 @@ doing the relay.
 this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
 
 relayers can set the gas price for `HomeBridge.withdraw`.
-they could set a very high gas price resulting in a very high `cost` through which they could large portions of `value`.
+they could set a very high gas price resulting in a very high `cost` through which they could burn large portions of `value`.
 to shut down this attack the `homeGasPrice` param was added to `ForeignBridge.transferHomeViaRelay`.
 end users have control over the cost/latency tradeoff of their relay transaction through the `homeGasPrice`.
 relayers have to set gas price to `homeGasPrice` when calling `HomeBridge.withdraw`.
