@@ -191,7 +191,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 								signatures.iter().map(|x| Signature::s_from_bytes(x.0.as_slice()).0),
 								message.clone().0).into();
 							let request = TransactionRequest {
-								from: app.config.home.account.clone(),
+								from: app.config.home.account,
 								to: Some(home_contract.clone()),
 								gas: Some(app.config.txs.withdraw_relay.gas.into()),
 								gas_price: Some(MessageToMainnet::from_bytes(message.0.as_slice()).mainnet_gas_price),
