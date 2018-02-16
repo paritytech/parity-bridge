@@ -49,13 +49,7 @@ mod test {
 	use super::*;
 
 	quickcheck! {
-		fn quickcheck_signature_roundtrips(v: u8, r_raw: Vec<u8>, s_raw: Vec<u8>) -> TestResult {
-			if r_raw.len() != 32 || s_raw.len() != 32 {
-				return TestResult::discard();
-			}
-
-			let r: H256 = r_raw.as_slice().into();
-			let s: H256 = s_raw.as_slice().into();
+		fn quickcheck_signature_roundtrips(v: u8, r: H256, s: H256) -> TestResult {
 			let signature = Signature { v, r, s };
 			assert_eq!(v, signature.v);
 			assert_eq!(r, signature.r);
