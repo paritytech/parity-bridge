@@ -5,6 +5,7 @@ extern crate web3;
 extern crate bridge;
 #[macro_use]
 extern crate pretty_assertions;
+extern crate ethereum_types;
 
 use std::cell::Cell;
 use web3::Transport;
@@ -95,6 +96,7 @@ macro_rules! test_app_stream {
 			use self::std::sync::Arc;
 			use self::std::time::Duration;
 			use self::futures::{Future, Stream};
+			use self::ethereum_types::U256;
 			use self::bridge::app::{App, Connections};
 			use self::bridge::contracts::{foreign, home};
 			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig};
@@ -138,9 +140,9 @@ macro_rules! test_app_stream {
 					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
 					required_signatures: $signatures,
 				},
-				estimated_gas_cost_of_withdraw: "100000".parse().unwrap(),
-				max_total_home_contract_balance: "10000000000000000000".parse().unwrap(),
-				max_single_deposit_value: "1000000000000000000".parse().unwrap(),
+				estimated_gas_cost_of_withdraw: U256::from_dec_str("100000").unwrap(),
+				max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+				max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
 			};
 
 			let app = App {
