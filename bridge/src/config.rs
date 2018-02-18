@@ -4,6 +4,7 @@ use std::io::Read;
 use std::time::Duration;
 use rustc_hex::FromHex;
 use web3::types::{Address, Bytes};
+use ethereum_types::U256;
 use error::{ResultExt, Error};
 use {toml};
 
@@ -18,7 +19,9 @@ pub struct Config {
 	pub foreign: Node,
 	pub authorities: Authorities,
 	pub txs: Transactions,
-	pub estimated_gas_cost_of_withdraw: u32,
+	pub estimated_gas_cost_of_withdraw: U256,
+	pub max_total_home_contract_balance: U256,
+	pub max_single_deposit_value: U256,
 }
 
 impl Config {
@@ -44,6 +47,8 @@ impl Config {
 			},
 			txs: config.transactions.map(Transactions::from_load_struct).unwrap_or_default(),
 			estimated_gas_cost_of_withdraw: config.estimated_gas_cost_of_withdraw,
+			max_total_home_contract_balance: config.max_total_home_contract_balance,
+			max_single_deposit_value: config.max_single_deposit_value,
 		};
 
 		Ok(result)
@@ -135,6 +140,18 @@ pub struct Authorities {
 mod load {
 	use std::path::PathBuf;
 	use web3::types::Address;
+	use ethereum_types::U256;
+	use serde::{Deserialize, Deserializer};
+	use serde::de::Error;
+
+	// TODO this is needed because
+	fn deserialize_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
+		where
+			D: Deserializer<'de>,
+	{
+		let s: &str = Deserialize::deserialize(deserializer)?;
+		U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
+	}
 
 	#[derive(Deserialize)]
 	#[serde(deny_unknown_fields)]
@@ -143,7 +160,12 @@ mod load {
 		pub foreign: Node,
 		pub authorities: Authorities,
 		pub transactions: Option<Transactions>,
-		pub estimated_gas_cost_of_withdraw: u32,
+		#[serde(deserialize_with="deserialize_u256")]
+		pub estimated_gas_cost_of_withdraw: U256,
+		#[serde(deserialize_with="deserialize_u256")]
+		pub max_total_home_contract_balance: U256,
+		#[serde(deserialize_with="deserialize_u256")]
+		pub max_single_deposit_value: U256,
 	}
 
 	#[derive(Deserialize)]
@@ -193,11 +215,14 @@ mod tests {
 	use std::time::Duration;
 	use rustc_hex::FromHex;
 	use super::{Config, Node, ContractConfig, Transactions, Authorities, TransactionConfig};
+	use ethereum_types::U256;
 
 	#[test]
 	fn load_full_setup_from_str() {
 		let toml = r#"
-estimated_gas_cost_of_withdraw = 100000
+estimated_gas_cost_of_withdraw = "100000"
+max_total_home_contract_balance = "10000000000000000000"
+max_single_deposit_value = "1000000000000000000"
 
 [home]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
@@ -257,7 +282,9 @@ home_deploy = { gas = 20 }
 				],
 				required_signatures: 2,
 			},
-			estimated_gas_cost_of_withdraw: 100_000,
+			estimated_gas_cost_of_withdraw: U256::from_dec_str("100000").unwrap(),
+			max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+			max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
 		};
 
 		expected.txs.home_deploy = TransactionConfig {
@@ -272,7 +299,9 @@ home_deploy = { gas = 20 }
 	#[test]
 	fn load_minimal_setup_from_str() {
 		let toml = r#"
-estimated_gas_cost_of_withdraw = 200000000
+estimated_gas_cost_of_withdraw = "200000000"
+max_total_home_contract_balance = "10000000000000000000"
+max_single_deposit_value = "1000000000000000000"
 
 [home]
 account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
@@ -326,7 +355,9 @@ required_signatures = 2
 				],
 				required_signatures: 2,
 			},
-			estimated_gas_cost_of_withdraw: 200_000_000,
+			estimated_gas_cost_of_withdraw: U256::from_dec_str("200000000").unwrap(),
+			max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+			max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
 		};
 
 		let config = Config::load_from_str(toml).unwrap();
