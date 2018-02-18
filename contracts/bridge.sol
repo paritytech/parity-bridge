@@ -205,6 +205,16 @@ contract HomeBridge {
     /// this shuts down attacks that exhaust authorities funds on home chain.
     uint256 public estimatedGasCostOfWithdraw;
 
+    /// reject deposits that would increase `this.balance` beyond this value.
+    /// security feature.
+    /// set to 0 to disable.
+    uint256 public maxTotalHomeContractBalance;
+
+    /// reject deposits whose `msg.value` is higher than this value.
+    /// security feature.
+    /// set to 0 to disable.
+    uint256 public maxSingleDepositValue;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -221,7 +231,9 @@ contract HomeBridge {
     function HomeBridge(
         uint256 requiredSignaturesParam,
         address[] authoritiesParam,
-        uint256 estimatedGasCostOfWithdrawParam
+        uint256 estimatedGasCostOfWithdrawParam,
+        uint256 maxTotalHomeContractBalanceParam,
+        uint256 maxSingleDepositValueParam
     ) public
     {
         require(requiredSignaturesParam != 0);
@@ -229,6 +241,8 @@ contract HomeBridge {
         requiredSignatures = requiredSignaturesParam;
         authorities = authoritiesParam;
         estimatedGasCostOfWithdraw = estimatedGasCostOfWithdrawParam;
+        maxTotalHomeContractBalance = maxTotalHomeContractBalanceParam;
+        maxSingleDepositValue = maxSingleDepositValueParam;
     }
 
     /// Should be used to deposit money.
