@@ -46,7 +46,9 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 							self.app.config.home.contract.bin.clone().0,
 							self.app.config.authorities.required_signatures,
 							self.app.config.authorities.accounts.clone(),
-							self.app.config.estimated_gas_cost_of_withdraw
+							self.app.config.estimated_gas_cost_of_withdraw,
+							self.app.config.max_total_home_contract_balance,
+							self.app.config.max_single_deposit_value
 						);
 						let test_data = self.app.foreign_bridge.constructor(
 							self.app.config.foreign.contract.bin.clone().0,
