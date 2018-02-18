@@ -1,4 +1,6 @@
-estimated_gas_cost_of_withdraw = 0
+estimated_gas_cost_of_withdraw = "0"
+max_total_home_contract_balance = "10000000000000000000"
+max_single_deposit_value = "1000000000000000000"
 
 [home]
 account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
