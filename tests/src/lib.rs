@@ -138,7 +138,9 @@ macro_rules! test_app_stream {
 					accounts: $authorities_accs.iter().map(|a: &&str| a.parse().unwrap()).collect(),
 					required_signatures: $signatures,
 				},
-				estimated_gas_cost_of_withdraw: 100_000,
+				estimated_gas_cost_of_withdraw: "100000".parse().unwrap(),
+				max_total_home_contract_balance: "10000000000000000000".parse().unwrap(),
+				max_single_deposit_value: "1000000000000000000".parse().unwrap(),
 			};
 
 			let app = App {
