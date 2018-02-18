@@ -248,7 +248,9 @@ contract HomeBridge {
     /// Should be used to deposit money.
     function () public payable {
         require(maxSingleDepositValue == 0 || msg.value <= maxSingleDepositValue);
-        require(maxTotalHomeContractBalance == 0 || this.balance + msg.value <= maxTotalHomeContractBalance);
+        // the value of `this.balance` in payable methods is increased
+        // by `msg.value` before the body of the payable method executes
+        require(maxTotalHomeContractBalance == 0 || this.balance <= maxTotalHomeContractBalance);
         Deposit(msg.sender, msg.value);
     }
 
