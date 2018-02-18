@@ -86,6 +86,67 @@ contract('HomeBridge', function(accounts) {
     })
   })
 
+  it("deposit should fail if maxSingleDepositValue exceeded", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    let userAccount = accounts[2];
+    let maxSingleDepositValue = web3.toWei(1, "ether");
+
+    return newHomeBridge({
+      requiredSignatures: requiredSignatures,
+      authorities: authorities,
+      maxSingleDepositValue: maxSingleDepositValue,
+    }).then(function(instance) {
+      meta = instance;
+      return meta.sendTransaction({
+        value: maxSingleDepositValue,
+        from: userAccount
+      })
+    }).then(function() {
+      return meta.sendTransaction({
+        value: maxSingleDepositValue + 1,
+        from: userAccount
+      })
+        .then(function() {
+          assert(false, "should fail")
+        }, helpers.ignoreExpectedError)
+    })
+  })
+
+  it("deposit should fail if maxTotalHomeContractBalance exceeded", function() {
+    var meta;
+    var requiredSignatures = 1;
+    var authorities = [accounts[0], accounts[1]];
+    let userAccount = accounts[2];
+    let maxTotalHomeContractBalance = web3.toWei(2, "ether");
+
+    return newHomeBridge({
+      requiredSignatures: requiredSignatures,
+      authorities: authorities,
+      maxTotalHomeContractBalance: maxTotalHomeContractBalance,
+    }).then(function(instance) {
+      meta = instance;
+      return meta.sendTransaction({
+        value: web3.toWei(1, "ether"),
+        from: userAccount
+      })
+    }).then(function(instance) {
+      return meta.sendTransaction({
+        value: web3.toWei(1, "ether"),
+        from: userAccount
+      })
+    }).then(function() {
+      return meta.sendTransaction({
+        value: 1,
+        from: userAccount
+      })
+        .then(function() {
+          assert(false, "should fail")
+        }, helpers.ignoreExpectedError)
+    })
+  })
+
   it("should allow correct withdraw without recipient paying for gas", function() {
     var homeBridge;
     var signature;
