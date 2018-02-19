@@ -82,12 +82,19 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "No event should be created");
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(web3.toWei(0, "ether"), result, "Contract balance should not change yet");
+
+      return meta.deposit.estimateGas(userAccount, value, hash, { from: authorities[1] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.deposit =", result);
+
       return meta.deposit(userAccount, value, hash, { from: authorities[1] });
     }).then(function(result) {
       assert.equal(2, result.logs.length)
