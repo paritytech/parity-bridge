@@ -134,8 +134,9 @@ all fields are required unless marked with *optional*.
 
 #### options
 
-- `estimated_gas_cost_of_withdraw` - the gas a transaction to `HomeBridge.withdraw` consumes
-  - currently recommended value: `100000`
+- `estimated_gas_cost_of_withdraw` - an upper bound on the gas a transaction to `HomeBridge.withdraw` consumes
+  - currently recommended value: `"100000"`
+  - must be a string because the `toml` crate can't parse numbers greater max i64
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
 - `max_total_home_contract_balance` - reject deposits that would increase `HomeBridge.balance` beyond this value
@@ -158,11 +159,12 @@ all fields are required unless marked with *optional*.
 - `home.account` - address of this bridge authority on `home` chain
 - `home.ipc` - path to the ipc socket of a parity node that has `home.account` unlocked
 - `home.contract.bin` - path to the compiled `HomeBridge` contract
-- `home.required_confirmations` - number of confirmations required to consider transaction final on `home`
+    - required for initial deployment
+- `home.required_confirmations` - number of confirmations required to consider transaction final on `home.ipc`
   - *optional,* default: **12**
 - `home.poll_interval` - specify how frequently (seconds) `home.ipc` should be polled for changes
   - *optional,* default: **1**
-- `home.request_timeout` - how many seconds to wait for `home.ipc` to respond before timing out
+- `home.request_timeout` - how many seconds to wait for responses from `home.ipc` before timing out
   - *optional,* default: **5**
 
 #### foreign options
@@ -171,11 +173,12 @@ all fields are required unless marked with *optional*.
   - usually the same as `home.account`
 - `foreign.ipc` - path to the ipc socket of a parity node that has `foreign.account` unlocked
 - `foreign.contract.bin` - path to the compiled `ForeignBridge` contract
-- `foreign.required_confirmations` - number of confirmations required to consider transaction final on `foreign`
+    - required for initial deployment
+- `foreign.required_confirmations` - number of confirmations required to consider transaction final on `foreign.ipc`
   - *optional,* default: **12**
 - `foreign.poll_interval` - specify how frequently (seconds) `foreign.ipc` should be polled for changes
   - *optional,* default: **1**
-- `foreign.request_timeout` - how many seconds to wait for `foreign.ipc` to respond before timing out
+- `foreign.request_timeout` - how many seconds to wait for responses from `foreign.ipc` before timing out
   - *optional,* default: **5**
 
 #### authorities options
