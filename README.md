@@ -194,16 +194,21 @@ these are all **optional** and default to `0`.
 look into the `[transactions]` section in [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
 for recommendations on provided `gas`.
 
+##### these happen on `home`:
+
 - `transaction.home_deploy.gas`
 - `transaction.home_deploy.gas_price`
+- `transaction.withdraw_relay.gas`
+- `transaction.withdraw_relay.gas_price`
+
+##### these happen on `foreign`:
+
 - `transaction.foreign_deploy.gas`
 - `transaction.foreign_deploy.gas_price`
 - `transaction.deposit_relay.gas`
 - `transaction.deposit_relay.gas_price`
 - `transaction.withdraw_confirm.gas`
 - `transaction.withdraw_confirm.gas_price`
-- `transaction.withdraw_relay.gas`
-- `transaction.withdraw_relay.gas_price`
 
 ### database file format
 
