@@ -160,6 +160,8 @@ all fields are required unless marked with *optional*.
 - `home.ipc` - path to the ipc socket of a parity node that has `home.account` unlocked
 - `home.contract.bin` - path to the compiled `HomeBridge` contract
     - required for initial deployment
+    - run [tools/compile_contracts.sh](tools/compile_contracts.sh) to compile contracts into dir `compiled_contracts`
+    - then set this to `compiled_contracts/HomeBridge.bin`
 - `home.required_confirmations` - number of confirmations required to consider transaction final on `home.ipc`
   - *optional,* default: **12**
 - `home.poll_interval` - specify how frequently (seconds) `home.ipc` should be polled for changes
@@ -174,6 +176,8 @@ all fields are required unless marked with *optional*.
 - `foreign.ipc` - path to the ipc socket of a parity node that has `foreign.account` unlocked
 - `foreign.contract.bin` - path to the compiled `ForeignBridge` contract
     - required for initial deployment
+    - run [tools/compile_contracts.sh](tools/compile_contracts.sh) to compile contracts into dir `compiled_contracts`
+    - then set this to `compiled_contracts/ForeignBridge.bin`
 - `foreign.required_confirmations` - number of confirmations required to consider transaction final on `foreign.ipc`
   - *optional,* default: **12**
 - `foreign.poll_interval` - specify how frequently (seconds) `foreign.ipc` should be polled for changes
