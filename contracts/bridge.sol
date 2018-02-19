@@ -206,7 +206,9 @@ contract HomeBridge {
     uint256 public estimatedGasCostOfWithdraw;
 
     /// reject deposits that would increase `this.balance` beyond this value.
-    /// security feature.
+    /// security feature:
+    /// limits the total amount of home/mainnet ether that can be lost
+    /// if the bridge is faulty or compromised in any way!
     /// set to 0 to disable.
     uint256 public maxTotalHomeContractBalance;
 
