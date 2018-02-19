@@ -10,9 +10,15 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
+      return web3.eth.getTransactionReceipt(instance.transactionHash);
+    }).then(function(transaction) {
+      console.log("estimated gas cost of ForeignBridge deploy =", transaction.gasUsed);
+
       return meta.requiredSignatures.call();
     }).then(function(result) {
       assert.equal(requiredSignatures, result, "Contract has invalid number of requiredSignatures");
+
       return Promise.all(authorities.map((_, index) => meta.authorities.call(index)));
     }).then(function(result) {
       assert.deepEqual(authorities, result, "Contract has invalid authorities");
