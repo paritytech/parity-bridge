@@ -123,41 +123,14 @@ bridge --config config.toml --database db.toml
   if there is no file at specified location, new bridge contracts will be deployed
   and new database will be created
 
-### configuration [file example](./examples/config.toml)
+### configuration
 
-```toml
-estimated_gas_cost_of_withdraw = 100000
-max_total_home_contract_balance = "10000000000000000000"
-max_single_deposit_value = "1000000000000000000"
+the bridge is configured through a configuration file.
 
-[home]
-account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
-ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
-required_confirmations = 0
+here's an example configuration file: [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
 
-[home.contract]
-bin = "contracts/EthereumBridge.bin"
-
-[foreign]
-account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
-ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
-required_confirmations = 0
-
-[foreign.contract]
-bin = "contracts/KovanBridge.bin"
-
-[authorities]
-accounts = [
-    "0x006e27b6a72e1f34c626762f3c4761547aff1421",
-    "0x006e27b6a72e1f34c626762f3c4761547aff1421",
-    "0x006e27b6a72e1f34c626762f3c4761547aff1421"
-]
-required_signatures = 2
-
-[transactions]
-home_deploy = { gas = 500000 }
-foreign_deploy = { gas = 500000 }
-```
+following is a detailed explanation of all config options.
+all fields are required unless marked with *optional*.
 
 #### options
 
@@ -165,16 +138,14 @@ foreign_deploy = { gas = 500000 }
   - currently recommended value: `100000`
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
-- `max_total_home_contract_balance` =
-  - reject deposits that would increase `HomeBridge.balance` beyond this value
+- `max_total_home_contract_balance` - reject deposits that would increase `HomeBridge.balance` beyond this value
   - security feature:
     - limits the total amount of home/mainnet ether that can be lost
       if the bridge is faulty or compromised in any way!
   - set to `"0"` to disable.
   - recommended for test deployment: 10 ether = `"10000000000000000000"`
   - must be a string because toml can't parse integers > max i64
-- `max_single_deposit_value`
-  - reject deposits whose `msg.value` is higher than this value.
+- `max_single_deposit_value` - reject deposits whose `msg.value` is higher than this value.
   - security feature
   - set to 0 to disable
   - recommended for test deployment: 1 ether = `"1000000000000000000"`
@@ -182,12 +153,17 @@ foreign_deploy = { gas = 500000 }
 
 #### home options
 
-- `home.account` - authority address on the home (**required**)
-- `home.ipc` - path to home parity ipc handle (**required**)
-- `home.contract.bin` - path to the compiled bridge contract (**required**)
-- `home.required_confirmations` - number of confirmation required to consider transaction final on home (default: **12**)
-- `home.poll_interval` - specify how often home node should be polled for changes (in seconds, default: **1**)
-- `home.request_timeout` - specify request timeout (in seconds, default: **5**)
+- `home.account` - authority address on the home
+- `home.ipc` - path to home parity ipc handle
+- `home.contract.bin` - path to the compiled bridge contract
+- `home.required_confirmations` - number of confirmation required to consider transaction final on home
+  - *optional,* default: **12**
+- `home.poll_interval` - specify how frequently home node should be polled for changes (
+  - in seconds
+  - *optional,* default: **1**
+- `home.request_timeout` - specify request timeout
+  - in seconds
+  - *optional,* default: **5**
 
 #### foreign options
 
@@ -198,24 +174,29 @@ foreign_deploy = { gas = 500000 }
 - `foreign.poll_interval` - specify how often home node should be polled for changes (in seconds, default: **1**)
 - `foreign.request_timeout` - specify request timeout (in seconds, default: **5**)
 
-
 #### authorities options
 
-- `authorities.account` - all authorities (**required**)
-- `authorities.required_signatures` - number of authorities signatures required to consider action final (**required**)
+- `authorities.account` - array of addresses of authorities
+- `authorities.required_signatures` - number of authorities signatures required to consider action final
 
 #### transaction options
 
-- `transaction.home_deploy.gas` - specify how much gas should be consumed by home contract deploy
-- `transaction.home_deploy.gas_price` - specify gas price for home contract deploy
-- `transaction.foreign_deploy.gas` - specify how much gas should be consumed by foreign contract deploy
-- `transaction.foreign_deploy.gas_price` - specify gas price for foreign contract deploy
-- `transaction.deposit_relay.gas` - specify how much gas should be consumed by deposit relay
-- `transaction.deposit_relay.gas_price` - specify gas price for deposit relay
-- `transaction.withdraw_confirm.gas` - specify how much gas should be consumed by withdraw confirm
-- `transaction.withdraw_confirm.gas_price` - specify gas price for withdraw confirm
-- `transaction.withdraw_relay.gas` - specify how much gas should be consumed by withdraw relay
-- `transaction.withdraw_relay.gas_price` - specify gas price for withdraw relay
+`gas` and `gas_price` to use for the specific transactions.
+these are all optional and default to `0`.
+
+look into the `[transactions]` section in [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
+for recommendations on provided `gas`.
+
+- `transaction.home_deploy.gas`
+- `transaction.home_deploy.gas_price`
+- `transaction.foreign_deploy.gas`
+- `transaction.foreign_deploy.gas_price`
+- `transaction.deposit_relay.gas`
+- `transaction.deposit_relay.gas_price`
+- `transaction.withdraw_confirm.gas`
+- `transaction.withdraw_confirm.gas_price`
+- `transaction.withdraw_relay.gas`
+- `transaction.withdraw_relay.gas_price`
 
 ### database file format
 
