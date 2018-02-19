@@ -10,11 +10,16 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-the bridge is an
+parity-bridge is currently an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 contract on one ethereum-based blockchain that is backed by ether on **another** ethereum-based blockchain.
 
-users can convert ether
+eventually parity-bridge will be able to pass arbitrary messages between
+two ethereum-based blockchains.
+in the future you'll be able to build the current ether-ERC20 bridge and any other
+cross-chain application on top of the message passing bridge.
+
+currently users can convert ether
 on one chain into the same amount of ERC20 tokens on the other and back.
 the bridge securely relays these conversions.
 
@@ -30,12 +35,6 @@ the users can withdraw their tokens worth of ether on the mainnet at any point.
 parity is using the bridge project to prototype
 the system that will eventually connect ethereum and other non-parachains to
 [polkadot](https://polkadot.io/).
-
-### next steps
-
-1. deploy to bridge **ethereum** and **kovan** (bridge authorities TBD)
-2. make the bridge work with contract-based dynamic validator sets
-3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
 ### current functionality
 
