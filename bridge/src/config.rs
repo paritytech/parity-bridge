@@ -144,7 +144,11 @@ mod load {
 	use serde::{Deserialize, Deserializer};
 	use serde::de::Error;
 
-	// TODO this is needed because
+	/// the toml crate parses integer literals as `i64`.
+	/// certain config options (example: `max_total_home_contract_balance`)
+	/// frequently don't fit into `i64`.
+	/// workaround: put them in string literals, use this custom
+	/// deserializer and parse them as U256.
 	fn deserialize_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
 		where
 			D: Deserializer<'de>,
