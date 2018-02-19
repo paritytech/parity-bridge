@@ -31,9 +31,15 @@ contract('HomeBridge', function(accounts) {
       authorities: authorities,
     }).then(function(instance) {
       meta = instance;
+
+      return web3.eth.getTransactionReceipt(instance.transactionHash);
+    }).then(function(transaction) {
+      console.log("estimated gas cost of HomeBridge deploy =", transaction.gasUsed);
+
       return meta.requiredSignatures.call();
     }).then(function(result) {
       assert.equal(requiredSignatures, result, "Contract has invalid number of requiredSignatures");
+
       return Promise.all(authorities.map((_, index) => meta.authorities.call(index)));
     }).then(function(result) {
       assert.deepEqual(authorities, result, "Contract has invalid authorities");
