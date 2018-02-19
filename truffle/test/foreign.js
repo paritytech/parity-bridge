@@ -10,9 +10,15 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
+      return web3.eth.getTransactionReceipt(instance.transactionHash);
+    }).then(function(transaction) {
+      console.log("estimated gas cost of ForeignBridge deploy =", transaction.gasUsed);
+
       return meta.requiredSignatures.call();
     }).then(function(result) {
       assert.equal(requiredSignatures, result, "Contract has invalid number of requiredSignatures");
+
       return Promise.all(authorities.map((_, index) => meta.authorities.call(index)));
     }).then(function(result) {
       assert.deepEqual(authorities, result, "Contract has invalid authorities");
@@ -76,12 +82,19 @@ contract('ForeignBridge', function(accounts) {
 
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "No event should be created");
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(web3.toWei(0, "ether"), result, "Contract balance should not change yet");
+
+      return meta.deposit.estimateGas(userAccount, value, hash, { from: authorities[1] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.deposit =", result);
+
       return meta.deposit(userAccount, value, hash, { from: authorities[1] });
     }).then(function(result) {
       assert.equal(2, result.logs.length)
@@ -342,11 +355,20 @@ contract('ForeignBridge', function(accounts) {
     var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
     var homeGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
     var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, homeGasPrice);
+    var signature;
+
     return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
-      return meta.submitSignature(result, message, { from: authorities[0] });
+      signature = result;
+
+      return meta.submitSignature.estimateGas(result, message, { from: authorities[0] });
+    }).then(function(result) {
+      console.log("estimated gas cost of ForeignBridge.submitSignature =", result);
+
+      return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(0, result.logs.length, "No events should be created");
     })

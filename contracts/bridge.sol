@@ -205,6 +205,18 @@ contract HomeBridge {
     /// this shuts down attacks that exhaust authorities funds on home chain.
     uint256 public estimatedGasCostOfWithdraw;
 
+    /// reject deposits that would increase `this.balance` beyond this value.
+    /// security feature:
+    /// limits the total amount of home/mainnet ether that can be lost
+    /// if the bridge is faulty or compromised in any way!
+    /// set to 0 to disable.
+    uint256 public maxTotalHomeContractBalance;
+
+    /// reject deposits whose `msg.value` is higher than this value.
+    /// security feature.
+    /// set to 0 to disable.
+    uint256 public maxSingleDepositValue;
+
     /// Contract authorities.
     address[] public authorities;
 
@@ -221,7 +233,9 @@ contract HomeBridge {
     function HomeBridge(
         uint256 requiredSignaturesParam,
         address[] authoritiesParam,
-        uint256 estimatedGasCostOfWithdrawParam
+        uint256 estimatedGasCostOfWithdrawParam,
+        uint256 maxTotalHomeContractBalanceParam,
+        uint256 maxSingleDepositValueParam
     ) public
     {
         require(requiredSignaturesParam != 0);
@@ -229,10 +243,16 @@ contract HomeBridge {
         requiredSignatures = requiredSignaturesParam;
         authorities = authoritiesParam;
         estimatedGasCostOfWithdraw = estimatedGasCostOfWithdrawParam;
+        maxTotalHomeContractBalance = maxTotalHomeContractBalanceParam;
+        maxSingleDepositValue = maxSingleDepositValueParam;
     }
 
     /// Should be used to deposit money.
     function () public payable {
+        require(maxSingleDepositValue == 0 || msg.value <= maxSingleDepositValue);
+        // the value of `this.balance` in payable methods is increased
+        // by `msg.value` before the body of the payable method executes
+        require(maxTotalHomeContractBalance == 0 || this.balance <= maxTotalHomeContractBalance);
         Deposit(msg.sender, msg.value);
     }
 

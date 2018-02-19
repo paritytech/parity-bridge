@@ -1,6 +1,7 @@
 extern crate futures;
 #[macro_use]
 extern crate serde_json;
+extern crate ethereum_types;
 extern crate bridge;
 #[macro_use]
 extern crate tests;

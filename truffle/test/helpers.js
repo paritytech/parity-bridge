@@ -61,7 +61,7 @@ contract("Helpers", function(accounts) {
 
       return library.uintToString.estimateGas(1);
     }).then(function(result) {
-      console.log("estimated gas cost of Helpers.uintToString(1)", result);
+      console.log("estimated gas cost of Helpers.uintToString(1) =", result);
 
       return library.uintToString.call(1234)
     }).then(function(result) {
@@ -73,7 +73,7 @@ contract("Helpers", function(accounts) {
 
       return library.uintToString.estimateGas(12345678)
     }).then(function(result) {
-      console.log("estimated gas cost of Helpers.uintToString(12345678)", result);
+      console.log("estimated gas cost of Helpers.uintToString(12345678) =", result);
 
       return library.uintToString.call(web3.toBigNumber("131242344353464564564574574567456"));
     }).then(function(result) {
