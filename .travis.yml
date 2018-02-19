@@ -13,10 +13,7 @@ matrix:
         - sudo add-apt-repository ppa:ethereum/ethereum -y
         - sudo apt-get update -y
         - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - sudo snap install parity --stable
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -28,10 +25,7 @@ matrix:
         - sudo add-apt-repository ppa:ethereum/ethereum -y
         - sudo apt-get update -y
         - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - sudo snap install parity --stable
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -43,10 +37,7 @@ matrix:
         - sudo add-apt-repository ppa:ethereum/ethereum -y
         - sudo apt-get update -y
         - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - sudo snap install parity --stable
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
