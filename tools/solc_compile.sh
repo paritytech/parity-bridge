@@ -1,11 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-cd contracts
-solc --abi --bin -o . --overwrite bridge.sol
-
-for abi in *.abi; do
-	python -m json.tool "$abi" > tmp
-	cat tmp > "$abi"
-done
-
-rm tmp
+solc \
+  --abi \
+  --bin \
+  --optimize \
+  --output-dir compiled_contracts \
+  --overwrite \
+  contracts/bridge.sol
