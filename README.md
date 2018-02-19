@@ -134,7 +134,7 @@ all fields are required unless marked with *optional*.
 
 #### options
 
-- `estimated_gas_cost_of_withdraw` - how much gas a transaction to `HomeBridge.withdraw` consumes (**required**)
+- `estimated_gas_cost_of_withdraw` - the gas a transaction to `HomeBridge.withdraw` consumes
   - currently recommended value: `100000`
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
@@ -144,35 +144,39 @@ all fields are required unless marked with *optional*.
       if the bridge is faulty or compromised in any way!
   - set to `"0"` to disable.
   - recommended for test deployment: 10 ether = `"10000000000000000000"`
-  - must be a string because toml can't parse integers > max i64
-- `max_single_deposit_value` - reject deposits whose `msg.value` is higher than this value.
+  - must be a string because the `toml` crate can't parse numbers greater max i64
+    and this value frequently is greater
+- `max_single_deposit_value` - reject deposits whose `msg.value` is higher than this value
   - security feature
   - set to 0 to disable
   - recommended for test deployment: 1 ether = `"1000000000000000000"`
-  - must be a string because toml can't parse integers > max i64
+  - must be a string because the `toml` crate can't parse numbers greater max i64
+    and this value frequently is greater
 
 #### home options
 
-- `home.account` - authority address on the home
-- `home.ipc` - path to home parity ipc handle
-- `home.contract.bin` - path to the compiled bridge contract
-- `home.required_confirmations` - number of confirmation required to consider transaction final on home
+- `home.account` - address of this bridge authority on `home` chain
+- `home.ipc` - path to the ipc socket of a parity node that has `home.account` unlocked
+- `home.contract.bin` - path to the compiled `HomeBridge` contract
+- `home.required_confirmations` - number of confirmations required to consider transaction final on `home`
   - *optional,* default: **12**
-- `home.poll_interval` - specify how frequently home node should be polled for changes (
-  - in seconds
+- `home.poll_interval` - specify how frequently (seconds) `home.ipc` should be polled for changes
   - *optional,* default: **1**
-- `home.request_timeout` - specify request timeout
-  - in seconds
+- `home.request_timeout` - how many seconds to wait for `home.ipc` to respond before timing out
   - *optional,* default: **5**
 
 #### foreign options
 
-- `foreign.account` - authority address on the foreign (**required**)
-- `foreign.ipc` - path to foreign parity ipc handle (**required**)
-- `foreign.contract.bin` - path to the compiled bridge contract (**required**)
-- `foreign.required_confirmations` - number of confirmation required to consider transaction final on foreign (default: **12**)
-- `foreign.poll_interval` - specify how often home node should be polled for changes (in seconds, default: **1**)
-- `foreign.request_timeout` - specify request timeout (in seconds, default: **5**)
+- `foreign.account` - address of this bridge authority on `home` chain
+  - usually the same as `home.account`
+- `foreign.ipc` - path to the ipc socket of a parity node that has `foreign.account` unlocked
+- `foreign.contract.bin` - path to the compiled `ForeignBridge` contract
+- `foreign.required_confirmations` - number of confirmations required to consider transaction final on `foreign`
+  - *optional,* default: **12**
+- `foreign.poll_interval` - specify how frequently (seconds) `foreign.ipc` should be polled for changes
+  - *optional,* default: **1**
+- `foreign.request_timeout` - how many seconds to wait for `foreign.ipc` to respond before timing out
+  - *optional,* default: **5**
 
 #### authorities options
 
@@ -182,7 +186,7 @@ all fields are required unless marked with *optional*.
 #### transaction options
 
 `gas` and `gas_price` to use for the specific transactions.
-these are all optional and default to `0`.
+these are all **optional** and default to `0`.
 
 look into the `[transactions]` section in [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
 for recommendations on provided `gas`.
