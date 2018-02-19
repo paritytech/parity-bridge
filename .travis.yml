@@ -1,4 +1,3 @@
-sudo: false
 branches:
   only:
   - master
@@ -7,6 +6,8 @@ matrix:
   include:
     - language: rust
       rust: stable
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
       before_script:
@@ -19,6 +20,8 @@ matrix:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
       rust: beta
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
       before_script:
@@ -31,6 +34,8 @@ matrix:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
       rust: nightly
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
       before_script:
@@ -43,6 +48,7 @@ matrix:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: node_js
       node_js: node
+      sudo: false
       cache: yarn
       before_script:
         - cd truffle
