@@ -127,6 +127,8 @@ bridge --config config.toml --database db.toml
 
 ```toml
 estimated_gas_cost_of_withdraw = 100000
+max_total_home_contract_balance = "10000000000000000000"
+max_single_deposit_value = "1000000000000000000"
 
 [home]
 account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
@@ -163,6 +165,20 @@ foreign_deploy = { gas = 500000 }
   - currently recommended value: `100000`
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
+- `max_total_home_contract_balance` =
+  - reject deposits that would increase `HomeBridge.balance` beyond this value
+  - security feature:
+    - limits the total amount of home/mainnet ether that can be lost
+      if the bridge is faulty or compromised in any way!
+  - set to `"0"` to disable.
+  - recommended for test deployment: 10 ether = `"10000000000000000000"`
+  - must be a string because toml can't parse integers > max i64
+- `max_single_deposit_value`
+  - reject deposits whose `msg.value` is higher than this value.
+  - security feature
+  - set to 0 to disable
+  - recommended for test deployment: 1 ether = `"1000000000000000000"`
+  - must be a string because toml can't parse integers > max i64
 
 #### home options
 
