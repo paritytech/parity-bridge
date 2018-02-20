@@ -87,6 +87,10 @@ checks that enough authorities in its authority list have signed and
 finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
 to `recipient`.
 
+### deploy
+
+[read our deployment guide](deployment_guide.md)
+
 ### run truffle smart contract tests
 
 requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
