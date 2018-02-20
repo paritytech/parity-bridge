@@ -17,6 +17,8 @@ matrix:
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
       before_script:
+        - export PATH=/snap/bin:${PATH}
+        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -33,6 +35,8 @@ matrix:
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
       before_script:
+        - export PATH=/snap/bin:${PATH}
+        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -49,6 +53,8 @@ matrix:
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
       before_script:
+        - export PATH=/snap/bin:${PATH}
+        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
