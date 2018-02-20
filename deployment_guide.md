@@ -14,22 +14,20 @@ let's call this the **deploying authority**.
 if the process is done correctly the other non-deploying authorities don't have to trust
 the deploying authority.
 
-upfront you must know the addresses of the authorities (`authorities`)
+upfront you must know the addresses of all authorities (`authorities`)
 es well as the number of `required_signatures`
 
 ## initial deployment steps for any authority (deploying and non-deploying)
 
-given you are an authority and have the pk
+given you are an authority and 
 
-[build and install the bridge](#README.md#build)
+[build and install the bridge](README.md#build)
 
 install parity.
-we tested it with parity [1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
+we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
 though it should work with the latest stable release.
 
-### start the parity nodes
-
-account must be present
+### start parity node that connects
 
 start a parity node `home_node` that connects to `foreign`.
 
@@ -37,7 +35,7 @@ assuming `foreign = kovan`:
 
 ```
 parity \
-  --chain kovan
+  --chain {chain name or spec}
   --ipc-path foreign.ipc
   --no-jsonrpc
   --unlock {authority_address}
@@ -48,12 +46,14 @@ start a parity node that connects to `foreign`.
 that has the authority address unlocked.
 let's call it `foreign_node`
 
+repeat the same for `home`.
+
 ### configure the bridge
 
-take [integration-tests/bridge_config.toml](integration-tests/
+copy [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
 to a local `bridge_config.toml`.
 
-resolve all the `ACTION REQUIRED`s in the bridge file.
+within `bridge_config.toml` resolve/fill-in all the `ACTION REQUIRED`s.
 
 refer to [the documentation of config options](README.md#configuration).
 
@@ -61,7 +61,7 @@ refer to [the documentation of config options](README.md#configuration).
 
 [if you're a non-leading authority continue here](#further-deployment-steps-for-non-leading-authorities)
 
-## further deployment steps for the leading authority
+## further deployment steps for leading authority
 
 start the bridge by executing:
 
@@ -144,7 +144,7 @@ it should eventually print this line:
 INFO:bridge: Starting listening to events
 ```
 
-**congratulations! the bridge has successfully started and joined the other authorities
+**congratulations! the bridge has successfully started and joined the other authorities**
 
 ensure the process keeps running. else the bridge won't function.
 (outside the scope of this guide, your devops team knows what to do).
