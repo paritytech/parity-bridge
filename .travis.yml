@@ -11,14 +11,12 @@ matrix:
       cache: cargo
       fast_finish: false
       install:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -29,14 +27,12 @@ matrix:
       cache: cargo
       fast_finish: false
       install:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
@@ -47,14 +43,12 @@ matrix:
       cache: cargo
       fast_finish: false
       install:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
         - sudo apt-get --yes install snapd
         - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - parity --version
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
