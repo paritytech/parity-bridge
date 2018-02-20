@@ -19,7 +19,7 @@ es well as the number of `required_signatures`
 
 ## initial deployment steps for any authority (deploying and non-deploying)
 
-given you are an authority and 
+given you are authority with `authority_address`.
 
 [build and install the bridge](README.md#build)
 
@@ -27,26 +27,27 @@ install parity.
 we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
 though it should work with the latest stable release.
 
-### start parity node that connects
-
-start a parity node `home_node` that connects to `foreign`.
-
-assuming `foreign = kovan`:
+### start parity node that connects to `home`
 
 ```
 parity \
-  --chain {chain name or spec}
-  --ipc-path foreign.ipc
+  --chain {home chain name or spec}
+  --ipc-path home.ipc
   --no-jsonrpc
   --unlock {authority_address}
   --password {path to file containing password for authority address}
 ```
 
-start a parity node that connects to `foreign`.
-that has the authority address unlocked.
-let's call it `foreign_node`
+### start parity node that connects to `foreign`
 
-repeat the same for `home`.
+```
+parity \
+  --chain {foreign chain name or spec}
+  --ipc-path foreign.ipc
+  --no-jsonrpc
+  --unlock {authority_address}
+  --password {path to file containing password for authority address}
+```
 
 ### configure the bridge
 
@@ -55,7 +56,8 @@ to a local `bridge_config.toml`.
 
 within `bridge_config.toml` resolve/fill-in all the `ACTION REQUIRED`s.
 
-refer to [the documentation of config options](README.md#configuration).
+for help refer to the comments, [the config option documentation](README.md#configuration).
+or [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badges.gitter.im/paritytech/parity-bridge.svg)](https://gitter.im/paritytech/parity-bridge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [if you're the **leading** authority continue here](#further-deployment-steps-for-leading-authority)
 
