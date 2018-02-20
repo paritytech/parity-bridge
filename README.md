@@ -118,7 +118,7 @@ to install copy `../target/release/bridge` into a folder that's in your `$PATH`.
 ### run
 
 ```
-bridge --config config.toml --database db.toml
+env RUST_LOG=info bridge --config config.toml --database db.toml
 ```
 
 - `--config` - location of the configuration file. configuration file must exist
