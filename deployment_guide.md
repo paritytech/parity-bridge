@@ -27,27 +27,13 @@ install parity.
 we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
 though it should work with the latest stable release.
 
-### start parity node that connects to `home`
+start a parity node that connects to `home` chain, has `authority_address` unlocked
+and ipc enabled at `home.ipc`. TODO add instructions. please refer to
+the parity documentation for now.
 
-```
-parity \
-  --chain {home chain name or spec}
-  --ipc-path home.ipc
-  --no-jsonrpc
-  --unlock {authority_address}
-  --password {path to file containing password for authority address}
-```
-
-### start parity node that connects to `foreign`
-
-```
-parity \
-  --chain {foreign chain name or spec}
-  --ipc-path foreign.ipc
-  --no-jsonrpc
-  --unlock {authority_address}
-  --password {path to file containing password for authority address}
-```
+start a parity node that connects to `foreign` chain, has `authority_address` unlocked
+and ipc enabled at `foreign.ipc`. TODO add instructions. please refer to
+the parity documentation for now.
 
 ### configure the bridge
 
