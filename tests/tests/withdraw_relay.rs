@@ -10,7 +10,7 @@ extern crate ethabi;
 extern crate ethereum_types;
 extern crate rustc_hex;
 
-use ethereum_types::{U256, H256};
+use ethereum_types::H256;
 use rustc_hex::ToHex;
 
 use bridge::bridge::create_withdraw_relay;
