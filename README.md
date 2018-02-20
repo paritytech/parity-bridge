@@ -10,11 +10,16 @@
 [coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
-the bridge is an
+parity-bridge is currently an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 contract on one ethereum-based blockchain that is backed by ether on **another** ethereum-based blockchain.
 
-users can convert ether
+eventually parity-bridge will be able to pass arbitrary messages between
+two ethereum-based blockchains.
+in the future you'll be able to build the current ether-ERC20 bridge and any other
+cross-chain application on top of the message passing bridge.
+
+currently users can convert ether
 on one chain into the same amount of ERC20 tokens on the other and back.
 the bridge securely relays these conversions.
 
@@ -30,12 +35,6 @@ the users can withdraw their tokens worth of ether on the mainnet at any point.
 parity is using the bridge project to prototype
 the system that will eventually connect ethereum and other non-parachains to
 [polkadot](https://polkadot.io/).
-
-### next steps
-
-1. deploy to bridge **ethereum** and **kovan** (bridge authorities TBD)
-2. make the bridge work with contract-based dynamic validator sets
-3. after kovan hardfork 2: deploy to kovan again with dynamic validator set
 
 ### current functionality
 
@@ -88,6 +87,10 @@ checks that enough authorities in its authority list have signed and
 finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
 to `recipient`.
 
+### deploy
+
+[read our deployment guide](deployment_guide.md)
+
 ### run truffle smart contract tests
 
 requires `yarn` to be `$PATH`. [installation instructions](https://yarnpkg.com/lang/en/docs/install/)
@@ -115,7 +118,7 @@ to install copy `../target/release/bridge` into a folder that's in your `$PATH`.
 ### run
 
 ```
-bridge --config config.toml --database db.toml
+env RUST_LOG=info bridge --config config.toml --database db.toml
 ```
 
 - `--config` - location of the configuration file. configuration file must exist
@@ -160,6 +163,8 @@ all fields are required unless marked with *optional*.
 - `home.ipc` - path to the ipc socket of a parity node that has `home.account` unlocked
 - `home.contract.bin` - path to the compiled `HomeBridge` contract
     - required for initial deployment
+    - run [tools/compile_contracts.sh](tools/compile_contracts.sh) to compile contracts into dir `compiled_contracts`
+    - then set this to `compiled_contracts/HomeBridge.bin`
 - `home.required_confirmations` - number of confirmations required to consider transaction final on `home.ipc`
   - *optional,* default: **12**
 - `home.poll_interval` - specify how frequently (seconds) `home.ipc` should be polled for changes
@@ -174,6 +179,8 @@ all fields are required unless marked with *optional*.
 - `foreign.ipc` - path to the ipc socket of a parity node that has `foreign.account` unlocked
 - `foreign.contract.bin` - path to the compiled `ForeignBridge` contract
     - required for initial deployment
+    - run [tools/compile_contracts.sh](tools/compile_contracts.sh) to compile contracts into dir `compiled_contracts`
+    - then set this to `compiled_contracts/ForeignBridge.bin`
 - `foreign.required_confirmations` - number of confirmations required to consider transaction final on `foreign.ipc`
   - *optional,* default: **12**
 - `foreign.poll_interval` - specify how frequently (seconds) `foreign.ipc` should be polled for changes
@@ -194,16 +201,21 @@ these are all **optional** and default to `0`.
 look into the `[transactions]` section in [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
 for recommendations on provided `gas`.
 
+##### these happen on `home`:
+
 - `transaction.home_deploy.gas`
 - `transaction.home_deploy.gas_price`
+- `transaction.withdraw_relay.gas`
+- `transaction.withdraw_relay.gas_price`
+
+##### these happen on `foreign`:
+
 - `transaction.foreign_deploy.gas`
 - `transaction.foreign_deploy.gas_price`
 - `transaction.deposit_relay.gas`
 - `transaction.deposit_relay.gas_price`
 - `transaction.withdraw_confirm.gas`
 - `transaction.withdraw_confirm.gas_price`
-- `transaction.withdraw_relay.gas`
-- `transaction.withdraw_relay.gas_price`
 
 ### database file format
 

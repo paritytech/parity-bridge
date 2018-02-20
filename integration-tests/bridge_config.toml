@@ -1,32 +1,65 @@
+# READ THE CONFIG DOCUMENTATION AT:
+# https://github.com/paritytech/parity-bridge/#configuration
+
+# ACTION REQUIRED: for test deployment set this to `"100000"`
 estimated_gas_cost_of_withdraw = "0"
+
+# limits total balance on `home` and therefore total ether that could get lost
+# if the bridge is faulty or compromised in any way!
+# set to `"0"` to disable limit (not recommended at this point)
+# currently set to 10 ether.
 max_total_home_contract_balance = "10000000000000000000"
+
+# set to `"0"` to disable limit (not recommended at this point)
 max_single_deposit_value = "1000000000000000000"
 
 [home]
+# ACTION REQUIRED: set to your authority address
 account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
+# ACTION REQUIRED: set the the ipc socket of the parity node that has `home.account` unlocked
 ipc = "./home.ipc"
+# ACTION REQUIRED: for test deployment set this to 12
 required_confirmations = 0
 
 [home.contract]
+# READ THE CONFIG DOCUMENTATION AT:
+# https://github.com/paritytech/parity-bridge/#configuration
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
+# ACTION REQUIRED: set to your authority address
 account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
+# ACTION REQUIRED: set the the ipc socket of the parity node that has `foreign.account` unlocked
 ipc = "./foreign.ipc"
+# ACTION REQUIRED: for test deployment set this to 12
 required_confirmations = 0
 
 [foreign.contract]
+# READ THE CONFIG DOCUMENTATION AT:
+# https://github.com/paritytech/parity-bridge/#configuration
 bin = "../compiled_contracts/ForeignBridge.bin"
 
 [authorities]
+# ACTION REQUIRED: set this to the addresses of the authority list
 accounts = [
 	"0x00bd138abd70e2f00903268f3db08f2d25677c9e",
 ]
+# ACTION REQUIRED: set this to a (super-)majority of `authorities.accounts`
+# example: set to 3 for 5 authorities. set to 7 for 10 authorities
 required_signatures = 1
 
 [transactions]
-home_deploy = { gas = 1000000 }
-foreign_deploy = { gas = 3000000 }
-deposit_relay = { gas = 150000 }
-withdraw_relay = { gas = 100000 }
-withdraw_confirm = { gas = 300000 }
+# `gas` below should be good defaults for test deployment.
+# ACTION REQUIRED: you have to set `gas_price` for each transaction
+# if your authority can't do free transactions on the chain.
+# `gas_price` might need adjustment once in a while.
+
+# these happen on `home`:
+home_deploy = { gas = 1000000 , gas_price = 0 }
+withdraw_relay = { gas = 100000 , gas_price = 0 }
+
+# these happen on `foreign`:
+foreign_deploy = { gas = 3000000 , gas_price = 0 }
+deposit_relay = { gas = 150000 , gas_price = 0 }
+
+withdraw_confirm = { gas = 300000 , gas_price = 0 }

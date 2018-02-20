@@ -1,4 +1,3 @@
-sudo: false
 branches:
   only:
   - master
@@ -7,51 +6,55 @@ matrix:
   include:
     - language: rust
       rust: stable
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
+      install:
+        - sudo apt-get --yes install snapd
+        - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - export PATH=/snap/bin:${PATH}
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
       rust: beta
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
+      install:
+        - sudo apt-get --yes install snapd
+        - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - export PATH=/snap/bin:${PATH}
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
       rust: nightly
+      sudo: required
+      dist: trusty
       cache: cargo
       fast_finish: false
+      install:
+        - sudo apt-get --yes install snapd
+        - sudo snap install parity --stable
+        - sudo snap install solc --stable
+        - snap list
       before_script:
-        - sudo add-apt-repository ppa:ethereum/ethereum -y
-        - sudo apt-get update -y
-        - sudo apt-get install solc -y
-        - wget https://parity-downloads-mirror.parity.io/v1.8.6/x86_64-unknown-linux-gnu/parity
-        - chmod +x parity
-        - cp parity ${HOME}/bin
-        - export PATH=${HOME}/bin:${PATH}
+        - export PATH=/snap/bin:${PATH}
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: node_js
       node_js: node
+      sudo: false
       cache: yarn
       before_script:
         - cd truffle
