@@ -19,9 +19,9 @@ es well as the number of `required_signatures`
 
 ## initial deployment steps for any authority (deploying and non-deploying)
 
-given you are authority with `authority_address`.
+assuming you are authority with `authority_address`.
 
-[build and install the bridge](README.md#build)
+[build and install the bridge](https://github.com/paritytech/parity-bridge/#build)
 
 install parity.
 we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
@@ -37,12 +37,12 @@ the parity documentation for now.
 
 ### configure the bridge
 
-copy [integration-tests/bridge_config.toml](integration-tests/bridge_config.toml)
+copy [integration-tests/bridge_config.toml](https://github.com/paritytech/parity-bridge/blob/master/integration-tests/bridge_config.toml)
 to a local `bridge_config.toml`.
 
 within `bridge_config.toml` resolve/fill-in all the `ACTION REQUIRED`s.
 
-for help refer to the comments, [the config option documentation](README.md#configuration).
+for help refer to the comments, [the config option documentation](https://github.com/paritytech/parity-bridge/#configuration),
 or [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badges.gitter.im/paritytech/parity-bridge.svg)](https://gitter.im/paritytech/parity-bridge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [if you're the deploying authority continue here](#further-deployment-steps-for-deploying-authority)
@@ -87,7 +87,7 @@ checked_withdraw_confirm = 4
 
 (verify the contracts deployed to `home_contract_address` and
 `foreign_contract_address` using
-https://etherscan.io/verifyContract so the other authorities
+[https://etherscan.io/verifyContract](https://etherscan.io/verifyContract) so the other authorities
 can verify that you did an honest deploy without having to trust you.)
 
 give the `bridge.db` file to the other authorities.
@@ -117,7 +117,7 @@ checked_withdraw_confirm = 4
 
 (check that the contracts deployed to
 `home_contract_address` and `foreign_contract_address` are
-verified on https://etherscan.io and that the source code matches
+verified on [https://etherscan.io](https://etherscan.io) and that the source code matches
 the code in the repo.)
 
 start the bridge by executing:
