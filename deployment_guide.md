@@ -45,11 +45,11 @@ within `bridge_config.toml` resolve/fill-in all the `ACTION REQUIRED`s.
 for help refer to the comments, [the config option documentation](README.md#configuration).
 or [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badges.gitter.im/paritytech/parity-bridge.svg)](https://gitter.im/paritytech/parity-bridge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[if you're the **leading** authority continue here](#further-deployment-steps-for-leading-authority)
+[if you're the deploying authority continue here](#further-deployment-steps-for-deploying-authority)
 
-[if you're a non-leading authority continue here](#further-deployment-steps-for-non-leading-authorities)
+[if you're a non-deploying authority continue here](#further-deployment-steps-for-non-deploying-authorities)
 
-## further deployment steps for leading authority
+## further deployment steps for deploying authority
 
 start the bridge by executing:
 
@@ -99,9 +99,9 @@ ask the other authorities to follow **this guide you're reading**.
 ensure the process keeps running. else the bridge won't function.
 (outside the scope of this guide, your devops team knows what to do).
 
-## further deployment steps for non-leading authorities
+## further deployment steps for non-deploying authorities
 
-you MUST receive a `bridge.db` from the leading authority.
+you MUST receive a `bridge.db` from the deploying authority.
 
 it should look similar to this:
 
