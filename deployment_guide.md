@@ -1,5 +1,7 @@
 # deployment guide
 
+[paritytech/parity-bridge](https://github.com/paritytech/parity-bridge)
+
 this guide assumes that you are one of the authorities of
 a PoA chain `foreign` and want to use the bridge to connect
 `foreign` to another chain `home`.
