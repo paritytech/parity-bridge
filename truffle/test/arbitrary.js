@@ -43,21 +43,12 @@ contract('MainBridge', function(accounts) {
 		sideExample = instance;
 		console.log("SideExample deployed");
 
-		return mainExample.sig.estimateGas();
-	}).then(function(gas) {
-		console.log("estimated gas for MainExample.sig =", gas);
-
-		return mainExample.sig();
-	}).then(function(result) {
-		console.log("sig =", result);
-
 		return mainExample.something.estimateGas(sideExample.address, 2, 32);
 	}).then(function(gas) {
 		console.log("estimated gas for MainExample.something =", gas);
 
 		return mainExample.something(sideExample.address, 2, 32, {
 			from: user,
-			gas: 4000000,
 		})
 	}).then(function(result) {
 		console.log("something called. result =", result);
