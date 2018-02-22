@@ -6,4 +6,4 @@ solc \
   --optimize \
   --output-dir compiled_contracts \
   --overwrite \
-  contracts/bridge.sol
+  contracts/*
