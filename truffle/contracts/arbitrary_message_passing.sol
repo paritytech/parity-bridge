@@ -26,10 +26,14 @@ contract MainExample {
 	}
 
     function something(address _receiver, uint256 a, uint256 b) public {
+		// need to build `data` manually for now.
+		// there will be a handy function for it in the future:
+		// https://github.com/ethereum/solidity/issues/1707
         var func_sig = bytes4(keccak256("times(uint256,uint256)"));
 		var data = new bytes(68);
 
 		assembly {
+			// skip first 32 bytes which encode length of `bytes data`
 			mstore(add(data, 32), func_sig)
 			mstore(add(data, 36), a)
 			mstore(add(data, 68), b)
