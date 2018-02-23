@@ -50,3 +50,10 @@ contract SideExample {
         Times(a, b, a * b);
     }
 }
+
+/// to give each sender a unique address
+contract AddressProxy {
+  function () public {
+
+  }
+}
