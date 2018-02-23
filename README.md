@@ -14,6 +14,10 @@ parity-bridge is currently an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
 contract on one ethereum-based blockchain that is backed by ether on **another** ethereum-based blockchain.
 
+[read me if you want to use the deployed bridge](user_guide.md)
+
+[read me if you want to deploy the bridge yourself](deployment_guide.md)
+
 eventually parity-bridge will be able to pass arbitrary messages between
 two ethereum-based blockchains.
 in the future you'll be able to build the current ether-ERC20 bridge and any other
@@ -86,10 +90,6 @@ and complete the withdraw.
 checks that enough authorities in its authority list have signed and
 finally transfers `value` ether ([minus the relay gas costs](#recipient-pays-relay-cost-to-relaying-authority))
 to `recipient`.
-
-### deploy
-
-[read our deployment guide](deployment_guide.md)
 
 ### run truffle smart contract tests
 
