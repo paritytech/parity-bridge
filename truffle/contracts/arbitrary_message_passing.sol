@@ -43,7 +43,7 @@ contract MainExample {
             mstore(add(data, 68), b)
         }
 
-        MainBridge(main_bridge_address).sendToSide(_receiver, data);
+        MainBridge(mainBridgeAddress).sendToSide(_receiver, data);
     }
 }
 
