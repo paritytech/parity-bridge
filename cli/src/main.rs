@@ -21,18 +21,6 @@ use bridge::bridge::{create_bridge, create_deploy, Deployed};
 use bridge::config::Config;
 use bridge::error::Error;
 
-const USAGE: &'static str = r#"
-Ethereum-Kovan bridge.
-    Copyright 2017 Parity Technologies (UK) Limited
-
-Usage:
-    bridge --config <config> --database <database>
-    bridge -h | --help
-
-Options:
-    -h, --help           Display help message and exit.
-"#;
-
 #[derive(Debug, Deserialize)]
 pub struct Args {
 	arg_config: PathBuf,
@@ -55,8 +43,23 @@ fn print_err(err: Error) {
 }
 
 fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item=S>, S: AsRef<str> {
+    let usage = format!(
+r#"
+Parity-bridge
+    Copyright 2017 Parity Technologies (UK) Limited
+    Version: {}
+    Commit: {}
+
+Usage:
+    bridge --config <config> --database <database>
+    bridge -h | --help
+
+Options:
+    -h, --help           Display help message and exit.
+"#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
+
 	info!(target: "bridge", "Parsing cli arguments");
-	let args: Args = Docopt::new(USAGE)
+	let args: Args = Docopt::new(usage)
 		.and_then(|d| d.argv(command).deserialize()).map_err(|e| e.to_string())?;
 
 	info!(target: "bridge", "Loading config");
