@@ -25,9 +25,9 @@ impl MessageToMainnet {
 
 		Self {
 			recipient: bytes[0..20].into(),
-			value: U256::from_little_endian(&bytes[20..52]),
+			value: U256::from_big_endian(&bytes[20..52]),
 			sidenet_transaction_hash: bytes[52..84].into(),
-			mainnet_gas_price: U256::from_little_endian(&bytes[84..MESSAGE_LENGTH]),
+			mainnet_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
 		}
 	}
 
@@ -53,9 +53,9 @@ impl MessageToMainnet {
 	pub fn to_bytes(&self) -> Vec<u8> {
 		let mut result = vec![0u8; MESSAGE_LENGTH];
 		result[0..20].copy_from_slice(&self.recipient.0[..]);
-		self.value.to_little_endian(&mut result[20..52]);
+		self.value.to_big_endian(&mut result[20..52]);
 		result[52..84].copy_from_slice(&self.sidenet_transaction_hash.0[..]);
-		self.mainnet_gas_price.to_little_endian(&mut result[84..MESSAGE_LENGTH]);
+		self.mainnet_gas_price.to_big_endian(&mut result[84..MESSAGE_LENGTH]);
 		return result;
 	}
 
