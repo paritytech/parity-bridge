@@ -25,9 +25,9 @@ impl MessageToMainnet {
 
 		Self {
 			recipient: bytes[0..20].into(),
-			value: U256::from_little_endian(&bytes[20..52]),
+			value: U256::from_big_endian(&bytes[20..52]),
 			sidenet_transaction_hash: bytes[52..84].into(),
-			mainnet_gas_price: U256::from_little_endian(&bytes[84..MESSAGE_LENGTH]),
+			mainnet_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
 		}
 	}
 
@@ -53,9 +53,9 @@ impl MessageToMainnet {
 	pub fn to_bytes(&self) -> Vec<u8> {
 		let mut result = vec![0u8; MESSAGE_LENGTH];
 		result[0..20].copy_from_slice(&self.recipient.0[..]);
-		self.value.to_little_endian(&mut result[20..52]);
+		self.value.to_big_endian(&mut result[20..52]);
 		result[52..84].copy_from_slice(&self.sidenet_transaction_hash.0[..]);
-		self.mainnet_gas_price.to_little_endian(&mut result[84..MESSAGE_LENGTH]);
+		self.mainnet_gas_price.to_big_endian(&mut result[84..MESSAGE_LENGTH]);
 		return result;
 	}
 
@@ -69,6 +69,24 @@ impl MessageToMainnet {
 mod test {
 	use quickcheck::TestResult;
 	use super::*;
+	use rustc_hex::FromHex;
+
+	#[test]
+	fn test_message_to_mainnet_to_bytes() {
+		let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0ce".into();
+		let value = U256::from_dec_str("3800000000000000").unwrap();
+		let sidenet_transaction_hash: H256 = "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
+		let mainnet_gas_price = U256::from_dec_str("8000000000").unwrap();
+
+		let message = MessageToMainnet {
+			recipient,
+			value,
+			sidenet_transaction_hash,
+			mainnet_gas_price
+		};
+
+		assert_eq!(message.to_bytes(), "eac4a655451e159313c3641e29824e77d6fcb0ce000000000000000000000000000000000000000000000000000d80147225800075ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e200000000000000000000000000000000000000000000000000000001dcd65000".from_hex().unwrap())
+	}
 
 	quickcheck! {
 		fn quickcheck_message_to_mainnet_roundtrips_to_bytes(
