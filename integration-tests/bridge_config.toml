@@ -10,7 +10,9 @@ estimated_gas_cost_of_withdraw = "0"
 # currently set to 10 ether.
 max_total_home_contract_balance = "10000000000000000000"
 
+# limit `msg.value` for a single deposit into the home contract.
 # set to `"0"` to disable limit (not recommended at this point)
+# currently set to 1 ether.
 max_single_deposit_value = "1000000000000000000"
 
 [home]
