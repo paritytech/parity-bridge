@@ -69,6 +69,24 @@ impl MessageToMainnet {
 mod test {
 	use quickcheck::TestResult;
 	use super::*;
+	use rustc_hex::FromHex;
+
+	#[test]
+	fn test_message_to_mainnet_to_bytes() {
+		let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0ce".into();
+		let value = U256::from_dec_str("3800000000000000").unwrap();
+		let sidenet_transaction_hash: H256 = "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
+		let mainnet_gas_price = U256::from_dec_str("8000000000").unwrap();
+
+		let message = MessageToMainnet {
+			recipient,
+			value,
+			sidenet_transaction_hash,
+			mainnet_gas_price
+		};
+
+		assert_eq!(message.to_bytes(), "eac4a655451e159313c3641e29824e77d6fcb0ce000000000000000000000000000000000000000000000000000d80147225800075ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e200000000000000000000000000000000000000000000000000000001dcd65000".from_hex().unwrap())
+	}
 
 	quickcheck! {
 		fn quickcheck_message_to_mainnet_roundtrips_to_bytes(
