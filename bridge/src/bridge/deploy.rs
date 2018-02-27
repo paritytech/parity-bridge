@@ -127,6 +127,7 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						&home_contract_address,
 						&home_receipt.transaction_hash,
 						"HomeBridge",
+						include_str!("../../../contracts/bridge.sol"),
 						include_str!("../../../compiled_contracts/HomeBridge.abi"),
 						include_str!("../../../compiled_contracts/HomeBridge.bin"),
 						&home_data.to_hex()
@@ -137,6 +138,7 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						&foreign_contract_address,
 						&foreign_receipt.transaction_hash,
 						"ForeignBridge",
+						include_str!("../../../contracts/bridge.sol"),
 						include_str!("../../../compiled_contracts/ForeignBridge.abi"),
 						include_str!("../../../compiled_contracts/ForeignBridge.bin"),
 						&foreign_data.to_hex()
@@ -178,6 +180,7 @@ pub fn write_deployment_info<P: AsRef<Path>>(
 	contract_address: &H160,
 	transaction_hash: &H256,
 	contract_name: &str,
+	contract_source: &str,
 	abi: &str,
 	bytecode_hex: &str,
 	deployed_bytecode_hex: &str,
@@ -206,6 +209,9 @@ pub fn write_deployment_info<P: AsRef<Path>>(
 
 	let mut file = File::create(dir.join("contract_address"))?;
 	file.write_all(contract_address.to_hex().as_bytes())?;
+
+	let mut file = File::create(dir.join("contract_source.sol"))?;
+	file.write_all(contract_source.as_bytes())?;
 
 	let mut file = File::create(dir.join("transaction_hash"))?;
 	file.write_all(transaction_hash.to_hex().as_bytes())?;
