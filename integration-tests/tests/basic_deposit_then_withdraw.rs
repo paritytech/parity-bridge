@@ -186,7 +186,7 @@ fn test_basic_deposit_then_withdraw() {
 	}, None)).unwrap();
 	assert_eq!(
 		home.functions().estimated_gas_cost_of_withdraw().output(response.0.as_slice()).unwrap(),
-		U256::from(100000),
+		U256::from(200000),
 		"estimated gas cost of withdraw must be correct");
 
 	println!("\ngive authority some funds to do relay later\n");
@@ -301,7 +301,7 @@ fn test_basic_deposit_then_withdraw() {
 	// test that withdraw completed
 	let balance = event_loop.run(home_eth.balance(receiver_address.into(), None)).unwrap();
 	println!("balance = {}", balance);
-	assert_eq!(balance, web3::types::U256::from(900000000));
+	assert_eq!(balance, web3::types::U256::from(800000000));
 
 	// ensure home contract balance has decreased
 	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();

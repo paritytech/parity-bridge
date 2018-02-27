@@ -1,8 +1,7 @@
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
 
-# ACTION REQUIRED: for test deployment set this to `"100000"`
-estimated_gas_cost_of_withdraw = "100000"
+estimated_gas_cost_of_withdraw = "200000"
 
 # limits total balance on `home` and therefore total ether that could get lost
 # if the bridge is faulty or compromised in any way!
