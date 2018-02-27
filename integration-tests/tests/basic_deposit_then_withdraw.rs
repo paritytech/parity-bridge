@@ -305,7 +305,7 @@ fn test_basic_deposit_then_withdraw() {
 
 	// ensure home contract balance has decreased
 	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
-	assert_eq!(balance, web3::types::U256::from(100000000));
+	assert_eq!(balance, web3::types::U256::from(0));
 
 	println!("\nconfirmed that withdraw reached home\n");
 
