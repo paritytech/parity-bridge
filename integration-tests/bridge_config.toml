@@ -58,7 +58,7 @@ required_signatures = 1
 
 # these happen on `home`:
 home_deploy = { gas = 1000000 , gas_price = 0 }
-withdraw_relay = { gas = 100000 , gas_price = 0 }
+withdraw_relay = { gas = 200000 , gas_price = 0 }
 
 # these happen on `foreign`:
 foreign_deploy = { gas = 3000000 , gas_price = 0 }
