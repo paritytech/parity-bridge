@@ -60,10 +60,6 @@ fn parity_foreign_command() -> Command {
 	command
 }
 
-fn address_from_str(string: &'static str) -> web3::types::Address {
-	web3::types::Address::from(&Address::from(string).0[..])
-}
-
 #[test]
 fn test_basic_deposit_then_withdraw() {
 	if Path::new(TMP_PATH).exists() {
@@ -98,9 +94,12 @@ fn test_basic_deposit_then_withdraw() {
 	// source: https://paritytech.github.io/wiki/Private-development-chain.html
 	let user_address = "0x00a329c0648769a73afac7f9381e08fb43dbea72";
 
+	let receiver_address = "0x05b344a728ebb2219459a008271264aef16adbc1";
+
 	let authority_address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e";
 
 	// create authority account on home
+	// this is currently not supported in web3 crate so we have to use curl
 	let exit_status = Command::new("curl")
 		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
 		.arg("-H").arg("Content-Type: application/json")
@@ -112,6 +111,7 @@ fn test_basic_deposit_then_withdraw() {
 	// TODO [snd] assert that created address matches authority_address
 
 	// create authority account on foreign
+	// this is currently not supported in web3 crate so we have to use curl
 	let exit_status = Command::new("curl")
 		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
 		.arg("-H").arg("Content-Type: application/json")
@@ -165,70 +165,109 @@ fn test_basic_deposit_then_withdraw() {
 	let home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 	let foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 
-	println!("\nuser deposits ether into HomeBridge\n");
-
-	// TODO [snd] use rpc client here instead of curl
-	let exit_status = Command::new("curl")
-		.arg("--data").arg(format!(r#"{{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[{{
-			"from": "{}",
-			"to": "{}",
-			"value": "0x186a0"
-		}}],"id":0}}"#, user_address, home_contract_address))
-		.arg("-H").arg("Content-Type: application/json")
-		.arg("-X").arg("POST")
-		.arg("localhost:8550")
-		.status()
-		.expect("failed to deposit into HomeBridge");
-	assert!(exit_status.success());
-
-	println!("\ndeposit into home sent. give it plenty of time to get mined and relayed\n");
-	thread::sleep(Duration::from_millis(10000));
-
 	// connect to foreign and home via IPC
 	let mut event_loop = Core::new().unwrap();
 	let foreign_transport = Ipc::with_event_loop("foreign.ipc", &event_loop.handle())
 		.expect("failed to connect to foreign.ipc");
 	let foreign = bridge::contracts::foreign::ForeignBridge::default();
-	let foreign_eth = web3::api::Eth::new(foreign_transport);
+	let foreign_eth = web3::api::Eth::new(foreign_transport.clone());
+	let home = bridge::contracts::home::HomeBridge::default();
 	let home_transport = Ipc::with_event_loop("home.ipc", &event_loop.handle())
 		.expect("failed to connect to home.ipc");
-	let home_eth = web3::api::Eth::new(home_transport);
+	let home_eth = web3::api::Eth::new(home_transport.clone());
 
-	// totalSupply on ForeignBridge should have increased
-	let total_supply_payload = foreign.functions().total_supply().input();
-
-	let future = foreign_eth.call(web3::types::CallRequest{
+	let response = event_loop.run(home_eth.call(web3::types::CallRequest{
 		from: None,
-		to: address_from_str(foreign_contract_address),
+		to: home_contract_address.into(),
 		gas: None,
 		gas_price: None,
 		value: None,
-		data: Some(web3::types::Bytes(total_supply_payload)),
-	}, None);
-
-	let response = event_loop.run(future).unwrap();
+		data: Some(web3::types::Bytes(home.functions().estimated_gas_cost_of_withdraw().input())),
+	}, None)).unwrap();
 	assert_eq!(
-		U256::from(response.0.as_slice()),
-		U256::from(100000),
+		home.functions().estimated_gas_cost_of_withdraw().output(response.0.as_slice()).unwrap(),
+		U256::from(200000),
+		"estimated gas cost of withdraw must be correct");
+
+	println!("\ngive authority some funds to do relay later\n");
+
+	let balance = event_loop.run(home_eth.balance(authority_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(0));
+	event_loop.run(web3::confirm::send_transaction_with_confirmation(
+		&home_transport,
+		web3::types::TransactionRequest{
+			from: user_address.into(),
+			to: Some(authority_address.into()),
+			gas: None,
+			gas_price: Some(10.into()),
+			value: Some(1000000000.into()),
+			data: None,
+			condition: None,
+			nonce: None,
+		},
+		Duration::from_secs(1),
+		0
+	)).unwrap();
+	let balance = event_loop.run(home_eth.balance(authority_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(1000000000));
+
+	// ensure receiver has 0 balance initially
+	let balance = event_loop.run(home_eth.balance(receiver_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(0));
+
+	// ensure home contract has 0 balance initially
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(0));
+
+	println!("\nuser deposits ether into HomeBridge\n");
+
+	event_loop.run(web3::confirm::send_transaction_with_confirmation(
+		&home_transport,
+		web3::types::TransactionRequest{
+			from: user_address.into(),
+			to: Some(home_contract_address.into()),
+			gas: None,
+			gas_price: None,
+			value: Some(1000000000.into()),
+			data: None,
+			condition: None,
+			nonce: None,
+		},
+		Duration::from_secs(1),
+		0
+	)).unwrap();
+
+	// ensure home contract balance has increased
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(1000000000));
+
+	println!("\ndeposit into home complete. give it plenty of time to get mined and relayed\n");
+	thread::sleep(Duration::from_millis(10000));
+
+	let response = event_loop.run(foreign_eth.call(web3::types::CallRequest{
+		from: None,
+		to: foreign_contract_address.into(),
+		gas: None,
+		gas_price: None,
+		value: None,
+		data: Some(web3::types::Bytes(foreign.functions().total_supply().input())),
+	}, None)).unwrap();
+	assert_eq!(
+		foreign.functions().total_supply().output(response.0.as_slice()).unwrap(),
+		U256::from(1000000000),
 		"totalSupply on ForeignBridge should have increased");
 
-	// balance on ForeignBridge should have increased
-	let balance_payload = foreign.functions().balance_of().input(Address::from(user_address));
-
-	let future = foreign_eth.call(web3::types::CallRequest{
+	let response = event_loop.run(foreign_eth.call(web3::types::CallRequest{
 		from: None,
-		to: address_from_str(foreign_contract_address),
+		to: foreign_contract_address.into(),
 		gas: None,
 		gas_price: None,
 		value: None,
-		data: Some(web3::types::Bytes(balance_payload)),
-	}, None);
-
-	let response = event_loop.run(future).unwrap();
-	let balance = U256::from(response.0.as_slice());
+		data: Some(web3::types::Bytes(foreign.functions().balance_of().input(Address::from(user_address)))),
+	}, None)).unwrap();
 	assert_eq!(
-		balance,
-		U256::from(100000),
+		foreign.functions().balance_of().output(response.0.as_slice()).unwrap(),
+		U256::from(1000000000),
 		"balance on ForeignBridge should have increased");
 
 	println!("\nconfirmed that deposit reached foreign\n");
@@ -237,29 +276,36 @@ fn test_basic_deposit_then_withdraw() {
 	let transfer_payload = foreign.functions()
 		.transfer_home_via_relay()
 		.input(
-			Address::from(user_address),
-			U256::from(100000),
-			U256::from(0));
-	let future = foreign_eth.send_transaction(web3::types::TransactionRequest{
-		from: address_from_str(user_address),
-		to: Some(address_from_str(foreign_contract_address)),
-		gas: None,
-		gas_price: None,
-		value: None,
-		data: Some(web3::types::Bytes(transfer_payload)),
-		condition: None,
-		nonce: None,
-	});
-	event_loop.run(future).unwrap();
+			Address::from(receiver_address),
+			U256::from(1000000000),
+			U256::from(1000));
+	event_loop.run(web3::confirm::send_transaction_with_confirmation(
+		&foreign_transport,
+		web3::types::TransactionRequest{
+			from: user_address.into(),
+			to: Some(foreign_contract_address.into()),
+			gas: None,
+			gas_price: None,
+			value: None,
+			data: Some(web3::types::Bytes(transfer_payload)),
+			condition: None,
+			nonce: None,
+		},
+		Duration::from_secs(1),
+		0
+	)).unwrap();
 
 	println!("\nForeignBridge.transferHomeViaRelay transaction sent. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
 
 	// test that withdraw completed
-	let future = home_eth.balance(address_from_str(user_address), None);
-	println!("waiting for future");
-	let balance = event_loop.run(future).unwrap();
-	assert!(balance > web3::types::U256::from(0));
+	let balance = event_loop.run(home_eth.balance(receiver_address.into(), None)).unwrap();
+	println!("balance = {}", balance);
+	assert_eq!(balance, web3::types::U256::from(800000000));
+
+	// ensure home contract balance has decreased
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(0));
 
 	println!("\nconfirmed that withdraw reached home\n");
 
