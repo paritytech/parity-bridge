@@ -138,7 +138,7 @@ all fields are required unless marked with *optional*.
 #### options
 
 - `estimated_gas_cost_of_withdraw` - an upper bound on the gas a transaction to `HomeBridge.withdraw` consumes
-  - currently recommended value: `"100000"`
+  - currently recommended value: `"200000"`
   - must be a string because the `toml` crate can't parse numbers greater max i64
   - run [tools/estimate_gas_costs.sh](tools/estimate_gas_costs.sh) to compute an estimate
   - see [recipient pays relay cost to relaying authority](#recipient-pays-relay-cost-to-relaying-authority) for why this config option is needed
