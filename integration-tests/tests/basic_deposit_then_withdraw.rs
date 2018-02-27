@@ -215,6 +215,10 @@ fn test_basic_deposit_then_withdraw() {
 	let balance = event_loop.run(home_eth.balance(receiver_address.into(), None)).unwrap();
 	assert_eq!(balance, web3::types::U256::from(0));
 
+	// ensure home contract has 0 balance initially
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(0));
+
 	println!("\nuser deposits ether into HomeBridge\n");
 
 	event_loop.run(web3::confirm::send_transaction_with_confirmation(
@@ -232,6 +236,10 @@ fn test_basic_deposit_then_withdraw() {
 		Duration::from_secs(1),
 		0
 	)).unwrap();
+
+	// ensure home contract balance has increased
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(1000000000));
 
 	println!("\ndeposit into home complete. give it plenty of time to get mined and relayed\n");
 	thread::sleep(Duration::from_millis(10000));
@@ -294,6 +302,10 @@ fn test_basic_deposit_then_withdraw() {
 	let balance = event_loop.run(home_eth.balance(receiver_address.into(), None)).unwrap();
 	println!("balance = {}", balance);
 	assert_eq!(balance, web3::types::U256::from(900000000));
+
+	// ensure home contract balance has decreased
+	let balance = event_loop.run(home_eth.balance(home_contract_address.into(), None)).unwrap();
+	assert_eq!(balance, web3::types::U256::from(100000000));
 
 	println!("\nconfirmed that withdraw reached home\n");
 
