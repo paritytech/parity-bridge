@@ -117,11 +117,11 @@ library MessageSigningTest {
 
 library Message {
     // layout of message :: bytes:
-    // offset  0: 32 bytes :: uint256 (little endian) - message length
+    // offset  0: 32 bytes :: uint256 (big endian) - message length
     // offset 32: 20 bytes :: address - recipient address
-    // offset 52: 32 bytes :: uint256 (little endian) - value
+    // offset 52: 32 bytes :: uint256 (big endian) - value
     // offset 84: 32 bytes :: bytes32 - transaction hash
-    // offset 116: 32 bytes :: uint256 (little endian) - home gas price
+    // offset 116: 32 bytes :: uint256 (big endian) - home gas price
 
     // bytes 1 to 32 are 0 because message length is stored as little endian.
     // mload always reads 32 bytes.
