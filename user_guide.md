@@ -8,7 +8,7 @@ a bridge is deployed for testing purposes between ropsten and kovan.
 (is an ERC20 token: )
 
 this guide assumes you use [metamask](https://metamask.io/)
-and have `account1_address`, `account2_address` and `account3_address` which initially have 0 ether
+and in metamask have three accounts `address1`, `address2` and `address3` which initially have 0 ether
 on ropsten and kovan.
 
 ## getting ropsten test ether
@@ -30,25 +30,40 @@ a transaction that sends kovan test ether to `account1_address`
 
 ## ropsten ether -> kovan tokens
 
-send some ropsten ether `value` from `account1_address` to `0xb06807115caa6d0086b844f7ffdf9b3df92257be`.
+choose `ropsten` and `account1` in metamask.
 
-transaction should show up on https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be
+send `0.1` ether (`100000000000000000` wei) to the `HomeBridge`
+contract at `0xb06807115caa6d0086b844f7ffdf9b3df92257be`
 
-*the bridge is now relaying the deposit to kovan*
+the transaction should show up on https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be
+
+[what if the transaction is reverted?](troubleshooting_guide.md)
+
+**the bridge is now relaying the deposit to kovan**
 
 after ~1 minute a transaction should show up on
 https://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388
 
-query balance for your `address` to verify you've received `value`:
-https://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388#readContract
+*TODO what if the transaction doesn't show up?*
+
+## check your token balance on kovan
+
+visit https://kovan.etherscan.io/address/{insert-address1-here}#tokentxns
+
+on the bottom you should see a recent (last couple seconds) transfer
+from `0x0000000000000000000000000000000000000000` (minting)
+over `100000000000000000` tokens.
+
+in the `View Tokens` dropdown to the right you should
+see `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388` and `100000000000000000`.
+
+*TODO what if i don't?*
 
 ## transfer ERC20 tokens on kovan to another address
 
-https://mycrypto.com/#send-transaction
+choose `kovan` and `address1` in metamask
 
-choose `kovan` and `account1_address` in metamask
-
-visit https://mycrypto.com/#send-transaction
+visit https://mycrypto.com/#send-transaction and choose `MetaMask`
 
 in the bottom right click on `Add Custom Token`
 
@@ -58,27 +73,14 @@ fill in
 `Decimals`: `18`
 and click `Save`
 
-fill in the main `Send` form:
-`To Address`: `address2`
-`Amount to Send`: `TODO` and choose `BridgedEther` in the dropdown!
+now fill in the main `Send` form:
+`To Address`: `{address2}`
+`Amount to Send`: `100000000000000000` and
+choose `BridgedEther` in the dropdown!
 
 click `Generate Transaction`
 
-
-
-use
-https://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388
-as you would use any ERC20 token
-
-if you have metamask installed
-you can use 
-
-the ABI is here:
-http://api-kovan.etherscan.io/api?module=contract&action=getabi&address=0x93fbabdabd72c3fb0cd39fc768d72522fcd90388&format=raw
-
-add custom token
-
-https://kovan.etherscan.io/token/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388
+click `Send Transaction`
 
 ## transfer your bridged ether tokens back to ropsten ether
 
