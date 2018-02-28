@@ -1,19 +1,28 @@
-# using an already deployed bridge system
+# using the ropsten-kovan test deployment
 
-a bridge is deployed for testing purposes between ropsten and kovan.
+a test-bridge is deployed ropsten and kovan
 
-`HomeBridge` contract at [0xb06807115caa6d0086b844f7ffdf9b3df92257be](https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be) on ropsten
+ropsten: `HomeBridge` contract at [0xb06807115caa6d0086b844f7ffdf9b3df92257be](https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be)
 
-`ForeignBridge` contract at [0x93fbabdabd72c3fb0cd39fc768d72522fcd90388](http://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388) on kovan
-(is an ERC20 token: )
+kovan: `ForeignBridge` contract at [0x93fbabdabd72c3fb0cd39fc768d72522fcd90388](http://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388)
+
+`ForeignBridge` is an ERC20 token
 
 this guide assumes you use [metamask](https://metamask.io/)
 and in metamask have three accounts `address1`, `address2` and `address3` which initially have 0 ether
 on ropsten and kovan.
 
-## getting ropsten test ether
+in this guide we will:
 
-in metamask set network to `ropsten` and choose `account1_address`
+1. use the bridge to transfer ropsten ether into tokens on kovan
+2. transfer tokens around on kovan
+3. use the bridge to transfer tokens on kovan back into ether on ropsten
+
+before playing around with the bridge we need some test ether on both testnets.
+
+## getting ropsten test ether for `address1`
+
+in metamask set network to `ropsten` and choose `address1`
 
 visit https://faucet.metamask.io/
 
@@ -23,10 +32,10 @@ after a couple of seconds your ether should show up in metamask!
 
 ## getting kovan test ether
 
-post `account2_address` (not `account1_address`) in https://gitter.im/kovan-testnet/faucet.
+post `address2` (not `address1`) in https://gitter.im/kovan-testnet/faucet.
 
 usually within a couple of minutes someone will respond with the hash of
-a transaction that sends kovan test ether to `account1_address`
+a transaction that sends kovan test ether to `address2`
 
 ## ropsten ether -> kovan tokens
 
@@ -84,24 +93,32 @@ click `Send Transaction`
 
 ## transfer your bridged ether tokens back to ropsten ether
 
+choose `kovan` and `address2` in metamask
+
 open [https://mycrypto.com/#contracts](https://mycrypto.com/#contracts)
 
+fill in form:
+`Contact Address`: `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
+`ABI / JSON Interface`: paste contents of this url
+http://api-kovan.etherscan.io/api?module=contract&action=getabi&address=0x93fbabdabd72c3fb0cd39fc768d72522fcd90388&format=raw
 
 click `Access`
 
-paste into `address` field:
-`0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
+now down in the new `Read / Write Contract` section:
 
-paste contents of this url into `ABI` field:
-http://api-kovan.etherscan.io/api?module=contract&action=getabi&address=0x93fbabdabd72c3fb0cd39fc768d72522fcd90388&format=raw
+in the `Select a function` dropdown select `transferHomeViaRelay`
 
-in the dropdown select function `transferHomeViaRelay`.
+fill in form:
+`recipient`: `{address3}`
+`value`: `100000000000000000`
+`homeGasPrice` use `100000000000` (100 shannon)
 
-fill in
-`recipient`: `address3`
+choose `Metamask` to access your wallet
 
-choose an address you control as  `recipient`
+click `WRITE`
 
-fill in `value`
+## confirm that you received ropsten ether on `address3`
 
-for `homeGasPrice` use `100000000000` (100 shannon)
+choose `ropsten` and `address3` in metamask
+
+balance should show 
