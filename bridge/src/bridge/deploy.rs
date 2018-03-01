@@ -104,6 +104,7 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 							self.app.config.foreign.required_confirmations
 						);
 
+						info!("sent contract deployment txs. waiting for confirmation...");
 						DeployState::Deploying {
 							home_data: home_data,
 							foreign_data: foreign_data,
@@ -118,12 +119,17 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 					ref foreign_data
 				} => {
 					let (home_receipt, foreign_receipt) = try_ready!(future.poll().map_err(ErrorKind::Web3));
+					info!("contract deployments complete");
 
 					let home_contract_address = home_receipt.contract_address.expect("contract creation receipt must have an address; qed");
+					info!("HomeBridge deployed to: {:?}", home_contract_address);
 					let foreign_contract_address = foreign_receipt.contract_address.expect("contract creation receipt must have an address; qed");
+					info!("ForeignBridge deployed to: {:?}", foreign_contract_address);
 
+					let home_deployment_info_dir = format!("deployment-home-{}", home_contract_address.to_hex());
+					info!("writing home deployment info to {}", home_deployment_info_dir);
 					write_deployment_info(
-						format!("deployment-home-{}", home_contract_address.to_hex()),
+						home_deployment_info_dir,
 						&home_contract_address,
 						&home_receipt.transaction_hash,
 						"HomeBridge",
@@ -133,8 +139,10 @@ impl<T: Transport + Clone> Future for Deploy<T> {
 						&home_data.to_hex()
 					)?;
 
+					let foreign_deployment_info_dir = format!("deployment-foreign-{}", foreign_contract_address.to_hex());
+					info!("writing foreign deployment info to {}", foreign_deployment_info_dir);
 					write_deployment_info(
-						format!("deployment-foreign-{}", foreign_contract_address.to_hex()),
+						foreign_deployment_info_dir,
 						&foreign_contract_address,
 						&foreign_receipt.transaction_hash,
 						"ForeignBridge",
@@ -188,9 +196,11 @@ pub fn write_deployment_info<P: AsRef<Path>>(
 	let dir = dir.as_ref();
 
 	if Path::new(dir).exists() {
+		info!("{:?} exists. removing", dir);
 		fs::remove_dir_all(dir)?;
 	}
 	fs::create_dir(dir)?;
+	info!("{:?} created", dir);
 
 	let mut file = File::create(dir.join("bridge_version"))?;
 	file.write_all(env!("CARGO_PKG_VERSION").as_bytes())?;
