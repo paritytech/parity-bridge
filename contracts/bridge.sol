@@ -317,6 +317,10 @@ contract ForeignBridge {
     uint256 public totalSupply;
 
     string public name = "ForeignBridge";
+    // BETH = bridged ether
+    string public symbol = "BETH";
+    // 1-1 mapping of ether to tokens
+    uint8 public decimals = 18;
 
     /// maps addresses to their token balances
     mapping (address => uint256) public balances;
