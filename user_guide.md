@@ -1,4 +1,4 @@
-# using the ropsten-kovan test deployment
+# using the ropsten-kovan test-bridge
 
 a test-bridge is deployed ropsten and kovan
 
@@ -8,13 +8,12 @@ kovan: `ForeignBridge` contract at [0x93fbabdabd72c3fb0cd39fc768d72522fcd90388](
 
 `ForeignBridge` is an ERC20 token
 
-this guide assumes you use [metamask](https://metamask.io/)
-and in metamask have three accounts `address1`, `address2` and `address3` which initially have 0 ether
-on ropsten and kovan.
+this guide assumes you use [metamask](https://metamask.io/).
+it also assumes that in metamask you have three accounts `address1`, `address2` and `address3` which initially have 0 ether on ropsten and kovan.
 
-in this guide we will:
+in this guide you will:
 
-1. use the bridge to transfer ropsten ether into tokens on kovan
+1. use the bridge to transfer ropsten ether into ERC20 tokens on kovan
 2. transfer tokens around on kovan
 3. use the bridge to transfer tokens on kovan back into ether on ropsten
 
@@ -30,7 +29,7 @@ click `request 1 ether from faucet`
 
 after a couple of seconds your ether should show up in metamask!
 
-## getting kovan test ether
+## getting kovan test ether for `address1`
 
 post `address2` (not `address1`) in https://gitter.im/kovan-testnet/faucet.
 
@@ -76,16 +75,17 @@ visit https://mycrypto.com/#send-transaction and choose `MetaMask`
 
 in the bottom right click on `Add Custom Token`
 
-fill in
-`Address`: `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
-`Token Symbol`: `BridgedEther`
-`Decimals`: `18`
-and click `Save`
+fill in form:
+- `Address`: `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
+- `Token Symbol`: `BridgedEther`
+- `Decimals`: `18`
+
+click `Save`
 
 now fill in the main `Send` form:
-`To Address`: `{address2}`
-`Amount to Send`: `100000000000000000` and
-choose `BridgedEther` in the dropdown!
+- `To Address`: `{address2}`
+- `Amount to Send`: `100000000000000000` and
+- choose `BridgedEther` in the dropdown!
 
 click `Generate Transaction`
 
@@ -109,9 +109,9 @@ now down in the new `Read / Write Contract` section:
 in the `Select a function` dropdown select `transferHomeViaRelay`
 
 fill in form:
-`recipient`: `{address3}`
-`value`: `100000000000000000`
-`homeGasPrice` use `100000000000` (100 shannon)
+- `recipient`: `{address3}`
+- `value`: `100000000000000000`
+- `homeGasPrice` use `100000000000` (100 shannon)
 
 choose `Metamask` to access your wallet
 
