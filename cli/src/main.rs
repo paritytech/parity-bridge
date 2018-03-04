@@ -17,7 +17,7 @@ use futures::{Stream, future};
 use tokio_core::reactor::Core;
 
 use bridge::app::App;
-use bridge::bridge::{create_bridge, create_deploy, Deployed};
+use bridge::bridge::create_bridge;
 use bridge::config::Config;
 use bridge::error::Error;
 
@@ -38,24 +38,24 @@ fn main() {
 }
 
 fn print_err(err: Error) {
-	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n  ");
+	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n	");
 	println!("{}", message);
 }
 
 fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item=S>, S: AsRef<str> {
-    let usage = format!(
+	let usage = format!(
 r#"
 Parity-bridge
-    Copyright 2017 Parity Technologies (UK) Limited
-    Version: {}
-    Commit: {}
+	Copyright 2017 Parity Technologies (UK) Limited
+	Version: {}
+	Commit: {}
 
 Usage:
-    bridge --config <config> --database <database>
-    bridge -h | --help
+	bridge --config <config> --database <database>
+	bridge -h | --help
 
 Options:
-    -h, --help           Display help message and exit.
+	-h, --help			 Display help message and exit.
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
 	info!(target: "bridge", "Parsing cli arguments");
@@ -72,30 +72,11 @@ Options:
 	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
 	let app_ref = Arc::new(app.as_ref());
 
-	info!(target: "bridge", "Deploying contracts (if needed)");
-	let deployed = event_loop.run(create_deploy(app_ref.clone()))?;
 
-	let database = match deployed {
-		Deployed::New(database) => {
-			info!(target: "bridge", "Deployed new bridge contracts");
-			info!(target: "bridge", "\n\n{}\n", database);
-			database.save(fs::File::create(&app_ref.database_path)?)?;
-			database
-		},
-		Deployed::Existing(database) => {
-			info!(target: "bridge", "Loaded database");
-			database
-		},
-	};
 
 	info!(target: "bridge", "Starting listening to events");
 	let bridge = create_bridge(app_ref, &database).and_then(|_| future::ok(true)).collect();
 	event_loop.run(bridge)?;
 
 	Ok("Done".into())
-}
-
-
-#[cfg(test)]
-mod tests {
 }

@@ -12,7 +12,7 @@ use app::App;
 use database::Database;
 use error::{Error, Result};
 
-pub use self::deploy::{Deploy, Deployed, create_deploy};
+pub use self::deploy::{DeployHome, DeployForeign};
 pub use self::deposit_relay::{DepositRelay, create_deposit_relay};
 pub use self::withdraw_relay::{WithdrawRelay, create_withdraw_relay};
 pub use self::withdraw_confirm::{WithdrawConfirm, create_withdraw_confirm};
