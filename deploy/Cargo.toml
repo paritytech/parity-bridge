@@ -1,0 +1,18 @@
+[package]
+name = "bridge-deploy"
+version = "0.3.0"
+authors = ["debris <marek.kotewicz@gmail.com>"]
+
+[[bin]]
+name = "bridge-deploy"
+path = "src/main.rs"
+
+[dependencies]
+bridge = { path = "../bridge" }
+serde = "1.0"
+serde_derive = "1.0"
+tokio-core = "0.1.8"
+docopt = "0.8.1"
+log = "0.3"
+env_logger = "0.4"
+futures = "0.1.14"
