@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::{io, str, fs, fmt};
 use std::io::{Read, Write};
-use web3::types::Address;
+use web3::types::{Address, TransactionReceipt};
 use toml;
 use error::{Error, ResultExt, ErrorKind};
 
@@ -39,7 +39,7 @@ impl fmt::Display for Database {
 }
 
 impl Database {
-	pub fn load<P: AsRef<Path>>(path: P) -> Result<Database, Error> {
+	pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
 		let mut file = match fs::File::open(&path) {
 			Ok(file) => file,
 			Err(ref err) if err.kind() == io::ErrorKind::NotFound => return Err(ErrorKind::MissingFile(format!("{:?}", path.as_ref())).into()),
@@ -54,6 +54,21 @@ impl Database {
 	pub fn save<W: Write>(&self, mut write: W) -> Result<(), Error> {
 		write.write_all(self.to_string().as_bytes())?;
 		Ok(())
+	}
+
+	pub fn from_receipts(
+		home_receipt: &TransactionReceipt,
+		foreign_receipt: &TransactionReceipt
+	) -> Self {
+		Self {
+			home_contract_address: home_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+			foreign_contract_address: foreign_receipt.contract_address.expect("contract creation receipt must have an address; qed"),
+			home_deploy: home_receipt.block_number.low_u64(),
+			foreign_deploy: foreign_receipt.block_number.low_u64(),
+			checked_deposit_relay: home_receipt.block_number.low_u64(),
+			checked_withdraw_relay: foreign_receipt.block_number.low_u64(),
+			checked_withdraw_confirm: foreign_receipt.block_number.low_u64(),
+		}
 	}
 }
 
