@@ -414,7 +414,7 @@ contract ForeignBridge {
     mapping (bytes32 => SignaturesCollection) signatures;
 
     /// triggered when relay of deposit from HomeBridge is complete
-    event Deposit(address recipient, uint256 value);
+    event Deposit(address recipient, uint256 value, bytes32 transactionHash);
 
     /// Event created on money withdraw.
     event Withdraw(address recipient, uint256 value, uint256 homeGasPrice);
@@ -463,7 +463,7 @@ contract ForeignBridge {
             // SHOULD trigger a Transfer event with the _from address
             // set to 0x0 when tokens are created.
             Transfer(0x0, recipient, value);
-            Deposit(recipient, value);
+            Deposit(recipient, value, transactionHash);
         }
     }
 
