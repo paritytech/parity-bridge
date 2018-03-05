@@ -1,3 +1,3 @@
 # troubleshooting guide
 
-TODO
+## home deposit reverted?

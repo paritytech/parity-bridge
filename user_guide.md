@@ -58,27 +58,26 @@ https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
 
 ## check your token balance on kovan
 
-visit https://kovan.etherscan.io/address/{insert-address1-here}#tokentxns
+https://kovan.etherscan.io/token/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe#balances
 
-on the bottom you should see a recent (last couple seconds) transfer
-from `0x0000000000000000000000000000000000000000` (minting)
-over `100000000000000000` tokens.
+your `address1` should show up as a token holder holding `0.1`
 
-in the `View Tokens` dropdown to the right you should
-see `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388` and `100000000000000000`.
-
-*TODO what if i don't?*
+[what if i don't see it?](troubleshooting_guide.md)
 
 ## transfer ERC20 tokens on kovan to another address
 
 choose `kovan` and `address1` in metamask
 
-visit https://mycrypto.com/#send-transaction and choose `MetaMask`
+visit https://mycrypto.com/#send-transaction 
+
+choose `Kovan` as the network in the upper right corner.
+
+in mycrypto connect to `MetaMask`
 
 in the bottom right click on `Add Custom Token`
 
 fill in form:
-- `Address`: `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
+- `Address`: `0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe`
 - `Token Symbol`: `BridgedEther`
 - `Decimals`: `18`
 
