@@ -1,12 +1,11 @@
 # using the ropsten-kovan test-bridge
 
-a test-bridge is deployed ropsten and kovan
+a test-bridge is deployed between ropsten and kovan.
 
-ropsten: `HomeBridge` contract at [0xb06807115caa6d0086b844f7ffdf9b3df92257be](https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be)
+ropsten: `HomeBridge` contract at [0xD8f166F41A198981688C68FbDC5F0e32180b7D6E](https://ropsten.etherscan.io/address/0xD8f166F41A198981688C68FbDC5F0e32180b7D6E)
 
-kovan: `ForeignBridge` contract at [0x93fbabdabd72c3fb0cd39fc768d72522fcd90388](http://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388)
-
-`ForeignBridge` is an ERC20 token
+kovan: `ForeignBridge` contract at [0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe](https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe)
+which is an [ERC20-token](https://kovan.etherscan.io/token/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe).
 
 this guide assumes you use [metamask](https://metamask.io/).
 it also assumes that in metamask you have three accounts `address1`, `address2` and `address3` which initially have 0 ether on ropsten and kovan.
@@ -17,7 +16,7 @@ in this guide you will:
 2. transfer tokens around on kovan
 3. use the bridge to transfer tokens on kovan back into ether on ropsten
 
-before playing around with the bridge we need some test ether on both testnets.
+before playing around with the bridge you need some test ether on both testnets.
 
 ## getting ropsten test ether for `address1`
 
@@ -41,18 +40,21 @@ a transaction that sends kovan test ether to `address2`
 choose `ropsten` and `account1` in metamask.
 
 send `0.1` ether (`100000000000000000` wei) to the `HomeBridge`
-contract at `0xb06807115caa6d0086b844f7ffdf9b3df92257be`
+contract at `0xD8f166F41A198981688C68FbDC5F0e32180b7D6E`
 
-the transaction should show up on https://ropsten.etherscan.io/address/0xb06807115caa6d0086b844f7ffdf9b3df92257be
+the transaction should show up on
+https://ropsten.etherscan.io/address/0xD8f166F41A198981688C68FbDC5F0e32180b7D6E
 
 [what if the transaction is reverted?](troubleshooting_guide.md)
 
 **the bridge is now relaying the deposit to kovan**
 
 after ~1 minute a transaction should show up on
-https://kovan.etherscan.io/address/0x93fbabdabd72c3fb0cd39fc768d72522fcd90388
+https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
 
-*TODO what if the transaction doesn't show up?*
+[what if the transaction doesn't show up?](troubleshooting_guide.md)
+
+[what if the transaction is reverted?](troubleshooting_guide.md)
 
 ## check your token balance on kovan
 
