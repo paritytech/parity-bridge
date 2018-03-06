@@ -64,6 +64,7 @@ contract('ForeignBridge', function(accounts) {
       assert.equal("Deposit", result.logs[1].event);
       assert.equal(userAccount, result.logs[1].args.recipient);
       assert.equal(value, result.logs[1].args.value);
+      assert.equal(hash, result.logs[1].args.transactionHash);
 
       return meta.balances.call(userAccount);
     }).then(function(result) {
@@ -107,6 +108,8 @@ contract('ForeignBridge', function(accounts) {
       assert.equal("Deposit", result.logs[1].event, "Event name should be Deposit");
       assert.equal(userAccount, result.logs[1].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[1].args.value, "Event value should match deposited ether");
+      assert.equal(hash, result.logs[1].args.transactionHash);
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(value, result, "Contract balance should change");
@@ -181,6 +184,7 @@ contract('ForeignBridge', function(accounts) {
       assert.equal("Deposit", result.logs[1].event, "Event name should be Deposit");
       assert.equal(userAccount, result.logs[1].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[1].args.value, "Event value should match transaction value");
+      assert.equal(hash, result.logs[1].args.transactionHash);
 
       return meta.balances.call(userAccount);
     }).then(function(result) {
