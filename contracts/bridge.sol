@@ -117,7 +117,7 @@ library MessageSigningTest {
 
 library Message {
     // layout of message :: bytes:
-    // offset  0: 32 bytes :: uint256 (big endian) - message length
+    // offset  0: 32 bytes :: uint256 (big endian) - message length (not part of message. any `bytes` begins with the length in memory)
     // offset 32: 20 bytes :: address - recipient address
     // offset 52: 32 bytes :: uint256 (big endian) - value
     // offset 84: 32 bytes :: bytes32 - transaction hash
