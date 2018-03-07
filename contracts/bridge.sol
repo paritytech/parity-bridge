@@ -227,7 +227,7 @@ contract HomeBridge {
     event Deposit (address recipient, uint256 value);
 
     /// Event created on money withdraw.
-    event Withdraw (address recipient, uint256 value);
+    event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
 
     /// Constructor.
     function HomeBridge(
@@ -305,7 +305,7 @@ contract HomeBridge {
         // refund relay cost to relaying authority
         msg.sender.transfer(estimatedWeiCostOfWithdraw);
 
-        Withdraw(recipient, valueRemainingAfterSubtractingCost);
+        Withdraw(recipient, valueRemainingAfterSubtractingCost, hash);
     }
 }
 

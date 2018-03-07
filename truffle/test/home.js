@@ -166,7 +166,8 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
     var homeGasPrice = web3.toBigNumber(0);
-    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = helpers.createMessage(recipientAccount, value, transactionHash, homeGasPrice);
 
     return newHomeBridge({
       requiredSignatures: 1,
@@ -208,6 +209,7 @@ contract('HomeBridge', function(accounts) {
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
+      assert.equal(transactionHash, result.logs[0].args.transactionHash);
     })
   })
 
@@ -226,7 +228,8 @@ contract('HomeBridge', function(accounts) {
     var chargerAccount = accounts[4];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
     var homeGasPrice = web3.toBigNumber(10000);
-    var message = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var message = helpers.createMessage(recipientAccount, value, transactionHash, homeGasPrice);
 
     return newHomeBridge({
       requiredSignatures: 1,
@@ -273,6 +276,7 @@ contract('HomeBridge', function(accounts) {
       assert.equal("Withdraw", transactionResult.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, transactionResult.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.minus(relayCost).equals(transactionResult.logs[0].args.value), "Event value should match value in message minus relay cost");
+      assert.equal(transactionHash, transactionResult.logs[0].args.transactionHash);
 
       return helpers.getBalances(accounts);
     }).then(function(balances) {
@@ -424,8 +428,10 @@ contract('HomeBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var value = web3.toBigNumber(web3.toWei(1, "ether"));
     var homeGasPrice = web3.toBigNumber(10000);
-    var message1 = helpers.createMessage(recipientAccount, value, "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80", homeGasPrice);
-    var message2 = helpers.createMessage(recipientAccount, value, "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3", homeGasPrice);
+    var transactionHash1 = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var transactionHash2 = "0x038c79eb958a13aa71996bac27c628f33f227288bd27d5e157b97e55e08fd2b3";
+    var message1 = helpers.createMessage(recipientAccount, value, transactionHash1, homeGasPrice);
+    var message2 = helpers.createMessage(recipientAccount, value, transactionHash2, homeGasPrice);
 
     return newHomeBridge({
       requiredSignatures: 1,
@@ -454,6 +460,7 @@ contract('HomeBridge', function(accounts) {
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
+      assert.equal(transactionHash1, result.logs[0].args.transactionHash);
 
       return helpers.sign(authorities[0], message2);
     }).then(function(signature) {
@@ -470,6 +477,7 @@ contract('HomeBridge', function(accounts) {
       assert.equal("Withdraw", result.logs[0].event, "Event name should be Withdraw");
       assert.equal(recipientAccount, result.logs[0].args.recipient, "Event recipient should match recipient in message");
       assert(value.equals(result.logs[0].args.value), "Event value should match value in message");
+      assert.equal(transactionHash2, result.logs[0].args.transactionHash);
     })
   })
 
