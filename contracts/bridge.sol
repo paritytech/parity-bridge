@@ -422,6 +422,8 @@ contract ForeignBridge {
     /// Event created on money withdraw.
     event Withdraw(address recipient, uint256 value, uint256 homeGasPrice);
 
+    event WithdrawSignatureSubmitted(bytes32 messageHash);
+
     /// Collected signatures which should be relayed to home chain.
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
 
@@ -525,6 +527,8 @@ contract ForeignBridge {
         // TODO: this may cause troubles if requiredSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
             CollectedSignatures(msg.sender, hash);
+        } else {
+            WithdrawSignatureSubmitted(hash);
         }
     }
 
