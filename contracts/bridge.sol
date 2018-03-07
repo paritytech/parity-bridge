@@ -413,7 +413,10 @@ contract ForeignBridge {
     /// Pending signatures and authorities who confirmed them
     mapping (bytes32 => SignaturesCollection) signatures;
 
-    /// triggered when relay of deposit from HomeBridge is complete
+    /// triggered when an authority confirms a deposit
+    event DepositConfirmation(address recipient, uint256 value, bytes32 transactionHash);
+
+    /// triggered when enough authorities have confirmed a deposit
     event Deposit(address recipient, uint256 value, bytes32 transactionHash);
 
     /// Event created on money withdraw.
@@ -454,17 +457,21 @@ contract ForeignBridge {
         require(!Helpers.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
+
         // TODO: this may cause troubles if requiredSignatures len is changed
-        if (deposits[hash].length == requiredSignatures) {
-            balances[recipient] += value;
-            // mints tokens
-            totalSupply += value;
-            // ERC20 specifies: a token contract which creates new tokens
-            // SHOULD trigger a Transfer event with the _from address
-            // set to 0x0 when tokens are created.
-            Transfer(0x0, recipient, value);
-            Deposit(recipient, value, transactionHash);
+        if (deposits[hash].length != requiredSignatures) {
+            DepositConfirmation(recipient, value, transactionHash);
+            return;
         }
+
+        balances[recipient] += value;
+        // mints tokens
+        totalSupply += value;
+        // ERC20 specifies: a token contract which creates new tokens
+        // SHOULD trigger a Transfer event with the _from address
+        // set to 0x0 when tokens are created.
+        Transfer(0x0, recipient, value);
+        Deposit(recipient, value, transactionHash);
     }
 
     /// Transfer `value` from `msg.sender`s local balance (on `foreign` chain) to `recipient` on `home` chain.
