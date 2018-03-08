@@ -112,7 +112,7 @@ in the `Select a function` dropdown select `transferHomeViaRelay`
 fill in form:
 - `recipient`: `{address3}`
 - `value`: `100000000000000000`
-- `homeGasPrice` use `100000000000` (100 shannon)
+- `homeGasPrice` use `5000000000` (5 shannon/gwei, [source](https://ropsten-stats.parity.io/))
 
 choose `Metamask` to access your wallet
 
