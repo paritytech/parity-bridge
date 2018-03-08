@@ -168,6 +168,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 						})
 						.collect::<ethabi::Result<Vec<_>>>()
 						.map_err(error::Error::from)?;
+					info!("messages decoded");
 
 					let signatures = signatures_raw
 						.iter()
@@ -186,6 +187,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 							.map_err(error::Error::from)
 						)
 						.collect::<error::Result<Vec<_>>>()?;
+					info!("signatures decoded");
 
 					let relays = messages.into_iter()
 						.zip(signatures.into_iter())
