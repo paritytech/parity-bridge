@@ -117,7 +117,7 @@ library MessageSigningTest {
 
 library Message {
     // layout of message :: bytes:
-    // offset  0: 32 bytes :: uint256 (big endian) - message length
+    // offset  0: 32 bytes :: uint256 (big endian) - message length (not part of message. any `bytes` begins with the length in memory)
     // offset 32: 20 bytes :: address - recipient address
     // offset 52: 32 bytes :: uint256 (big endian) - value
     // offset 84: 32 bytes :: bytes32 - transaction hash
@@ -227,7 +227,7 @@ contract HomeBridge {
     event Deposit (address recipient, uint256 value);
 
     /// Event created on money withdraw.
-    event Withdraw (address recipient, uint256 value);
+    event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
 
     /// Constructor.
     function HomeBridge(
@@ -305,7 +305,7 @@ contract HomeBridge {
         // refund relay cost to relaying authority
         msg.sender.transfer(estimatedWeiCostOfWithdraw);
 
-        Withdraw(recipient, valueRemainingAfterSubtractingCost);
+        Withdraw(recipient, valueRemainingAfterSubtractingCost, hash);
     }
 }
 
@@ -413,11 +413,16 @@ contract ForeignBridge {
     /// Pending signatures and authorities who confirmed them
     mapping (bytes32 => SignaturesCollection) signatures;
 
-    /// triggered when relay of deposit from HomeBridge is complete
+    /// triggered when an authority confirms a deposit
+    event DepositConfirmation(address recipient, uint256 value, bytes32 transactionHash);
+
+    /// triggered when enough authorities have confirmed a deposit
     event Deposit(address recipient, uint256 value, bytes32 transactionHash);
 
     /// Event created on money withdraw.
     event Withdraw(address recipient, uint256 value, uint256 homeGasPrice);
+
+    event WithdrawSignatureSubmitted(bytes32 messageHash);
 
     /// Collected signatures which should be relayed to home chain.
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
@@ -454,17 +459,21 @@ contract ForeignBridge {
         require(!Helpers.addressArrayContains(deposits[hash], msg.sender));
 
         deposits[hash].push(msg.sender);
+
         // TODO: this may cause troubles if requiredSignatures len is changed
-        if (deposits[hash].length == requiredSignatures) {
-            balances[recipient] += value;
-            // mints tokens
-            totalSupply += value;
-            // ERC20 specifies: a token contract which creates new tokens
-            // SHOULD trigger a Transfer event with the _from address
-            // set to 0x0 when tokens are created.
-            Transfer(0x0, recipient, value);
-            Deposit(recipient, value, transactionHash);
+        if (deposits[hash].length != requiredSignatures) {
+            DepositConfirmation(recipient, value, transactionHash);
+            return;
         }
+
+        balances[recipient] += value;
+        // mints tokens
+        totalSupply += value;
+        // ERC20 specifies: a token contract which creates new tokens
+        // SHOULD trigger a Transfer event with the _from address
+        // set to 0x0 when tokens are created.
+        Transfer(0x0, recipient, value);
+        Deposit(recipient, value, transactionHash);
     }
 
     /// Transfer `value` from `msg.sender`s local balance (on `foreign` chain) to `recipient` on `home` chain.
@@ -518,6 +527,8 @@ contract ForeignBridge {
         // TODO: this may cause troubles if requiredSignatures len is changed
         if (signatures[hash].signed.length == requiredSignatures) {
             CollectedSignatures(msg.sender, hash);
+        } else {
+            WithdrawSignatureSubmitted(hash);
         }
     }
 

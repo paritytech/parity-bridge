@@ -72,7 +72,7 @@ contract('ForeignBridge', function(accounts) {
     })
   })
 
-  it("should require 2 authorities to confirm deposit", function() {
+  it("should require 2 authorities to complete deposit", function() {
     var meta;
     var requiredSignatures = 2;
     var estimatedGasCostOfWithdraw = 0;
@@ -86,7 +86,12 @@ contract('ForeignBridge', function(accounts) {
 
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "No event should be created");
+      assert.equal(1, result.logs.length);
+
+      assert.equal("DepositConfirmation", result.logs[0].event);
+      assert.equal(userAccount, result.logs[0].args.recipient);
+      assert.equal(value, result.logs[0].args.value);
+      assert.equal(hash, result.logs[0].args.transactionHash);
 
       return meta.balances.call(userAccount);
     }).then(function(result) {
@@ -168,10 +173,20 @@ contract('ForeignBridge', function(accounts) {
       meta = instance;
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "No event should be created yet");
+      assert.equal(1, result.logs.length);
+
+      assert.equal("DepositConfirmation", result.logs[0].event);
+      assert.equal(userAccount, result.logs[0].args.recipient);
+      assert.equal(value, result.logs[0].args.value);
+      assert.equal(hash, result.logs[0].args.transactionHash);
+
       return meta.deposit(userAccount, invalidValue, hash, { from: authorities[1] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "Misbehaving authority should be ignored");
+      assert.equal("DepositConfirmation", result.logs[0].event);
+      assert.equal(userAccount, result.logs[0].args.recipient);
+      assert.equal(invalidValue, result.logs[0].args.value);
+      assert.equal(hash, result.logs[0].args.transactionHash);
+
       return meta.deposit(userAccount, value, hash, { from: authorities[2] })
     }).then(function(result) {
       assert.equal(2, result.logs.length)
@@ -374,7 +389,12 @@ contract('ForeignBridge', function(accounts) {
 
       return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "No events should be created");
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("WithdrawSignatureSubmitted", result.logs[0].event);
+
+      return meta.signature.call(result.logs[0].args.messageHash, 0);
+    }).then(function(result) {
+      assert.equal(signature, result);
     })
   })
 
@@ -405,10 +425,14 @@ contract('ForeignBridge', function(accounts) {
       signatures_for_message2.push(result[3]);
       return meta.submitSignature(signatures_for_message[0], message, { from: authorities[0] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "No events should be created");
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("WithdrawSignatureSubmitted", result.logs[0].event);
+
       return meta.submitSignature(signatures_for_message2[1], message2, { from: authorities[1] });
     }).then(function(result) {
-      assert.equal(0, result.logs.length, "No events should be created");
+      assert.equal(1, result.logs.length, "Exactly one event should be created");
+      assert.equal("WithdrawSignatureSubmitted", result.logs[0].event);
+
       return meta.submitSignature(signatures_for_message2[0], message2, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
