@@ -1,1 +1,1 @@
- *.sol linguist-language=Solidity
+ contracts/*.sol linguist-language=Solidity
