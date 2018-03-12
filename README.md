@@ -104,7 +104,7 @@ yarn test
 
 requires `rust` and `cargo`: [installation instructions.](https://www.rust-lang.org/en-US/install.html)
 
-requires `solc` to be in `$PATH`: [installation instructions.](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
+requires `solc`: [installation instructions.](https://solidity.readthedocs.io/en/develop/installing-solidity.html)
 
 assuming you've cloned the bridge (`git clone git@github.com:paritytech/parity-bridge.git`)
 and are in the project directory (`cd parity-bridge`) run:
@@ -113,7 +113,7 @@ and are in the project directory (`cd parity-bridge`) run:
 cargo build -p bridge-cli --release
 ```
 
-to install copy `../target/release/bridge` into a folder that's in your `$PATH`.
+to install copy `target/release/bridge` into a folder that's in your `$PATH`.
 
 ### run
 
