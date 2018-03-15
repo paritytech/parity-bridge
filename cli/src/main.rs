@@ -20,6 +20,7 @@ use bridge::app::App;
 use bridge::bridge::create_bridge;
 use bridge::config::Config;
 use bridge::error::Error;
+use bridge::database::Database;
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
@@ -72,7 +73,7 @@ Options:
 	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
 	let app_ref = Arc::new(app.as_ref());
 
-
+	let database = Database::load(&args.arg_database)?;
 
 	info!(target: "bridge", "Starting listening to events");
 	let bridge = create_bridge(app_ref, &database).and_then(|_| future::ok(true)).collect();
