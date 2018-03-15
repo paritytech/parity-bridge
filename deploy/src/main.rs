@@ -30,7 +30,7 @@ Usage:
 	bridge -h | --help
 
 Options:
-	-h, --help			 Display help message and exit.
+	-h, --help
 "#;
 
 #[derive(Debug, Deserialize)]
