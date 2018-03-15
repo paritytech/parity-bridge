@@ -56,7 +56,7 @@ Usage:
 	bridge -h | --help
 
 Options:
-	-h, --help			 Display help message and exit.
+	-h, --help
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
 	info!(target: "bridge", "Parsing cli arguments");
