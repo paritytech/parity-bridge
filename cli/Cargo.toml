@@ -1,7 +1,7 @@
 [package]
 name = "parity-bridge"
 version = "0.4.0"
-authors = ["debris <marek.kotewicz@gmail.com>"]
+authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
 [[bin]]
 name = "parity-bridge"
