@@ -58,32 +58,32 @@ Options:
     -h, --help           Display help message and exit.
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
-	info!(target: "bridge", "Parsing cli arguments");
+	info!(target: "parity-bridge-deploy", "Parsing cli arguments");
 	let args: Args = Docopt::new(USAGE)
 		.and_then(|d| d.argv(command).deserialize()).map_err(|e| e.to_string())?;
 
-	info!(target: "bridge", "Loading config");
+	info!(target: "parity-bridge-deploy", "Loading config");
 	let config = Config::load(args.arg_config)?;
 
-	info!(target: "bridge", "Starting event loop");
+	info!(target: "parity-bridge-deploy", "Starting event loop");
 	let mut event_loop = Core::new().unwrap();
 
-	info!(target: "bridge", "Establishing ipc connection");
+	info!(target: "parity-bridge-deploy", "Establishing ipc connection");
 	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
 	let app_ref = Arc::new(app.as_ref());
 
-	info!(target: "bridge", "Deploying HomeBridge contract");
+	info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
 	let home_deployed = event_loop.run(DeployHome::new(app_ref.clone()))?;
 	home_deployed.dump_info(
 		format!("deployment-home-{}", home_deployed.contract_address))?;
 
-	info!(target: "bridge", "Deploying ForeignBridge contract");
+	info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
 	let foreign_deployed = event_loop.run(DeployForeign::new(app_ref.clone()))?;
 	foreign_deployed.dump_info(
 		format!("deployment-foreign-{}", foreign_deployed.contract_address))?;
 
 	let database = Database::from_receipts(&home_deployed.receipt, &foreign_deployed.receipt);
-	info!(target: "bridge", "\n\n{}\n", database);
+	info!(target: "parity-bridge-deploy", "\n\n{}\n", database);
 	database.save(fs::File::create(&app_ref.database_path)?)?;
 
 	Ok("Done".into())
