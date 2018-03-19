@@ -59,7 +59,7 @@ Options:
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
 	info!(target: "parity-bridge-deploy", "Parsing cli arguments");
-	let args: Args = Docopt::new(USAGE)
+	let args: Args = Docopt::new(usage)
 		.and_then(|d| d.argv(command).deserialize()).map_err(|e| e.to_string())?;
 
 	info!(target: "parity-bridge-deploy", "Loading config");
