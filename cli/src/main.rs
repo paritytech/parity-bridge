@@ -39,7 +39,7 @@ fn main() {
 }
 
 fn print_err(err: Error) {
-	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n	");
+	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n  ");
 	println!("{}", message);
 }
 
@@ -47,16 +47,16 @@ fn execute<S, I>(command: I) -> Result<String, Error> where I: IntoIterator<Item
 	let usage = format!(
 r#"
 Parity-bridge
-	Copyright 2017 Parity Technologies (UK) Limited
-	Version: {}
-	Commit: {}
+    Copyright 2017 Parity Technologies (UK) Limited
+    Version: {}
+    Commit: {}
 
 Usage:
-	bridge --config <config> --database <database>
-	bridge -h | --help
+    bridge --config <config> --database <database>
+    bridge -h | --help
 
 Options:
-	-h, --help
+	-h, --help           Display help message and exit.
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
 	info!(target: "bridge", "Parsing cli arguments");
