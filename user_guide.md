@@ -2,10 +2,10 @@
 
 a test-bridge is deployed between ropsten and kovan.
 
-ropsten: `HomeBridge` contract at [0xD8f166F41A198981688C68FbDC5F0e32180b7D6E](https://ropsten.etherscan.io/address/0xD8f166F41A198981688C68FbDC5F0e32180b7D6E)
+ropsten: `HomeBridge` contract at [0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe](https://ropsten.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe)
 
-kovan: `ForeignBridge` contract at [0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe](https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe)
-which is an [ERC20-token](https://kovan.etherscan.io/token/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe).
+kovan: `ForeignBridge` contract at [0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54](https://kovan.etherscan.io/address/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54)
+which is an [ERC20-token](https://kovan.etherscan.io/token/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54).
 
 this guide assumes you use [metamask](https://metamask.io/).
 it also assumes that in metamask you have three accounts `address1`, `address2` and `address3` which initially have 0 ether on ropsten and kovan.
@@ -40,17 +40,17 @@ a transaction that sends kovan test ether to `address2`
 choose `ropsten` and `account1` in metamask.
 
 send `0.1` ether (`100000000000000000` wei) to the `HomeBridge`
-contract at `0xD8f166F41A198981688C68FbDC5F0e32180b7D6E`
+contract at `0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe`
 
 the transaction should show up on
-https://ropsten.etherscan.io/address/0xD8f166F41A198981688C68FbDC5F0e32180b7D6E
+https://ropsten.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
 
 [what if the transaction is reverted?](troubleshooting_guide.md)
 
 **the bridge is now relaying the deposit to kovan**
 
 after ~1 minute a transaction should show up on
-https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
+https://kovan.etherscan.io/address/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54
 
 [what if the transaction doesn't show up?](troubleshooting_guide.md)
 
@@ -58,7 +58,7 @@ https://kovan.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
 
 ## check your token balance on kovan
 
-https://kovan.etherscan.io/token/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe#balances
+https://kovan.etherscan.io/token/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54#balances
 
 your `address1` should show up as a token holder holding `0.1`
 
@@ -77,7 +77,7 @@ in mycrypto connect to `MetaMask`
 in the bottom right click on `Add Custom Token`
 
 fill in form:
-- `Address`: `0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe`
+- `Address`: `0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54`
 - `Token Symbol`: `BridgedEther`
 - `Decimals`: `18`
 
@@ -99,9 +99,9 @@ choose `kovan` and `address2` in metamask
 open [https://mycrypto.com/#contracts](https://mycrypto.com/#contracts)
 
 fill in form:
-`Contact Address`: `0x93fbabdabd72c3fb0cd39fc768d72522fcd90388`
+`Contact Address`: `0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54`
 `ABI / JSON Interface`: paste contents of this url
-http://api-kovan.etherscan.io/api?module=contract&action=getabi&address=0x93fbabdabd72c3fb0cd39fc768d72522fcd90388&format=raw
+http://api-kovan.etherscan.io/api?module=contract&action=getabi&address=0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54&format=raw
 
 click `Access`
 
