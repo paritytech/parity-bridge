@@ -13,11 +13,10 @@ use std::{env, fs};
 use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
-use futures::{Stream, future};
 use tokio_core::reactor::Core;
 
 use bridge::app::App;
-use bridge::bridge::create_bridge;
+use bridge::bridge::{DeployHome, DeployForeign};
 use bridge::config::Config;
 use bridge::error::Error;
 use bridge::database::Database;
@@ -39,7 +38,7 @@ fn main() {
 }
 
 fn print_err(err: Error) {
-	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n  ");
+	let message = err.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n\nCaused by:\n	");
 	println!("{}", message);
 }
 
@@ -52,32 +51,40 @@ Parity-bridge
     Commit: {}
 
 Usage:
-    parity-bridge --config <config> --database <database>
-    parity-bridge -h | --help
+    parity-bridge-deploy --config <config> --database <database>
+    parity-bridge-deploy -h | --help
 
 Options:
     -h, --help           Display help message and exit.
 "#, env!("CARGO_PKG_VERSION"), env!("GIT_HASH"));
 
-	info!(target: "bridge", "Parsing cli arguments");
+	info!(target: "parity-bridge-deploy", "Parsing cli arguments");
 	let args: Args = Docopt::new(usage)
 		.and_then(|d| d.argv(command).deserialize()).map_err(|e| e.to_string())?;
 
-	info!(target: "bridge", "Loading config");
+	info!(target: "parity-bridge-deploy", "Loading config");
 	let config = Config::load(args.arg_config)?;
 
-	info!(target: "bridge", "Starting event loop");
+	info!(target: "parity-bridge-deploy", "Starting event loop");
 	let mut event_loop = Core::new().unwrap();
 
-	info!(target: "bridge", "Establishing ipc connection");
+	info!(target: "parity-bridge-deploy", "Establishing ipc connection");
 	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
 	let app_ref = Arc::new(app.as_ref());
 
-	let database = Database::load(&args.arg_database)?;
+	info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
+	let home_deployed = event_loop.run(DeployHome::new(app_ref.clone()))?;
+	home_deployed.dump_info(
+		format!("deployment-home-{}", home_deployed.contract_address))?;
 
-	info!(target: "bridge", "Starting listening to events");
-	let bridge = create_bridge(app_ref, &database).and_then(|_| future::ok(true)).collect();
-	event_loop.run(bridge)?;
+	info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
+	let foreign_deployed = event_loop.run(DeployForeign::new(app_ref.clone()))?;
+	foreign_deployed.dump_info(
+		format!("deployment-foreign-{}", foreign_deployed.contract_address))?;
+
+	let database = Database::from_receipts(&home_deployed.receipt, &foreign_deployed.receipt);
+	info!(target: "parity-bridge-deploy", "\n\n{}\n", database);
+	database.save(fs::File::create(&app_ref.database_path)?)?;
 
 	Ok("Done".into())
 }

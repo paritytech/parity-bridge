@@ -67,13 +67,22 @@ fn test_basic_deposit_then_withdraw() {
 	}
 	let _tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
 
-	println!("\nbuild the bridge cli executable so we can run it later\n");
+	println!("\nbuild the deploy executable so we can run it later\n");
+	assert!(Command::new("cargo")
+		.env("RUST_BACKTRACE", "1")
+		.current_dir("../deploy")
+		.arg("build")
+		.status()
+		.expect("failed to build parity-bridge-deploy executable")
+		.success());
+
+	println!("\nbuild the parity-bridge executable so we can run it later\n");
 	assert!(Command::new("cargo")
 		.env("RUST_BACKTRACE", "1")
 		.current_dir("../cli")
 		.arg("build")
 		.status()
-		.expect("failed to build bridge cli")
+		.expect("failed to build parity-bridge executable")
 		.success());
 
 	// start a parity node that represents the home chain
@@ -149,18 +158,26 @@ fn test_basic_deposit_then_withdraw() {
 	// give nodes time to start up
 	thread::sleep(Duration::from_millis(10000));
 
+    // deploy bridge contracts
+
+	assert!(Command::new("env")
+		.arg("RUST_BACKTRACE=1")
+		.arg("../target/debug/parity-bridge-deploy")
+		.arg("--config").arg("bridge_config.toml")
+		.arg("--database").arg("tmp/bridge1_db.txt")
+		.status()
+		.expect("failed spawn parity-bridge-deploy")
+		.success());
+
 	// start bridge authority 1
 	let mut bridge1 = Command::new("env")
 		.arg("RUST_BACKTRACE=1")
-		.arg("../target/debug/bridge")
+		.arg("../target/debug/parity-bridge")
 		.env("RUST_LOG", "info")
 		.arg("--config").arg("bridge_config.toml")
 		.arg("--database").arg("tmp/bridge1_db.txt")
 		.spawn()
 		.expect("failed to spawn bridge process");
-
-	// give the bridge time to start up and deploy the contracts
-	thread::sleep(Duration::from_millis(10000));
 
 	let home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 	let foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";

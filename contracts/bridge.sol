@@ -312,11 +312,15 @@ contract HomeBridge {
 
 contract ForeignBridge {
     // following is the part of ForeignBridge that implements an ERC20 token.
-    // ERC20 spec: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
+    // ERC20 spec: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
 
     uint256 public totalSupply;
 
     string public name = "ForeignBridge";
+    // BETH = bridged ether
+    string public symbol = "BETH";
+    // 1-1 mapping of ether to tokens
+    uint8 public decimals = 18;
 
     /// maps addresses to their token balances
     mapping (address => uint256) public balances;

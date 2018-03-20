@@ -1,10 +1,10 @@
 [package]
-name = "parity-bridge"
-version = "0.4.0"
-authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
+name = "parity-bridge-deploy"
+version = "0.3.0"
+authors = ["debris <marek.kotewicz@gmail.com>"]
 
 [[bin]]
-name = "parity-bridge"
+name = "parity-bridge-deploy"
 path = "src/main.rs"
 
 [dependencies]
