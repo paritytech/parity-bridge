@@ -110,15 +110,15 @@ assuming you've cloned the bridge (`git clone git@github.com:paritytech/parity-b
 and are in the project directory (`cd parity-bridge`) run:
 
 ```
-cargo build -p bridge-cli --release
+cargo build -p parity-bridge --release
 ```
 
-to install copy `target/release/bridge` into a folder that's in your `$PATH`.
+to install copy `target/release/parity-bridge` into a folder that's in your `$PATH`.
 
 ### run
 
 ```
-env RUST_LOG=info bridge --config config.toml --database db.toml
+env RUST_LOG=info parity-bridge --config config.toml --database db.toml
 ```
 
 - `--config` - location of the configuration file. configuration file must exist

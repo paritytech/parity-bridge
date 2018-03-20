@@ -56,7 +56,7 @@ or [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badge
 start the bridge by executing:
 
 ```
-env RUST_LOG=info bridge --config bridge_config.toml --database bridge.db
+env RUST_LOG=info parity-bridge --config bridge_config.toml --database bridge.db
 ```
 
 it should eventually print something like this:
