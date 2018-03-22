@@ -5,10 +5,10 @@
 [![Build Status][travis-image]][travis-url]
 [![Solidity Coverage Status][coveralls-image]][coveralls-url] (contracts only)
 
-[travis-image]: https://travis-ci.org/paritytech/parity-bridge.svg?branch=master
-[travis-url]: https://travis-ci.org/paritytech/parity-bridge
-[coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
-[coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
+[travis-image]: https://travis-ci.org/ShyftNetwork/shyft_bridge.svg?branch=master
+[travis-url]: https://travis-ci.org/ShyftNetwork/shyft_bridge
+[coveralls-image]: https://coveralls.io/repos/github/ShyftNetwork/shyft_bridge/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/github/ShyftNetwork/shyft_bridge?branch=master
 
 parity-bridge is currently an
 [ERC20 token](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md)
