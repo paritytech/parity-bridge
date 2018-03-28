@@ -7,13 +7,13 @@ ropsten: `HomeBridge` contract at [0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe](h
 kovan: `ForeignBridge` contract at [0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54](https://kovan.etherscan.io/address/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54)
 which is an [ERC20-token](https://kovan.etherscan.io/token/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54).
 
-this guide assumes you use [metamask](https://metamask.io/).
-it also assumes that in metamask you have three accounts `address1`, `address2` and `address3` which initially have 0 ether on ropsten and kovan.
+this guide assumes you use [metamask](https://metamask.io/)
+and that in metamask you have three accounts `address1`, `address2` and `address3` which initially have 0 ether on ropsten and kovan.
 
 in this guide you will:
 
 1. use the bridge to transfer ropsten ether into ERC20 tokens on kovan
-2. transfer tokens around on kovan
+2. transfer those tokens around on kovan
 3. use the bridge to transfer tokens on kovan back into ether on ropsten
 
 before playing around with the bridge you need some test ether on both testnets.
@@ -26,7 +26,7 @@ visit https://faucet.metamask.io/
 
 click `request 1 ether from faucet`
 
-after a couple of seconds your ether should show up in metamask!
+after a couple of seconds your ether should show up in metamask
 
 ## getting kovan test ether for `address1`
 
@@ -47,10 +47,13 @@ https://ropsten.etherscan.io/address/0xDf40eFE7BCFae751b47D4dBe26Ed457fa335cbFe
 
 [what if the transaction is reverted?](troubleshooting_guide.md)
 
-**the bridge is now relaying the deposit to kovan**
+*the bridge is now relaying the deposit to kovan*
 
 after ~1 minute a transaction should show up on
 https://kovan.etherscan.io/address/0xc62BC10aBD17DD94f94E931e815DE7aFEa48ec54
+
+it should also show up here:
+https://bridge-dashboard.parity.io/deposits
 
 [what if the transaction doesn't show up?](troubleshooting_guide.md)
 
@@ -68,7 +71,7 @@ your `address1` should show up as a token holder holding `0.1`
 
 choose `kovan` and `address1` in metamask
 
-visit https://mycrypto.com/#send-transaction 
+visit https://mycrypto.com/#send-transaction
 
 choose `Kovan` as the network in the upper right corner.
 
