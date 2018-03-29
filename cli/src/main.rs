@@ -9,7 +9,7 @@ extern crate log;
 extern crate env_logger;
 extern crate bridge;
 
-use std::{env, fs};
+use std::{env};
 use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;

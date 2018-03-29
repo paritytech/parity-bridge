@@ -73,7 +73,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
 						self.app.config.home.required_confirmations
 					);
 
-					info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.home.required_confirmations);
+					info!("Sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.home.required_confirmations);
 
 					DeployState::Deploying {
 						data: data,
