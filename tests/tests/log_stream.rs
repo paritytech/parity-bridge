@@ -337,7 +337,7 @@ test_transport_stream! {
 			address: "0000000000000000000000000000000000000001".into(),
 			topics: vec![],
 			data: vec![0x10].into(),
-			log_type: "".into(),
+			log_type: None,
 			..Default::default()
 		}],
 	}],
@@ -380,7 +380,7 @@ test_transport_stream! {
 			address: "0000000000000000000000000000000000000001".into(),
 			topics: vec![],
 			data: vec![0x10].into(),
-			log_type: "".into(),
+			log_type: None,
 			..Default::default()
 		}],
 	}, LogStreamItem {
@@ -394,13 +394,13 @@ test_transport_stream! {
 			address: "0000000000000000000000000000000000000002".into(),
 			topics: vec![],
 			data: vec![0x20].into(),
-			log_type: "".into(),
+			log_type: None,
 			..Default::default()
 		}, Log {
 			address: "0000000000000000000000000000000000000002".into(),
 			topics: vec![],
 			data: vec![0x30].into(),
-			log_type: "".into(),
+			log_type: None,
 			..Default::default()
 		}],
 	}],
