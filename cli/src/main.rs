@@ -9,7 +9,7 @@ extern crate serde;
 extern crate serde_derive;
 extern crate tokio_core;
 
-use std::{env, fs};
+use std::env;
 use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
