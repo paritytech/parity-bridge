@@ -38,13 +38,11 @@ impl Transport for MockedTransport {
     fn prepare(&self, method: &str, params: Vec<rpc::Value>) -> (usize, rpc::Call) {
         let n = self.requests.get();
         assert_eq!(
-            &self.expected_requests[n].method as &str,
-            method,
+            &self.expected_requests[n].method as &str, method,
             "invalid method called"
         );
         assert_eq!(
-            self.expected_requests[n].params,
-            params,
+            self.expected_requests[n].params, params,
             "invalid method params"
         );
         self.requests.set(n + 1);

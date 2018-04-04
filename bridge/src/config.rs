@@ -177,9 +177,12 @@ mod load {
         pub foreign: Node,
         pub authorities: Authorities,
         pub transactions: Option<Transactions>,
-        #[serde(deserialize_with = "deserialize_u256")] pub estimated_gas_cost_of_withdraw: U256,
-        #[serde(deserialize_with = "deserialize_u256")] pub max_total_home_contract_balance: U256,
-        #[serde(deserialize_with = "deserialize_u256")] pub max_single_deposit_value: U256,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub estimated_gas_cost_of_withdraw: U256,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub max_total_home_contract_balance: U256,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub max_single_deposit_value: U256,
     }
 
     #[derive(Deserialize)]
