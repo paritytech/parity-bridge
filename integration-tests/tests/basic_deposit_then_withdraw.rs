@@ -46,6 +46,7 @@ fn parity_home_command() -> Command {
         .arg("0")
         .arg("--no-ws")
         .arg("--no-dapps")
+        .arg("--no-warp")
         .arg("--no-ui");
     command
 }
@@ -73,6 +74,7 @@ fn parity_foreign_command() -> Command {
         .arg("0")
         .arg("--no-ws")
         .arg("--no-dapps")
+        .arg("--no-warp")
         .arg("--no-ui");
     command
 }
