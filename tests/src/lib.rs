@@ -101,7 +101,8 @@ macro_rules! test_app_stream {
 		txs => $txs: expr,
 		init => $init_stream: expr,
 		expected => $expected: expr,
-		home_transport => [$($home_method: expr => req => $home_req: expr, res => $home_res: expr ;)*],
+		home_transport =>
+            [$($home_method: expr => req => $home_req: expr, res => $home_res: expr ;)*],
 		foreign_transport =>
             [$($foreign_method: expr => req => $foreign_req: expr, res => $foreign_res: expr ;)*]
 	) => {
