@@ -17,7 +17,6 @@ matrix:
         - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - cd integration-tests
         - rustup component add rustfmt-preview
       script:
         # using --write-mode=diff instructs rustfmt to exit with an error code if the input is not formatted correctly
@@ -36,7 +35,6 @@ matrix:
         - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
@@ -52,7 +50,6 @@ matrix:
         - snap list
       before_script:
         - export PATH=/snap/bin:${PATH}
-        - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: node_js
