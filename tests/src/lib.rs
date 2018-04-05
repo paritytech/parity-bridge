@@ -118,7 +118,7 @@ macro_rules! test_app_stream {
 				txs: $txs,
 				home: Node {
 					account: $home_acc.parse().unwrap(),
-					ipc: "".into(),
+					jsonrpc: "".into(),
 					contract: ContractConfig {
 						bin: Default::default(),
 					},
@@ -128,7 +128,7 @@ macro_rules! test_app_stream {
 				},
 				foreign: Node {
 					account: $foreign_acc.parse().unwrap(),
-					ipc: "".into(),
+					jsonrpc: "".into(),
 					contract: ContractConfig {
 						bin: Default::default(),
 					},
