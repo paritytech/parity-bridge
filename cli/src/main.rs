@@ -69,8 +69,8 @@ Options:
 	info!(target: "bridge", "Starting event loop");
 	let mut event_loop = Core::new().unwrap();
 
-	info!(target: "bridge", "Establishing ipc connection");
-	let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
+	info!(target: "bridge", "Establishing http connection");
+	let app = App::new_http(config, &args.arg_database, &event_loop.handle())?;
 	let app_ref = Arc::new(app.as_ref());
 
 	let database = Database::load(&args.arg_database)?;

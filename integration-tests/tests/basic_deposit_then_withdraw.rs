@@ -18,7 +18,7 @@ use std::path::Path;
 
 use tokio_core::reactor::Core;
 
-use web3::transports::ipc::Ipc;
+use web3::transports::http::Http;
 use web3::api::Namespace;
 use ethereum_types::{Address, U256};
 
@@ -29,7 +29,7 @@ fn parity_home_command() -> Command {
 	command
 		.arg("--base-path").arg(format!("{}/home", TMP_PATH))
 		.arg("--chain").arg("dev")
-		.arg("--ipc-path").arg("home.ipc")
+		.arg("--no-ipc")
 		.arg("--logging").arg("rpc=trace")
 		.arg("--jsonrpc-port").arg("8550")
 		.arg("--jsonrpc-apis").arg("all")
@@ -47,7 +47,7 @@ fn parity_foreign_command() -> Command {
 	command
 		.arg("--base-path").arg(format!("{}/foreign", TMP_PATH))
 		.arg("--chain").arg("dev")
-		.arg("--ipc-path").arg("foreign.ipc")
+		.arg("--no-ipc")
 		.arg("--logging").arg("rpc=trace")
 		.arg("--jsonrpc-port").arg("8551")
 		.arg("--jsonrpc-apis").arg("all")
@@ -182,16 +182,18 @@ fn test_basic_deposit_then_withdraw() {
 	let home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 	let foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
 
-	// connect to foreign and home via IPC
+	// connect to home and foreign via jsonrpc
 	let mut event_loop = Core::new().unwrap();
-	let foreign_transport = Ipc::with_event_loop("foreign.ipc", &event_loop.handle())
-		.expect("failed to connect to foreign.ipc");
+
+	let home = bridge::contracts::home::HomeBridge::default();
+	let home_transport = Http::with_event_loop("http://localhost:8550", &event_loop.handle(), 10)
+		.expect("failed to connect to home jsonrpc http://localhost:8550");
+	let home_eth = web3::api::Eth::new(home_transport.clone());
+
+	let foreign_transport = Http::with_event_loop("http://localhost:8551", &event_loop.handle(), 10)
+		.expect("failed to connect to foreign jsonrpc http://localhost:8551");
 	let foreign = bridge::contracts::foreign::ForeignBridge::default();
 	let foreign_eth = web3::api::Eth::new(foreign_transport.clone());
-	let home = bridge::contracts::home::HomeBridge::default();
-	let home_transport = Ipc::with_event_loop("home.ipc", &event_loop.handle())
-		.expect("failed to connect to home.ipc");
-	let home_eth = web3::api::Eth::new(home_transport.clone());
 
 	let response = event_loop.run(home_eth.call(web3::types::CallRequest{
 		from: None,
