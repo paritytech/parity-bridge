@@ -28,11 +28,14 @@ matrix:
       fast_finish: false
       install:
         - sudo apt-get --yes install snapd
-        - sudo snap install parity --stable
+        # - sudo snap install parity --stable
         - sudo snap install solc --stable
         - snap list
+        - wget http://d1h4xl4cr1h0mo.cloudfront.net/v1.9.5/x86_64-unknown-debian-gnu/parity
+        - chmod +x parity
+        - cp parity ${HOME}/bin
       before_script:
-        - export PATH=/snap/bin:${PATH}
+        - export PATH=${HOME}/bin:${PATH}
         - cd integration-tests
       script:
         - env BACKTRACE=1 cargo test --all -- --nocapture
