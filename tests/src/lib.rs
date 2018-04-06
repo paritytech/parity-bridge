@@ -1,55 +1,64 @@
-extern crate serde_json;
+extern crate bridge;
+extern crate ethereum_types;
 extern crate futures;
 extern crate jsonrpc_core as rpc;
-extern crate web3;
-extern crate bridge;
 #[macro_use]
 extern crate pretty_assertions;
-extern crate ethereum_types;
+extern crate serde_json;
+extern crate web3;
 
 use std::cell::Cell;
 use web3::Transport;
 
 #[derive(Debug, Clone)]
 pub struct MockedRequest {
-	pub method: String,
-	pub params: Vec<rpc::Value>,
+    pub method: String,
+    pub params: Vec<rpc::Value>,
 }
 
 impl From<(&'static str, serde_json::Value)> for MockedRequest {
-	fn from(a: (&'static str, serde_json::Value)) -> Self {
-		MockedRequest {
-			method: a.0.to_owned(),
-			params: a.1.as_array().unwrap().clone()
-		}
-	}
+    fn from(a: (&'static str, serde_json::Value)) -> Self {
+        MockedRequest {
+            method: a.0.to_owned(),
+            params: a.1.as_array().unwrap().clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct MockedTransport {
-	pub requests: Cell<usize>,
-	pub expected_requests: Vec<MockedRequest>,
-	pub mocked_responses: Vec<serde_json::Value>,
+    pub requests: Cell<usize>,
+    pub expected_requests: Vec<MockedRequest>,
+    pub mocked_responses: Vec<serde_json::Value>,
 }
 
 impl Transport for MockedTransport {
-	type Out = web3::Result<rpc::Value>;
+    type Out = web3::Result<rpc::Value>;
 
-	fn prepare(&self, method: &str, params: Vec<rpc::Value>) -> (usize, rpc::Call) {
-		let n = self.requests.get();
-		assert_eq!(&self.expected_requests[n].method as &str, method, "invalid method called");
-		assert_eq!(self.expected_requests[n].params, params, "invalid method params");
-		self.requests.set(n + 1);
+    fn prepare(&self, method: &str, params: Vec<rpc::Value>) -> (usize, rpc::Call) {
+        let n = self.requests.get();
+        assert_eq!(
+            &self.expected_requests[n].method as &str, method,
+            "invalid method called"
+        );
+        assert_eq!(
+            self.expected_requests[n].params, params,
+            "invalid method params"
+        );
+        self.requests.set(n + 1);
 
-		let request = web3::helpers::build_request(1, method, params);
-		(n + 1, request)
-	}
+        let request = web3::helpers::build_request(1, method, params);
+        (n + 1, request)
+    }
 
-	fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
-		let response = self.mocked_responses.iter().nth(self.requests.get() - 1).expect("missing response");
-		let f = futures::finished(response.clone());
-		Box::new(f)
-	}
+    fn send(&self, _id: usize, _request: rpc::Call) -> web3::Result<rpc::Value> {
+        let response = self.mocked_responses
+            .iter()
+            .nth(self.requests.get() - 1)
+            .expect("missing response");
+        let f = futures::finished(response.clone());
+        Box::new(f)
+    }
 }
 
 #[macro_export]
@@ -66,7 +75,12 @@ macro_rules! test_transport_stream {
 
 			let transport = $crate::MockedTransport {
 				requests: Default::default(),
-				expected_requests: vec![$($method),*].into_iter().zip(vec![$($req),*].into_iter()).map(Into::into).collect(),
+				expected_requests: vec![$($method),*]
+                    .into_iter()
+                    .zip(vec![$($req),*]
+                    .into_iter())
+                    .map(Into::into)
+                    .collect(),
 				mocked_responses: vec![$($res),*],
 			};
 			let stream = $init_stream(&transport);
@@ -87,8 +101,10 @@ macro_rules! test_app_stream {
 		txs => $txs: expr,
 		init => $init_stream: expr,
 		expected => $expected: expr,
-		home_transport => [$($home_method: expr => req => $home_req: expr, res => $home_res: expr ;)*],
-		foreign_transport => [$($foreign_method: expr => req => $foreign_req: expr, res => $foreign_res: expr ;)*]
+		home_transport =>
+            [$($home_method: expr => req => $home_req: expr, res => $home_res: expr ;)*],
+		foreign_transport =>
+            [$($foreign_method: expr => req => $foreign_req: expr, res => $foreign_res: expr ;)*]
 	) => {
 		#[test]
 		#[allow(unused_imports)]
@@ -99,18 +115,35 @@ macro_rules! test_app_stream {
 			use self::ethereum_types::U256;
 			use self::bridge::app::{App, Connections};
 			use self::bridge::contracts::{foreign, home};
-			use self::bridge::config::{Config, Authorities, Node, ContractConfig, Transactions, TransactionConfig};
+			use self::bridge::config::{
+                Config,
+                Authorities,
+                Node,
+                ContractConfig,
+                Transactions,
+                TransactionConfig
+            };
 			use self::bridge::database::Database;
 
 			let home = $crate::MockedTransport {
 				requests: Default::default(),
-				expected_requests: vec![$($home_method),*].into_iter().zip(vec![$($home_req),*].into_iter()).map(Into::into).collect(),
+				expected_requests: vec![$($home_method),*]
+                    .into_iter()
+                    .zip(vec![$($home_req),*]
+                    .into_iter())
+                    .map(Into::into)
+                    .collect(),
 				mocked_responses: vec![$($home_res),*],
 			};
 
 			let foreign = $crate::MockedTransport {
 				requests: Default::default(),
-				expected_requests: vec![$($foreign_method),*].into_iter().zip(vec![$($foreign_req),*].into_iter()).map(Into::into).collect(),
+				expected_requests: vec![$($foreign_method),*]
+                    .into_iter()
+                    .zip(vec![$($foreign_req),*]
+                    .into_iter())
+                    .map(Into::into)
+                    .collect(),
 				mocked_responses: vec![$($foreign_res),*],
 			};
 
@@ -183,5 +216,4 @@ macro_rules! test_app_stream {
 }
 
 #[cfg(test)]
-mod tests {
-}
+mod tests {}
