@@ -90,7 +90,7 @@ Options:
     let database = TomlFileDatabase::from_path(&args.arg_database)?;
 
     let bridge_stream = Bridge::new(config, home_connection, foreign_connection, database);
-    info!(target: "parity-bridge", "Starting listening to events");
+    info!(target: "parity-bridge", "Listening to events");
     let bridge_future = bridge_stream
         .and_then(|_| future::ok(true))
         .collect();
