@@ -15,8 +15,9 @@ const DEFAULT_TIMEOUT: u64 = 5;
 /// Application config.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
-    pub home: Node,
-    pub foreign: Node,
+    pub address: Address,
+    pub home: NodeConfig,
+    pub foreign: NodeConfig,
     pub authorities: Authorities,
     pub txs: Transactions,
     pub estimated_gas_cost_of_withdraw: U256,
@@ -39,8 +40,9 @@ impl Config {
 
     fn from_load_struct(config: load::Config) -> Result<Config, Error> {
         let result = Config {
-            home: Node::from_load_struct(config.home)?,
-            foreign: Node::from_load_struct(config.foreign)?,
+            address: config.address,
+            home: NodeConfig::from_load_struct(config.home)?,
+            foreign: NodeConfig::from_load_struct(config.foreign)?,
             authorities: Authorities {
                 accounts: config.authorities.accounts,
                 required_signatures: config.authorities.required_signatures,
@@ -59,8 +61,7 @@ impl Config {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Node {
-    pub account: Address,
+pub struct NodeConfig {
     pub contract: ContractConfig,
     pub ipc: PathBuf,
     pub request_timeout: Duration,
@@ -68,10 +69,9 @@ pub struct Node {
     pub required_confirmations: usize,
 }
 
-impl Node {
-    fn from_load_struct(node: load::Node) -> Result<Node, Error> {
-        let result = Node {
-            account: node.account,
+impl NodeConfig {
+    fn from_load_struct(node: load::NodeConfig) -> Result<NodeConfig, Error> {
+        let result = Self {
             contract: ContractConfig {
                 bin: {
                     let mut read = String::new();
@@ -178,8 +178,9 @@ mod load {
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct Config {
-        pub home: Node,
-        pub foreign: Node,
+        pub address: Address,
+        pub home: NodeConfig,
+        pub foreign: NodeConfig,
         pub authorities: Authorities,
         pub transactions: Option<Transactions>,
         #[serde(deserialize_with = "deserialize_u256")]
@@ -192,8 +193,7 @@ mod load {
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
-    pub struct Node {
-        pub account: Address,
+    pub struct NodeConfig {
         pub contract: ContractConfig,
         pub ipc: PathBuf,
         pub request_timeout: Option<u64>,
@@ -236,18 +236,18 @@ mod load {
 mod tests {
     use std::time::Duration;
     use rustc_hex::FromHex;
-    use super::{Authorities, Config, ContractConfig, Node, TransactionConfig, Transactions};
+    use super::{Authorities, Config, ContractConfig, NodeConfig, TransactionConfig, Transactions};
     use ethereum_types::U256;
 
     #[test]
     fn load_full_setup_from_str() {
         let toml = r#"
+address = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 estimated_gas_cost_of_withdraw = "100000"
 max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = "/home.ipc"
 poll_interval = 2
 required_confirmations = 100
@@ -256,7 +256,6 @@ required_confirmations = 100
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
-account = "0x0000000000000000000000000000000000000001"
 ipc = "/foreign.ipc"
 
 [foreign.contract]
@@ -275,9 +274,9 @@ home_deploy = { gas = 20 }
 "#;
 
         let mut expected = Config {
+            address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
             txs: Transactions::default(),
-            home: Node {
-                account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
+            home: NodeConfig {
                 ipc: "/home.ipc".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/HomeBridge.bin")
@@ -289,8 +288,7 @@ home_deploy = { gas = 20 }
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 100,
             },
-            foreign: Node {
-                account: "0000000000000000000000000000000000000001".into(),
+            foreign: NodeConfig {
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
                         .from_hex()
@@ -327,19 +325,18 @@ home_deploy = { gas = 20 }
     #[test]
     fn load_minimal_setup_from_str() {
         let toml = r#"
+address = "0x0000000000000000000000000000000000000001"
 estimated_gas_cost_of_withdraw = "200000000"
 max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 ipc = ""
 
 [home.contract]
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
-account = "0x0000000000000000000000000000000000000001"
 ipc = ""
 
 [foreign.contract]
@@ -354,9 +351,9 @@ accounts = [
 required_signatures = 2
 "#;
         let expected = Config {
+            address: "0000000000000000000000000000000000000001".into(),
             txs: Transactions::default(),
-            home: Node {
-                account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
+            home: NodeConfig {
                 ipc: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/HomeBridge.bin")
@@ -368,8 +365,7 @@ required_signatures = 2
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 12,
             },
-            foreign: Node {
-                account: "0000000000000000000000000000000000000001".into(),
+            foreign: NodeConfig {
                 ipc: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/ForeignBridge.bin")

@@ -1,25 +1,17 @@
-use std::sync::Arc;
 use std::ops;
 use futures::{Future, Poll, Stream};
-use futures::future::{join_all, JoinAll};
+use futures::future::{join_all, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Address, Bytes, FilterBuilder, H256, H520, TransactionRequest};
-use api::{self, ApiCall, LogStream};
-use app::App;
-use contracts::foreign;
-use util::web3_filter;
-use database::Database;
-use error::Error;
+use web3::types::{Bytes, H256, H520, U256};
+use log_stream::LogStream;
+use contracts::foreign::ForeignBridge;
+use error;
 use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
-
-fn withdraws_filter(foreign: &foreign::ForeignBridge, address: Address) -> FilterBuilder {
-    let filter = foreign.events().withdraw().create_filter();
-    web3_filter(filter, address)
-}
+use contract_connection::ContractConnection;
+use web3::helpers::CallResult;
 
 fn withdraw_submit_signature_payload(
-    foreign: &foreign::ForeignBridge,
     withdraw_message: Vec<u8>,
     signature: H520,
 ) -> Bytes {
@@ -29,7 +21,7 @@ fn withdraw_submit_signature_payload(
         "ForeignBridge never accepts messages with len != {} bytes; qed",
         MESSAGE_LENGTH
     );
-    foreign
+    ForeignBridge::default()
         .functions()
         .submit_signature()
         .input(signature.0.to_vec(), withdraw_message)
@@ -39,61 +31,55 @@ fn withdraw_submit_signature_payload(
 /// State of withdraw confirmation.
 enum WithdrawConfirmState<T: Transport> {
     /// Withdraw confirm is waiting for logs.
-    Wait,
+    WaitForLogs,
     /// Signing withdraws.
     SignWithdraws {
         messages: Vec<Vec<u8>>,
-        future: JoinAll<Vec<Timeout<ApiCall<H520, T::Out>>>>,
+        future: JoinAll<Vec<Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>>>,
         block: u64,
     },
     /// Confirming withdraws.
     ConfirmWithdraws {
-        future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
+        future: JoinAll<Vec<Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>>>,
         block: u64,
     },
     /// All withdraws till given block has been confirmed.
     Yield(Option<u64>),
 }
 
-pub fn create_withdraw_confirm<T: Transport + Clone>(
-    app: Arc<App<T>>,
-    init: &Database,
-) -> WithdrawConfirm<T> {
-    let logs_init = api::LogStreamInit {
-        after: init.checked_withdraw_confirm,
-        request_timeout: app.config.foreign.request_timeout,
-        poll_interval: app.config.foreign.poll_interval,
-        confirmations: app.config.foreign.required_confirmations,
-        filter: withdraws_filter(&app.foreign_bridge, init.foreign_contract_address.clone()),
-    };
-
-    WithdrawConfirm {
-        logs: api::log_stream(
-            app.connections.foreign.clone(),
-            app.timer.clone(),
-            logs_init,
-        ),
-        foreign_contract: init.foreign_contract_address,
-        state: WithdrawConfirmState::Wait,
-        app,
-    }
+pub struct WithdrawConfirm<T: Transport> {
+    logs: LogStream<T>,
+    foreign: ContractConnection<T>,
+    gas: U256,
+    gas_price: U256,
+    state: WithdrawConfirmState<T>,
 }
 
-pub struct WithdrawConfirm<T: Transport> {
-    app: Arc<App<T>>,
-    logs: LogStream<T>,
-    state: WithdrawConfirmState<T>,
-    foreign_contract: Address,
+impl<T: Transport> WithdrawConfirm<T> {
+    pub fn new(
+        logs: LogStream<T>,
+        foreign: ContractConnection<T>,
+        gas: U256,
+        gas_price: U256,
+    ) -> Self {
+        Self {
+            logs,
+            foreign,
+            gas,
+            gas_price,
+            state: WithdrawConfirmState::WaitForLogs,
+        }
+    }
 }
 
 impl<T: Transport> Stream for WithdrawConfirm<T> {
     type Item = u64;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let next_state = match self.state {
-                WithdrawConfirmState::Wait => {
+                WithdrawConfirmState::WaitForLogs => {
                     let item = try_stream!(self.logs.poll());
                     info!("got {} new withdraws to sign", item.logs.len());
                     let withdraw_messages = item.logs
@@ -105,26 +91,19 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
                             );
                             Ok(MessageToMainnet::from_log(log)?.to_bytes())
                         })
-                        .collect::<Result<Vec<_>, Error>>()?;
+                        .collect::<Result<Vec<_>, Self::Error>>()?;
 
-                    let requests = withdraw_messages
+                    // borrow checker...
+                    let foreign = &self.foreign;
+                    let sign_requests = withdraw_messages
                         .clone()
                         .into_iter()
-                        .map(|message| {
-                            self.app.timer.timeout(
-                                api::sign(
-                                    &self.app.connections.foreign,
-                                    self.app.config.foreign.account,
-                                    Bytes(message),
-                                ),
-                                self.app.config.foreign.request_timeout,
-                            )
-                        })
+                        .map(|message| foreign.sign(Bytes(message)))
                         .collect::<Vec<_>>();
 
                     info!("signing");
                     WithdrawConfirmState::SignWithdraws {
-                        future: join_all(requests),
+                        future: join_all(sign_requests),
                         messages: withdraw_messages,
                         block: item.to,
                     }
@@ -136,41 +115,29 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
                 } => {
                     let signatures = try_ready!(future.poll());
                     info!("signing complete");
+
                     // borrow checker...
-                    let app = &self.app;
-                    let foreign_contract = &self.foreign_contract;
-                    let confirmations = messages
+                    let foreign = &self.foreign;
+                    let gas = self.gas;
+                    let gas_price = self.gas_price;
+                    let requests = messages
                         .drain(ops::RangeFull)
                         .zip(signatures.into_iter())
                         .map(|(withdraw_message, signature)| {
                             withdraw_submit_signature_payload(
-                                &app.foreign_bridge,
                                 withdraw_message,
                                 signature,
                             )
                         })
-                        .map(|payload| TransactionRequest {
-                            from: app.config.foreign.account,
-                            to: Some(foreign_contract.clone()),
-                            gas: Some(app.config.txs.withdraw_confirm.gas.into()),
-                            gas_price: Some(app.config.txs.withdraw_confirm.gas_price.into()),
-                            value: None,
-                            data: Some(payload),
-                            nonce: None,
-                            condition: None,
-                        })
-                        .map(|request| {
+                        .map(|payload| {
                             info!("submitting signature");
-                            app.timer.timeout(
-                                api::send_transaction(&app.connections.foreign, request),
-                                app.config.foreign.request_timeout,
-                            )
+                            foreign.send_transaction(payload, gas, gas_price)
                         })
                         .collect::<Vec<_>>();
 
-                    info!("submitting {} signatures", confirmations.len());
+                    info!("submitting {} signatures", requests.len());
                     WithdrawConfirmState::ConfirmWithdraws {
-                        future: join_all(confirmations),
+                        future: join_all(requests),
                         block,
                     }
                 }
@@ -185,7 +152,7 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
                 WithdrawConfirmState::Yield(ref mut block) => match block.take() {
                     None => {
                         info!("waiting for new withdraws that should get signed");
-                        WithdrawConfirmState::Wait
+                        WithdrawConfirmState::WaitForLogs
                     }
                     some => return Ok(some.into()),
                 },

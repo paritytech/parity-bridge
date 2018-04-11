@@ -1,6 +1,9 @@
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
 
+# ACTION REQUIRED: set to your authority address
+address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
+
 estimated_gas_cost_of_withdraw = "200000"
 
 # limits total balance on `home` and therefore total ether that could get lost
@@ -15,8 +18,6 @@ max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-# ACTION REQUIRED: set to your authority address
-account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
 # ACTION REQUIRED: set the the ipc socket of the parity node that has `home.account` unlocked
 ipc = "./home.ipc"
 # ACTION REQUIRED: for test deployment set this to 12
@@ -28,8 +29,6 @@ required_confirmations = 0
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
-# ACTION REQUIRED: set to your authority address
-account = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
 # ACTION REQUIRED: set the the ipc socket of the parity node that has `foreign.account` unlocked
 ipc = "./foreign.ipc"
 # ACTION REQUIRED: for test deployment set this to 12

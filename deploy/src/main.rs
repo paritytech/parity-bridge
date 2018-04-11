@@ -8,18 +8,18 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate tokio_core;
+extern crate web3;
 
 use std::{env, fs};
-use std::sync::Arc;
 use std::path::PathBuf;
 use docopt::Docopt;
 use tokio_core::reactor::Core;
+use web3::transports::ipc::Ipc;
 
-use bridge::app::App;
 use bridge::bridge::{DeployForeign, DeployHome};
 use bridge::config::Config;
 use bridge::error::Error;
-use bridge::database::Database;
+use bridge::database::State;
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
@@ -79,27 +79,35 @@ Options:
     info!(target: "parity-bridge-deploy", "Starting event loop");
     let mut event_loop = Core::new().unwrap();
 
-    info!(target: "parity-bridge-deploy", "Establishing ipc connection");
-    let app = App::new_ipc(config, &args.arg_database, &event_loop.handle())?;
-    let app_ref = Arc::new(app.as_ref());
+    info!(target: "parity-bridge-deploy", "Establishing IPC connection to home");
+    let home_ipc_connection = Ipc::with_event_loop(&config.home.ipc, &event_loop.handle())?;
+
+    info!(target: "parity-bridge-deploy", "Establishing IPC connection to foreign");
+    let foreign_ipc_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
     info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
-    let home_deployed = event_loop.run(DeployHome::new(app_ref.clone()))?;
+    let home_deployed = event_loop.run(DeployHome::new(
+        config.clone(), home_ipc_connection))?;
+    info!(target: "parity-bridge-deploy", "Successfully deployed HomeBridge contract");
+
     home_deployed.dump_info(format!(
         "deployment-home-{}",
         home_deployed.contract_address
     ))?;
 
     info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
-    let foreign_deployed = event_loop.run(DeployForeign::new(app_ref.clone()))?;
+    let foreign_deployed = event_loop.run(DeployForeign::new(
+        config.clone(), foreign_ipc_connection))?;
+    info!(target: "parity-bridge-deploy", "Successfully deployed ForeignBridge contract");
+
     foreign_deployed.dump_info(format!(
         "deployment-foreign-{}",
         foreign_deployed.contract_address
     ))?;
 
-    let database = Database::from_receipts(&home_deployed.receipt, &foreign_deployed.receipt);
-    info!(target: "parity-bridge-deploy", "\n\n{}\n", database);
-    database.save(fs::File::create(&app_ref.database_path)?)?;
+    let state = State::from_transaction_receipts(&home_deployed.receipt, &foreign_deployed.receipt);
+    info!(target: "parity-bridge-deploy", "\n\n{}\n", state);
+    state.write(fs::File::create(args.arg_database)?)?;
 
     Ok("Done".into())
 }

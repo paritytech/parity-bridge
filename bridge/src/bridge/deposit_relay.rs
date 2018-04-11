@@ -1,136 +1,161 @@
-use std::sync::Arc;
 use futures::{Future, Poll, Stream};
-use futures::future::{join_all, JoinAll};
+use futures::future::{join_all, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Address, Bytes, FilterBuilder, H256, Log, TransactionRequest};
+use web3::types::{Bytes, H256, U256, Log};
+use web3::helpers::CallResult;
 use ethabi::RawLog;
-use api::{self, ApiCall, LogStream};
-use error::{Error, Result};
-use database::Database;
-use contracts::{foreign, home};
-use util::web3_filter;
-use app::App;
+use log_stream::LogStream;
+use error;
+use contracts::{HomeBridge, ForeignBridge};
+use contract_connection::ContractConnection;
 
-fn deposits_filter(home: &home::HomeBridge, address: Address) -> FilterBuilder {
-    let filter = home.events().deposit().create_filter();
-    web3_filter(filter, address)
-}
-
+/// takes `deposit_log` which must be a `HomeBridge.Deposit` event
+/// and returns the payload for the call to `ForeignBridge.deposit()`
 fn deposit_relay_payload(
-    home: &home::HomeBridge,
-    foreign: &foreign::ForeignBridge,
-    log: Log,
-) -> Result<Bytes> {
-    let raw_log = RawLog {
-        topics: log.topics,
-        data: log.data.0,
+    web3_log: Log,
+) -> error::Result<Bytes> {
+    let tx_hash = web3_log.transaction_hash
+        .expect("log must be mined and contain `transaction_hash`");
+    let raw_ethabi_log = RawLog {
+        topics: web3_log.topics,
+        data: web3_log.data.0,
     };
-    let deposit_log = home.events().deposit().parse_log(raw_log)?;
-    let hash = log.transaction_hash
-        .expect("log to be mined and contain `transaction_hash`");
-    let payload = foreign.functions().deposit().input(
-        deposit_log.recipient,
-        deposit_log.value,
-        hash.0,
+    let ethabi_log = HomeBridge::default().events().deposit().parse_log(raw_ethabi_log)?;
+    let payload = ForeignBridge::default().functions().deposit().input(
+        ethabi_log.recipient,
+        ethabi_log.value,
+        tx_hash.0,
     );
     Ok(payload.into())
 }
 
-/// State of deposits relay.
-enum DepositRelayState<T: Transport> {
-    /// Deposit relay is waiting for logs.
-    Wait,
-    /// Relaying deposits in progress.
-    RelayDeposits {
-        future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
-        block: u64,
-    },
-    /// All deposits till given block has been relayed.
-    Yield(Option<u64>),
+SingleDepositRelayFactory {
+    gas,
+    gas_price,
+    foreign: ContractConnection<T>,
 }
 
-pub fn create_deposit_relay<T: Transport + Clone>(
-    app: Arc<App<T>>,
-    init: &Database,
-) -> DepositRelay<T> {
-    let logs_init = api::LogStreamInit {
-        after: init.checked_deposit_relay,
-        request_timeout: app.config.home.request_timeout,
-        poll_interval: app.config.home.poll_interval,
-        confirmations: app.config.home.required_confirmations,
-        filter: deposits_filter(&app.home_bridge, init.home_contract_address),
-    };
-    DepositRelay {
-        logs: api::log_stream(app.connections.home.clone(), app.timer.clone(), logs_init),
-        foreign_contract: init.foreign_contract_address,
-        state: DepositRelayState::Wait,
-        app,
+impl<T: Transport> SingleDepositRelayFactory {
+    pub fn log_to_relay(log: Log) -> SingleDepositRelay<T> {
+        SingleDepositRelay::new(log, self.foreign, self.gas, self.gas_price)
     }
 }
 
-pub struct DepositRelay<T: Transport> {
-    app: Arc<App<T>>,
+pub struct SingleDepositRelay<T: Transport> {
+    future: Timeout<FromErr<CallResult<Bytes, T::Out>
+}
+
+impl<T: Transport + Clone> SingleDepositRelay<T> {
+    pub fn new(
+        log: Log,
+        foreign: ContractConnection<T>,
+        gas: U256,
+        gas_price: U256,
+    ) -> Result<Self> {
+        let payload = deposit_relay_payload(log)?;
+            // TODO annotate error
+
+        Self {
+            future: foreign.send_transaction(payload, gas, gas_price),
+        }
+    }
+}
+
+impl<T: Transport> Stream for DepositRelay<T> {
+    type Item = ();
+    type Error = error::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        info!("single_deposit_relay"
+        let _ = try_ready!(future.poll());
+        info!(
+        Some(())
+    }
+}
+
+/// State of deposits relay.
+enum DepositBatchRelayState<T: Transport> {
+    /// Deposit relay is waiting for logs.
+    WaitForLogs,
+    /// Relaying deposits in progress.
+    WaitForRelays {
+        future: JoinAll<Vec<Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>>>,
+        block: u64,
+    },
+    /// All deposits till given block has been relayed.
+    Yield {
+        block: u64,
+    }
+}
+
+/// a tokio `Stream` that when polled fetches all new `HomeBridge.Deposit`
+/// events from `logs` and for each of them executes a `ForeignBridge.deposit`
+/// transaction and waits for the configured confirmations.
+/// stream yields last block on `home` for which all `HomeBrige.Deposit`
+/// events have been handled this way.
+pub struct DepositRelayMany<T: Transport> {
     logs: LogStream<T>,
+    log_to_relay: LogToRelay<T>
+    foreign: ContractConnection<T>,
+    gas: U256,
+    gas_price: U256,
     state: DepositRelayState<T>,
-    foreign_contract: Address,
+}
+
+impl<T: Transport + Clone> DepositRelayMany<T> {
+    pub fn new(
+        logs: LogStream<T>,
+        log_to_relay: LogToRelay<T>
+        foreign: ContractConnection<T>,
+        gas: U256,
+        gas_price: U256,
+    ) -> Self {
+        Self {
+            logs,
+            foreign,
+            gas,
+            gas_price,
+            state: DepositRelayManyState::WaitForLogs,
+        }
+    }
 }
 
 impl<T: Transport> Stream for DepositRelay<T> {
     type Item = u64;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let next_state = match self.state {
-                DepositRelayState::Wait => {
-                    let item = try_stream!(self.logs.poll());
-                    info!("got {} new deposits to relay", item.logs.len());
-                    let deposits = item.logs
-                        .into_iter()
-                        .map(|log| {
-                            deposit_relay_payload(
-                                &self.app.home_bridge,
-                                &self.app.foreign_bridge,
-                                log,
-                            )
-                        })
-                        .collect::<Result<Vec<_>>>()?
-                        .into_iter()
-                        .map(|payload| TransactionRequest {
-                            from: self.app.config.foreign.account,
-                            to: Some(self.foreign_contract.clone()),
-                            gas: Some(self.app.config.txs.deposit_relay.gas.into()),
-                            gas_price: Some(self.app.config.txs.deposit_relay.gas_price.into()),
-                            value: None,
-                            data: Some(payload),
-                            nonce: None,
-                            condition: None,
-                        })
-                        .map(|request| {
-                            self.app.timer.timeout(
-                                api::send_transaction(&self.app.connections.foreign, request),
-                                self.app.config.foreign.request_timeout,
-                            )
-                        })
-                        .collect::<Vec<_>>();
+                DepositRelayState::WaitForLogs => {
+                    let log_range = try_stream!(self.logs.poll());
 
-                    info!("relaying {} deposits", deposits.len());
-                    DepositRelayState::RelayDeposits {
-                        future: join_all(deposits),
+                    let foreign = self.foreign.clone();
+                    let gas = self.gas;
+                    let gas_price = self.gas_price;
+
+                    let relays = log_range.logs
+                        .into_iter()
+                        .map(|log| DepositRelaySingle::new(
+                            log, foreign
+                        ))
+                        .collect::<Result<Vec<_>, Self::Error>>()?;
+
+                    DepositRelayState::WaitForRelays {
+                        future: join_all(transactions),
                         block: item.to,
                     }
                 }
-                DepositRelayState::RelayDeposits {
+                DepositRelayState::WaitForRelays {
                     ref mut future,
                     block,
                 } => {
                     let _ = try_ready!(future.poll());
-                    info!("deposit relay completed");
                     DepositRelayState::Yield(Some(block))
                 }
-                DepositRelayState::Yield(ref mut block) => match block.take() {
-                    None => DepositRelayState::Wait,
+                DepositRelayState::Yield(block) {
+                    None => DepositRelayState::WaitForLogs,
                     some => return Ok(some.into()),
                 },
             };
@@ -139,18 +164,15 @@ impl<T: Transport> Stream for DepositRelay<T> {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use rustc_hex::FromHex;
     use web3::types::{Bytes, Log};
-    use contracts::{foreign, home};
     use super::deposit_relay_payload;
 
     #[test]
     fn test_deposit_relay_payload() {
-        let home = home::HomeBridge::default();
-        let foreign = foreign::ForeignBridge::default();
-
         let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
         let log = Log {
             data: data.into(),
@@ -163,7 +185,7 @@ mod tests {
             ..Default::default()
         };
 
-        let payload = deposit_relay_payload(&home, &foreign, log).unwrap();
+        let payload = deposit_relay_payload(log).unwrap();
         let expected: Bytes = "26b3293f000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap().into();
         assert_eq!(expected, payload);
     }

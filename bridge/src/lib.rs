@@ -28,13 +28,12 @@ extern crate web3;
 #[macro_use]
 mod macros;
 
-pub mod api;
-pub mod app;
+pub mod contract_connection;
 pub mod config;
 pub mod bridge;
+pub mod log_stream;
 pub mod contracts;
 pub mod database;
 pub mod error;
-pub mod util;
 pub mod message_to_mainnet;
 pub mod signature;

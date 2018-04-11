@@ -1,7 +1,6 @@
 #![allow(unknown_lints)]
 
 use std::io;
-use api::ApiCall;
 use tokio_timer::{TimeoutError, TimerError};
 use {ethabi, rustc_hex, toml, web3};
 
@@ -20,9 +19,9 @@ error_chain! {
 
     errors {
         // api timeout
-        Timeout(request: &'static str) {
+        Timeout {
             description("Request timeout"),
-            display("Request {} timed out", request),
+            display("Request timed out"),
         }
         // workaround for error_chain not allowing to check internal error kind
         // https://github.com/rust-lang-nursery/error-chain/issues/206
@@ -38,12 +37,33 @@ error_chain! {
     }
 }
 
-impl<T, F> From<TimeoutError<ApiCall<T, F>>> for Error {
-    fn from(err: TimeoutError<ApiCall<T, F>>) -> Self {
-        match err {
-            TimeoutError::Timer(call, _) | TimeoutError::TimedOut(call) => {
-                ErrorKind::Timeout(call.message()).into()
-            }
-        }
+// `CallResult` is a future whose associated type `Error` is a `web3::Error`
+
+// `Timeout<F>` is a future whose associated type `Error` is `From<TimeoutError<F>>`
+
+// so for `TimeoutError<CallResult<T, F>` the `Error` of CallResult (web::Error)
+// must implement From<TimeoutError.
+// that's pretty ridiculous
+// so you need to wrap it
+
+// the timeout has the same error type as the wrapped future.
+// that's why the error type of the wrapped future must impl from TimeoutError
+
+// you cant implement from TimeoutError for web3::Error
+
+impl<F> From<TimeoutError<F>> for Error {
+    fn from(_err: TimeoutError<F>) -> Self {
+        ErrorKind::Timeout.into()
     }
 }
+
+impl From<web3::Error> for Error {
+    fn from(err: web3::Error) -> Self {
+        ErrorKind::Web3(err).into()
+    }
+}
+
+// /// captures a string describing the context
+// pub fn annotate<T: AsRef<String>> (err: Error, context_description: T) -> {
+//     format!("error occured while `{}`: {?}", context_description, err);
+// }

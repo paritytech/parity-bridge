@@ -4,3 +4,6 @@ use_contract!(
     "ForeignBridge",
     "../compiled_contracts/ForeignBridge.abi"
 );
+
+pub use self::home::HomeBridge;
+pub use self::foreign::ForeignBridge;

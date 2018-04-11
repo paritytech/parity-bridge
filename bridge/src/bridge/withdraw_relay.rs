@@ -1,27 +1,16 @@
-use std::sync::Arc;
 use futures::{Future, Poll, Stream};
-use futures::future::{join_all, Join, JoinAll};
+use futures::future::{join_all, Join, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Address, Bytes, FilterBuilder, H256, Log, TransactionRequest};
+use web3::types::{Address, Bytes, U256, H256, Log};
 use ethabi::{self, RawLog};
-use app::App;
-use api::{self, ApiCall, LogStream};
-use contracts::foreign;
-use util::web3_filter;
-use database::Database;
-use error::{self, Error};
+use log_stream::LogStream;
+use contracts::{ForeignBridge, HomeBridge};
+use error;
 use message_to_mainnet::MessageToMainnet;
 use signature::Signature;
-
-/// returns a filter for `ForeignBridge.CollectedSignatures` events
-fn collected_signatures_filter(
-    foreign: &foreign::ForeignBridge,
-    address: Address,
-) -> FilterBuilder {
-    let filter = foreign.events().collected_signatures().create_filter();
-    web3_filter(filter, address)
-}
+use contract_connection::ContractConnection;
+use web3::helpers::CallResult;
 
 /// payloads for calls to `ForeignBridge.signature` and `ForeignBridge.message`
 /// to retrieve the signatures (v, r, s) and messages
@@ -34,7 +23,6 @@ struct RelayAssignment {
 }
 
 fn signatures_payload(
-    foreign: &foreign::ForeignBridge,
     required_signatures: u32,
     my_address: Address,
     log: Log,
@@ -45,7 +33,7 @@ fn signatures_payload(
         topics: log.topics.into_iter().map(|t| t.0.into()).collect(),
         data: log.data.0,
     };
-    let collected_signatures = foreign.events().collected_signatures().parse_log(raw_log)?;
+    let collected_signatures = ForeignBridge::default().events().collected_signatures().parse_log(raw_log)?;
     if collected_signatures.authority_responsible_for_relay != my_address.0.into() {
         info!(
             "bridge not responsible for relaying transaction to home. tx hash: {}",
@@ -58,14 +46,14 @@ fn signatures_payload(
     let signature_payloads = (0..required_signatures)
         .into_iter()
         .map(|index| {
-            foreign
+            ForeignBridge::default()
                 .functions()
                 .signature()
                 .input(collected_signatures.message_hash, index)
         })
         .map(Into::into)
         .collect();
-    let message_payload = foreign
+    let message_payload = ForeignBridge::default()
         .functions()
         .message()
         .input(collected_signatures.message_hash)
@@ -79,62 +67,63 @@ fn signatures_payload(
 
 /// state of the withdraw relay state machine
 pub enum WithdrawRelayState<T: Transport> {
-    Wait,
-    FetchMessagesSignatures {
+    WaitForLogs,
+    WaitForMessagesSignatures {
         future: Join<
-            JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>,
-            JoinAll<Vec<JoinAll<Vec<Timeout<ApiCall<Bytes, T::Out>>>>>>,
+            JoinAll<Vec<Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>>>,
+            JoinAll<Vec<JoinAll<Vec<Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>>>>>,
         >,
         block: u64,
     },
     RelayWithdraws {
-        future: JoinAll<Vec<Timeout<ApiCall<H256, T::Out>>>>,
+        future: JoinAll<Vec<Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>>>,
         block: u64,
     },
     Yield(Option<u64>),
 }
 
-pub fn create_withdraw_relay<T: Transport + Clone>(
-    app: Arc<App<T>>,
-    init: &Database,
-) -> WithdrawRelay<T> {
-    let logs_init = api::LogStreamInit {
-        after: init.checked_withdraw_relay,
-        request_timeout: app.config.foreign.request_timeout,
-        poll_interval: app.config.foreign.poll_interval,
-        confirmations: app.config.foreign.required_confirmations,
-        filter: collected_signatures_filter(&app.foreign_bridge, init.foreign_contract_address),
-    };
-
-    WithdrawRelay {
-        logs: api::log_stream(
-            app.connections.foreign.clone(),
-            app.timer.clone(),
-            logs_init,
-        ),
-        home_contract: init.home_contract_address,
-        foreign_contract: init.foreign_contract_address,
-        state: WithdrawRelayState::Wait,
-        app,
-    }
+/// a tokio `Stream` that when polled fetches all new `ForeignBridge.CollectedSignatures`
+/// events from `logs` and, if the node is responsible for the relay,
+/// executes a `HomeBridge.withdraw` transaction and waits for the configured
+/// confirmations.
+/// stream yields last block on `foreign` for which all `ForeignBridge.CollectedSignatures`
+/// events have been handled this way.
+pub struct WithdrawRelay<T: Transport> {
+    logs: LogStream<T>,
+    home: ContractConnection<T>,
+    foreign: ContractConnection<T>,
+    required_signatures: u32,
+    gas: U256,
+    state: WithdrawRelayState<T>,
 }
 
-pub struct WithdrawRelay<T: Transport> {
-    app: Arc<App<T>>,
-    logs: LogStream<T>,
-    state: WithdrawRelayState<T>,
-    foreign_contract: Address,
-    home_contract: Address,
+impl<T: Transport + Clone> WithdrawRelay<T> {
+    pub fn new(
+        logs: LogStream<T>,
+        home: ContractConnection<T>,
+        foreign: ContractConnection<T>,
+        required_signatures: u32,
+        gas: U256,
+    ) -> Self {
+        Self {
+            logs,
+            home,
+            foreign,
+            required_signatures,
+            gas,
+            state: WithdrawRelayState::WaitForLogs,
+        }
+    }
 }
 
 impl<T: Transport> Stream for WithdrawRelay<T> {
     type Item = u64;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let next_state = match self.state {
-                WithdrawRelayState::Wait => {
+                WithdrawRelayState::WaitForLogs => {
                     let item = try_stream!(self.logs.poll());
                     info!("got {} new signed withdraws to relay", item.logs.len());
                     let assignments = item.logs
@@ -145,13 +134,14 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                                 log.transaction_hash.unwrap()
                             );
                             signatures_payload(
-                                &self.app.foreign_bridge,
-                                self.app.config.authorities.required_signatures,
-                                self.app.config.foreign.account,
+                                self.required_signatures,
+                                self.home.authority_address,
                                 log,
                             )
                         })
                         .collect::<error::Result<Vec<_>>>()?;
+                        // .map_err(|err|
+                        //     error::annotate(err, "polling logs from home chain"))?;
 
                     let (signatures, messages): (Vec<_>, Vec<_>) = assignments
                         .into_iter()
@@ -161,18 +151,10 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                         })
                         .unzip();
 
+                    let foreign = &self.foreign;
                     let message_calls = messages
                         .into_iter()
-                        .map(|payload| {
-                            self.app.timer.timeout(
-                                api::call(
-                                    &self.app.connections.foreign,
-                                    self.foreign_contract.clone(),
-                                    payload,
-                                ),
-                                self.app.config.foreign.request_timeout,
-                            )
-                        })
+                        .map(|payload| foreign.call(payload))
                         .collect::<Vec<_>>();
 
                     let signature_calls = signatures
@@ -180,28 +162,19 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                         .map(|payloads| {
                             payloads
                                 .into_iter()
-                                .map(|payload| {
-                                    self.app.timer.timeout(
-                                        api::call(
-                                            &self.app.connections.foreign,
-                                            self.foreign_contract.clone(),
-                                            payload,
-                                        ),
-                                        self.app.config.foreign.request_timeout,
-                                    )
-                                })
+                                .map(|payload| foreign.call(payload))
                                 .collect::<Vec<_>>()
                         })
                         .map(|calls| join_all(calls))
                         .collect::<Vec<_>>();
 
                     info!("fetching messages and signatures");
-                    WithdrawRelayState::FetchMessagesSignatures {
+                    WithdrawRelayState::WaitForMessagesSignatures {
                         future: join_all(message_calls).join(join_all(signature_calls)),
                         block: item.to,
                     }
                 }
-                WithdrawRelayState::FetchMessagesSignatures {
+                WithdrawRelayState::WaitForMessagesSignatures {
                     ref mut future,
                     block,
                 } => {
@@ -209,13 +182,10 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                     info!("fetching messages and signatures complete");
                     assert_eq!(messages_raw.len(), signatures_raw.len());
 
-                    let app = &self.app;
-                    let home_contract = &self.home_contract;
-
                     let messages = messages_raw
                         .iter()
                         .map(|message| {
-                            app.foreign_bridge
+                            ForeignBridge::default()
                                 .functions()
                                 .message()
                                 .output(message.0.as_slice())
@@ -232,24 +202,26 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                                 .iter()
                                 .map(|signature| {
                                     Signature::from_bytes(
-                                        app.foreign_bridge
+                                        ForeignBridge::default()
                                             .functions()
                                             .signature()
                                             .output(signature.0.as_slice())?
                                             .as_slice(),
                                     )
                                 })
-                                .collect::<Result<Vec<_>, Error>>()
-                                .map_err(error::Error::from)
+                                .collect::<error::Result<Vec<_>>>()
                         })
                         .collect::<error::Result<Vec<_>>>()?;
                     info!("signatures decoded");
 
+                    // borrow checker...
+                    let home = &self.home;
+                    let gas = self.gas;
                     let relays = messages
                         .into_iter()
                         .zip(signatures.into_iter())
                         .map(|(message, signatures)| {
-                            let payload: Bytes = app.home_bridge
+                            let payload: Bytes = HomeBridge::default()
                                 .functions()
                                 .withdraw()
                                 .input(
@@ -259,23 +231,9 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                                     message.clone().0,
                                 )
                                 .into();
-                            let request = TransactionRequest {
-                                from: app.config.home.account,
-                                to: Some(home_contract.clone()),
-                                gas: Some(app.config.txs.withdraw_relay.gas.into()),
-                                gas_price: Some(
-                                    MessageToMainnet::from_bytes(message.0.as_slice())
-                                        .mainnet_gas_price,
-                                ),
-                                value: None,
-                                data: Some(payload),
-                                nonce: None,
-                                condition: None,
-                            };
-                            app.timer.timeout(
-                                api::send_transaction(&app.connections.home, request),
-                                app.config.home.request_timeout,
-                            )
+                            let gas_price = MessageToMainnet::from_bytes(message.0.as_slice())
+                                .mainnet_gas_price;
+                            home.send_transaction(payload, gas, gas_price)
                         })
                         .collect::<Vec<_>>();
 
@@ -296,7 +254,7 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                 WithdrawRelayState::Yield(ref mut block) => match block.take() {
                     None => {
                         info!("waiting for signed withdraws to relay");
-                        WithdrawRelayState::Wait
+                        WithdrawRelayState::WaitForLogs
                     }
                     some => return Ok(some.into()),
                 },
@@ -310,12 +268,10 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
 mod tests {
     use rustc_hex::FromHex;
     use web3::types::{Bytes, Log};
-    use contracts::foreign;
     use super::signatures_payload;
 
     #[test]
     fn test_signatures_payload() {
-        let foreign = foreign::ForeignBridge::default();
         let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccc".into();
 
         let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
@@ -331,7 +287,7 @@ mod tests {
             ..Default::default()
         };
 
-        let assignment = signatures_payload(&foreign, 2, my_address, log)
+        let assignment = signatures_payload(2, my_address, log)
             .unwrap()
             .unwrap();
         let expected_message: Bytes =
@@ -349,7 +305,6 @@ mod tests {
 
     #[test]
     fn test_signatures_payload_not_ours() {
-        let foreign = foreign::ForeignBridge::default();
         let my_address = "aff3454fce5edbc8cca8697c15331677e6ebcccd".into();
 
         let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
@@ -365,7 +320,7 @@ mod tests {
             ..Default::default()
         };
 
-        let assignment = signatures_payload(&foreign, 2, my_address, log).unwrap();
+        let assignment = signatures_payload(2, my_address, log).unwrap();
         assert_eq!(None, assignment);
     }
 }

@@ -1,16 +1,16 @@
-use std::sync::Arc;
 use futures::{Future, Poll};
 use web3::Transport;
-use web3::confirm::SendTransactionWithConfirmation;
+use web3::confirm::{SendTransactionWithConfirmation, send_transaction_with_confirmation};
 use web3::types::{TransactionReceipt, TransactionRequest};
-use app::App;
 use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use error::{Error, ErrorKind};
+use error::Error;
 use rustc_hex::ToHex;
-use api;
+use config::Config;
+use contracts::foreign::ForeignBridge;
+use contracts::home::HomeBridge;
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
@@ -24,14 +24,16 @@ pub enum DeployState<T: Transport + Clone> {
 }
 
 pub struct DeployHome<T: Transport + Clone> {
-    app: Arc<App<T>>,
+    config: Config,
+    home_connection: T,
     state: DeployState<T>,
 }
 
 impl<T: Transport + Clone> DeployHome<T> {
-    pub fn new(app: Arc<App<T>>) -> Self {
+    pub fn new(config: Config, home_connection: T) -> Self {
         Self {
-            app,
+            config,
+            home_connection,
             state: DeployState::NotDeployed,
         }
     }
@@ -46,34 +48,34 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = self.app.home_bridge.constructor(
-                        self.app.config.home.contract.bin.clone().0,
-                        self.app.config.authorities.required_signatures,
-                        self.app.config.authorities.accounts.clone(),
-                        self.app.config.estimated_gas_cost_of_withdraw,
-                        self.app.config.max_total_home_contract_balance,
-                        self.app.config.max_single_deposit_value,
+                    let data = HomeBridge::default().constructor(
+                        self.config.home.contract.bin.clone().0,
+                        self.config.authorities.required_signatures,
+                        self.config.authorities.accounts.clone(),
+                        self.config.estimated_gas_cost_of_withdraw,
+                        self.config.max_total_home_contract_balance,
+                        self.config.max_single_deposit_value,
                     );
 
                     let tx_request = TransactionRequest {
-                        from: self.app.config.home.account,
+                        from: self.config.address,
                         to: None,
-                        gas: Some(self.app.config.txs.home_deploy.gas.into()),
-                        gas_price: Some(self.app.config.txs.home_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.home_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.home_deploy.gas_price.into()),
                         value: None,
                         data: Some(data.clone().into()),
                         nonce: None,
                         condition: None,
                     };
 
-                    let future = api::send_transaction_with_confirmation(
-                        self.app.connections.home.clone(),
+                    let future = send_transaction_with_confirmation(
+                        self.home_connection.clone(),
                         tx_request,
-                        self.app.config.home.poll_interval,
-                        self.app.config.home.required_confirmations,
+                        self.config.home.poll_interval,
+                        self.config.home.required_confirmations,
                     );
 
-                    info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.home.required_confirmations);
+                    info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.config.home.required_confirmations);
 
                     DeployState::Deploying {
                         data: data,
@@ -84,7 +86,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll().map_err(ErrorKind::Web3));
+                    let receipt = try_ready!(future.poll());
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
@@ -109,14 +111,16 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
 }
 
 pub struct DeployForeign<T: Transport + Clone> {
-    app: Arc<App<T>>,
+    config: Config,
+    foreign_connection: T,
     state: DeployState<T>,
 }
 
 impl<T: Transport + Clone> DeployForeign<T> {
-    pub fn new(app: Arc<App<T>>) -> Self {
+    pub fn new(config: Config, foreign_connection: T) -> Self {
         Self {
-            app,
+            config,
+            foreign_connection,
             state: DeployState::NotDeployed,
         }
     }
@@ -131,32 +135,32 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = self.app.foreign_bridge.constructor(
-                        self.app.config.foreign.contract.bin.clone().0,
-                        self.app.config.authorities.required_signatures,
-                        self.app.config.authorities.accounts.clone(),
-                        self.app.config.estimated_gas_cost_of_withdraw,
+                    let data = ForeignBridge::default().constructor(
+                        self.config.foreign.contract.bin.clone().0,
+                        self.config.authorities.required_signatures,
+                        self.config.authorities.accounts.clone(),
+                        self.config.estimated_gas_cost_of_withdraw,
                     );
 
                     let tx_request = TransactionRequest {
-                        from: self.app.config.foreign.account,
+                        from: self.config.address,
                         to: None,
-                        gas: Some(self.app.config.txs.foreign_deploy.gas.into()),
-                        gas_price: Some(self.app.config.txs.foreign_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.foreign_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.foreign_deploy.gas_price.into()),
                         value: None,
                         data: Some(data.clone().into()),
                         nonce: None,
                         condition: None,
                     };
 
-                    let future = api::send_transaction_with_confirmation(
-                        self.app.connections.foreign.clone(),
+                    let future = send_transaction_with_confirmation(
+                        self.foreign_connection.clone(),
                         tx_request,
-                        self.app.config.foreign.poll_interval,
-                        self.app.config.foreign.required_confirmations,
+                        self.config.foreign.poll_interval,
+                        self.config.foreign.required_confirmations,
                     );
 
-                    info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.foreign.required_confirmations);
+                    info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.config.foreign.required_confirmations);
 
                     DeployState::Deploying {
                         data: data,
@@ -167,7 +171,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll().map_err(ErrorKind::Web3));
+                    let receipt = try_ready!(future.poll());
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
