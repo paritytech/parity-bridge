@@ -93,11 +93,11 @@ enum LogStreamState<T: Transport> {
         future: Timeout<FromErr<CallResult<Vec<Log>, T::Out>, error::Error>>,
     },
     /// All logs has been fetched.
-    NextItem(Option<LogStreamItem>),
+    NextItem(Option<LogRange>),
 }
 
 impl<T: Transport> Stream for LogStream<T> {
-    type Item = LogStreamItem;
+    type Item = LogRange;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -139,7 +139,7 @@ impl<T: Transport> Stream for LogStream<T> {
                     to,
                 } => {
                     let logs = try_ready!(future.poll());
-                    let item = LogStreamItem { from, to, logs };
+                    let item = LogRange { from, to, logs };
 
                     self.after = to;
                     LogStreamState::NextItem(Some(item))
