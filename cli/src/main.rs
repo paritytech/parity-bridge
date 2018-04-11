@@ -74,19 +74,19 @@ Options:
         .and_then(|d| d.argv(command).deserialize())
         .map_err(|e| e.to_string())?;
 
-    info!(target: "parity-bridge", "Loading config");
+    info!(target: "parity-bridge", "Loading config from {:?}", args.arg_config);
     let config = Config::load(args.arg_config)?;
 
     info!(target: "parity-bridge", "Starting event loop");
     let mut event_loop = Core::new().unwrap();
 
-    info!(target: "parity-bridge", "Establishing IPC connection to home");
+    info!(target: "parity-bridge", "Establishing IPC connection to home {:?}", config.home.ipc);
     let home_connection = Ipc::with_event_loop(&config.home.ipc, &event_loop.handle())?;
 
-    info!(target: "parity-bridge", "Establishing IPC connection to foreign");
+    info!(target: "parity-bridge", "Establishing IPC connection to foreign {:?}", config.foreign.ipc);
     let foreign_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
-    info!(target: "parity-bridge", "Loading database from file");
+    info!(target: "parity-bridge", "Loading database from {:?}", args.arg_database);
     let database = TomlFileDatabase::from_path(&args.arg_database)?;
 
     let bridge_stream = Bridge::new(config, home_connection, foreign_connection, database);

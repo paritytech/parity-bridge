@@ -62,9 +62,9 @@ impl<T: Transport> Future for DepositRelay<T> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        info!("{:?} start", self.tx_hash);
+        info!("relaying {:?}", self.tx_hash);
         let _ = try_ready!(self.future.poll());
-        info!("{:?} end", self.tx_hash);
+        info!("finished relaying {:?}", self.tx_hash);
         Ok(Async::Ready(()))
     }
 }
