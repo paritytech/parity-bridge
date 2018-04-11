@@ -1,4 +1,4 @@
-use futures::{Future, Poll, Stream};
+use futures::{Future, Poll, Stream, Async};
 use futures::future::{join_all, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
@@ -14,79 +14,84 @@ use contract_connection::ContractConnection;
 /// and returns the payload for the call to `ForeignBridge.deposit()`
 fn deposit_relay_payload(
     web3_log: Log,
-) -> error::Result<Bytes> {
+) -> Vec<u8> {
     let tx_hash = web3_log.transaction_hash
-        .expect("log must be mined and contain `transaction_hash`");
+        .expect("log must be mined and contain `transaction_hash`. q.e.d.");
     let raw_ethabi_log = RawLog {
         topics: web3_log.topics,
         data: web3_log.data.0,
     };
-    let ethabi_log = HomeBridge::default().events().deposit().parse_log(raw_ethabi_log)?;
-    let payload = ForeignBridge::default().functions().deposit().input(
+    let ethabi_log = HomeBridge::default()
+        .events()
+        .deposit()
+        .parse_log(raw_ethabi_log)
+        .expect("log must be a from a Deposit event. q.e.d.");
+    ForeignBridge::default().functions().deposit().input(
         ethabi_log.recipient,
         ethabi_log.value,
         tx_hash.0,
-    );
-    Ok(payload.into())
+    )
 }
 
-SingleDepositRelayFactory {
-    gas,
-    gas_price,
-    foreign: ContractConnection<T>,
+/// `Future` that relays a single deposit
+pub struct DepositRelay<T: Transport> {
+    tx_hash: H256,
+    future: Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>,
 }
 
-impl<T: Transport> SingleDepositRelayFactory {
-    pub fn log_to_relay(log: Log) -> SingleDepositRelay<T> {
-        SingleDepositRelay::new(log, self.foreign, self.gas, self.gas_price)
-    }
-}
-
-pub struct SingleDepositRelay<T: Transport> {
-    future: Timeout<FromErr<CallResult<Bytes, T::Out>
-}
-
-impl<T: Transport + Clone> SingleDepositRelay<T> {
+impl<T: Transport + Clone> DepositRelay<T> {
     pub fn new(
         log: Log,
         foreign: ContractConnection<T>,
         gas: U256,
         gas_price: U256,
-    ) -> Result<Self> {
-        let payload = deposit_relay_payload(log)?;
-            // TODO annotate error
+    ) -> Self {
+        let tx_hash = log.transaction_hash
+            .expect("log must be mined and contain `transaction_hash`. q.e.d.");
+        let payload = deposit_relay_payload(log);
 
         Self {
-            future: foreign.send_transaction(payload, gas, gas_price),
+            tx_hash,
+            future: foreign.send_transaction(Bytes(payload), gas, gas_price),
         }
     }
 }
 
-impl<T: Transport> Stream for DepositRelay<T> {
+impl<T: Transport> Future for DepositRelay<T> {
     type Item = ();
     type Error = error::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        info!("single_deposit_relay"
-        let _ = try_ready!(future.poll());
-        info!(
-        Some(())
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        info!("{:?} start", self.tx_hash);
+        let _ = try_ready!(self.future.poll());
+        info!("{:?} end", self.tx_hash);
+        Ok(Async::Ready(()))
+    }
+}
+
+/// a thing that contains configuration for `DepositRelay`s
+/// so it can take a `Log` and return a `DepositRelay`
+pub struct LogToDepositRelay<T> {
+    pub gas: U256,
+    pub gas_price: U256,
+    pub foreign: ContractConnection<T>,
+}
+
+impl<T: Transport> LogToDepositRelay<T> {
+    pub fn log_to_relay(&self, log: Log) -> DepositRelay<T> {
+        DepositRelay::new(log, self.foreign.clone(), self.gas, self.gas_price)
     }
 }
 
 /// State of deposits relay.
-enum DepositBatchRelayState<T: Transport> {
+enum DepositsRelayState<T: Transport> {
     /// Deposit relay is waiting for logs.
     WaitForLogs,
     /// Relaying deposits in progress.
     WaitForRelays {
-        future: JoinAll<Vec<Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>>>,
+        future: JoinAll<Vec<DepositRelay<T>>>,
         block: u64,
     },
-    /// All deposits till given block has been relayed.
-    Yield {
-        block: u64,
-    }
 }
 
 /// a tokio `Stream` that when polled fetches all new `HomeBridge.Deposit`
@@ -94,72 +99,55 @@ enum DepositBatchRelayState<T: Transport> {
 /// transaction and waits for the configured confirmations.
 /// stream yields last block on `home` for which all `HomeBrige.Deposit`
 /// events have been handled this way.
-pub struct DepositRelayMany<T: Transport> {
+pub struct DepositsRelay<T: Transport> {
     logs: LogStream<T>,
-    log_to_relay: LogToRelay<T>
-    foreign: ContractConnection<T>,
-    gas: U256,
-    gas_price: U256,
-    state: DepositRelayState<T>,
+    log_to_relay: LogToDepositRelay<T>,
+    state: DepositsRelayState<T>
 }
 
-impl<T: Transport + Clone> DepositRelayMany<T> {
+impl<T: Transport + Clone> DepositsRelay<T> {
     pub fn new(
         logs: LogStream<T>,
-        log_to_relay: LogToRelay<T>
-        foreign: ContractConnection<T>,
-        gas: U256,
-        gas_price: U256,
+        log_to_relay: LogToDepositRelay<T>
     ) -> Self {
         Self {
             logs,
-            foreign,
-            gas,
-            gas_price,
-            state: DepositRelayManyState::WaitForLogs,
+            log_to_relay,
+            state: DepositsRelayState::WaitForLogs,
         }
     }
 }
 
-impl<T: Transport> Stream for DepositRelay<T> {
+impl<T: Transport> Stream for DepositsRelay<T> {
     type Item = u64;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
-            let next_state = match self.state {
-                DepositRelayState::WaitForLogs => {
+            let (next_state, block_to_return) = match self.state {
+                DepositsRelayState::WaitForLogs => {
                     let log_range = try_stream!(self.logs.poll());
 
-                    let foreign = self.foreign.clone();
-                    let gas = self.gas;
-                    let gas_price = self.gas_price;
+                    // borrow checker...
+                    let log_to_relay = &self.log_to_relay;
 
                     let relays = log_range.logs
                         .into_iter()
-                        .map(|log| DepositRelaySingle::new(
-                            log, foreign
-                        ))
-                        .collect::<Result<Vec<_>, Self::Error>>()?;
+                        .map(|log| log_to_relay.log_to_relay(log))
+                        .collect::<Vec<_>>();
 
-                    DepositRelayState::WaitForRelays {
-                        future: join_all(transactions),
-                        block: item.to,
-                    }
+                    (DepositsRelayState::WaitForRelays {
+                        future: join_all(relays),
+                        block: log_range.to,
+                    }, None)
                 }
-                DepositRelayState::WaitForRelays {
-                    ref mut future,
-                    block,
-                } => {
-                    let _ = try_ready!(future.poll());
-                    DepositRelayState::Yield(Some(block))
+                DepositsRelayState::WaitForRelays { ref mut future, block } => {
+                    try_ready!(future.poll());
+                    (DepositsRelayState::WaitForLogs, Some(block))
                 }
-                DepositRelayState::Yield(block) {
-                    None => DepositRelayState::WaitForLogs,
-                    some => return Ok(some.into()),
-                },
             };
             self.state = next_state;
+            if block_to_return.is_some() { return Ok(Async::Ready(block_to_return)); }
         }
     }
 }
