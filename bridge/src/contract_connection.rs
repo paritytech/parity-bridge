@@ -20,8 +20,6 @@ pub struct ContractConnection<T> {
     pub timer: Timer,
 }
 
-type CallResult
-
 impl<T: Transport> ContractConnection<T> {
     pub fn new(
         authority_address: Address,
