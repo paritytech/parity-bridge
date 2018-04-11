@@ -477,6 +477,7 @@ dependencies = [
  "serde 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "web3 0.2.0 (git+https://github.com/tomusdrw/rust-web3?branch=bridge)",
 ]
 
 [[package]]
@@ -491,6 +492,7 @@ dependencies = [
  "serde 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "web3 0.2.0 (git+https://github.com/tomusdrw/rust-web3?branch=bridge)",
 ]
 
 [[package]]
