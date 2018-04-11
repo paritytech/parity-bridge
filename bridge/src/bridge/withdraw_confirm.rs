@@ -29,7 +29,7 @@ fn withdraw_submit_signature_payload(
 }
 
 /// State of withdraw confirmation.
-enum WithdrawConfirmState<T: Transport> {
+enum WithdrawsConfirmState<T: Transport> {
     /// Withdraw confirm is waiting for logs.
     WaitForLogs,
     /// Signing withdraws.
@@ -47,15 +47,15 @@ enum WithdrawConfirmState<T: Transport> {
     Yield(Option<u64>),
 }
 
-pub struct WithdrawConfirm<T: Transport> {
+pub struct WithdrawsConfirm<T: Transport> {
     logs: LogStream<T>,
     foreign: ContractConnection<T>,
     gas: U256,
     gas_price: U256,
-    state: WithdrawConfirmState<T>,
+    state: WithdrawsConfirmState<T>,
 }
 
-impl<T: Transport> WithdrawConfirm<T> {
+impl<T: Transport> WithdrawsConfirm<T> {
     pub fn new(
         logs: LogStream<T>,
         foreign: ContractConnection<T>,
@@ -67,19 +67,19 @@ impl<T: Transport> WithdrawConfirm<T> {
             foreign,
             gas,
             gas_price,
-            state: WithdrawConfirmState::WaitForLogs,
+            state: WithdrawsConfirmState::WaitForLogs,
         }
     }
 }
 
-impl<T: Transport> Stream for WithdrawConfirm<T> {
+impl<T: Transport> Stream for WithdrawsConfirm<T> {
     type Item = u64;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let next_state = match self.state {
-                WithdrawConfirmState::WaitForLogs => {
+                WithdrawsConfirmState::WaitForLogs => {
                     let item = try_stream!(self.logs.poll());
                     info!("got {} new withdraws to sign", item.logs.len());
                     let withdraw_messages = item.logs
@@ -102,13 +102,13 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
                         .collect::<Vec<_>>();
 
                     info!("signing");
-                    WithdrawConfirmState::SignWithdraws {
+                    WithdrawsConfirmState::SignWithdraws {
                         future: join_all(sign_requests),
                         messages: withdraw_messages,
                         block: item.to,
                     }
                 }
-                WithdrawConfirmState::SignWithdraws {
+                WithdrawsConfirmState::SignWithdraws {
                     ref mut future,
                     ref mut messages,
                     block,
@@ -136,23 +136,23 @@ impl<T: Transport> Stream for WithdrawConfirm<T> {
                         .collect::<Vec<_>>();
 
                     info!("submitting {} signatures", requests.len());
-                    WithdrawConfirmState::ConfirmWithdraws {
+                    WithdrawsConfirmState::ConfirmWithdraws {
                         future: join_all(requests),
                         block,
                     }
                 }
-                WithdrawConfirmState::ConfirmWithdraws {
+                WithdrawsConfirmState::ConfirmWithdraws {
                     ref mut future,
                     block,
                 } => {
                     let _ = try_ready!(future.poll());
                     info!("submitting signatures complete");
-                    WithdrawConfirmState::Yield(Some(block))
+                    WithdrawsConfirmState::Yield(Some(block))
                 }
-                WithdrawConfirmState::Yield(ref mut block) => match block.take() {
+                WithdrawsConfirmState::Yield(ref mut block) => match block.take() {
                     None => {
                         info!("waiting for new withdraws that should get signed");
-                        WithdrawConfirmState::WaitForLogs
+                        WithdrawsConfirmState::WaitForLogs
                     }
                     some => return Ok(some.into()),
                 },

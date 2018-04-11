@@ -66,7 +66,7 @@ fn signatures_payload(
 }
 
 /// state of the withdraw relay state machine
-pub enum WithdrawRelayState<T: Transport> {
+pub enum WithdrawsRelayState<T: Transport> {
     WaitForLogs,
     WaitForMessagesSignatures {
         future: Join<
@@ -88,16 +88,16 @@ pub enum WithdrawRelayState<T: Transport> {
 /// confirmations.
 /// stream yields last block on `foreign` for which all `ForeignBridge.CollectedSignatures`
 /// events have been handled this way.
-pub struct WithdrawRelay<T: Transport> {
+pub struct WithdrawsRelay<T: Transport> {
     logs: LogStream<T>,
     home: ContractConnection<T>,
     foreign: ContractConnection<T>,
     required_signatures: u32,
     gas: U256,
-    state: WithdrawRelayState<T>,
+    state: WithdrawsRelayState<T>,
 }
 
-impl<T: Transport + Clone> WithdrawRelay<T> {
+impl<T: Transport + Clone> WithdrawsRelay<T> {
     pub fn new(
         logs: LogStream<T>,
         home: ContractConnection<T>,
@@ -111,19 +111,19 @@ impl<T: Transport + Clone> WithdrawRelay<T> {
             foreign,
             required_signatures,
             gas,
-            state: WithdrawRelayState::WaitForLogs,
+            state: WithdrawsRelayState::WaitForLogs,
         }
     }
 }
 
-impl<T: Transport> Stream for WithdrawRelay<T> {
+impl<T: Transport> Stream for WithdrawsRelay<T> {
     type Item = u64;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let next_state = match self.state {
-                WithdrawRelayState::WaitForLogs => {
+                WithdrawsRelayState::WaitForLogs => {
                     let item = try_stream!(self.logs.poll());
                     info!("got {} new signed withdraws to relay", item.logs.len());
                     let assignments = item.logs
@@ -169,12 +169,12 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                         .collect::<Vec<_>>();
 
                     info!("fetching messages and signatures");
-                    WithdrawRelayState::WaitForMessagesSignatures {
+                    WithdrawsRelayState::WaitForMessagesSignatures {
                         future: join_all(message_calls).join(join_all(signature_calls)),
                         block: item.to,
                     }
                 }
-                WithdrawRelayState::WaitForMessagesSignatures {
+                WithdrawsRelayState::WaitForMessagesSignatures {
                     ref mut future,
                     block,
                 } => {
@@ -238,23 +238,23 @@ impl<T: Transport> Stream for WithdrawRelay<T> {
                         .collect::<Vec<_>>();
 
                     info!("relaying {} withdraws", relays.len());
-                    WithdrawRelayState::RelayWithdraws {
+                    WithdrawsRelayState::RelayWithdraws {
                         future: join_all(relays),
                         block,
                     }
                 }
-                WithdrawRelayState::RelayWithdraws {
+                WithdrawsRelayState::RelayWithdraws {
                     ref mut future,
                     block,
                 } => {
                     let _ = try_ready!(future.poll());
                     info!("relaying withdraws complete");
-                    WithdrawRelayState::Yield(Some(block))
+                    WithdrawsRelayState::Yield(Some(block))
                 }
-                WithdrawRelayState::Yield(ref mut block) => match block.take() {
+                WithdrawsRelayState::Yield(ref mut block) => match block.take() {
                     None => {
                         info!("waiting for signed withdraws to relay");
-                        WithdrawRelayState::WaitForLogs
+                        WithdrawsRelayState::WaitForLogs
                     }
                     some => return Ok(some.into()),
                 },

@@ -14,9 +14,9 @@ use contracts::{HomeBridge, ForeignBridge};
 use contract_connection::ContractConnection;
 
 pub use self::deploy::{DeployForeign, DeployHome};
-pub use self::deposit_relay::DepositRelay;
-pub use self::withdraw_relay::WithdrawRelay;
-pub use self::withdraw_confirm::WithdrawConfirm;
+pub use self::deposit_relay::{DepositsRelay, LogToDepositRelay};
+pub use self::withdraw_relay::WithdrawsRelay;
+pub use self::withdraw_confirm::WithdrawsConfirm;
 
 /// combines relays streams with the database.
 /// (relay streams have no knowledge of the database.)
@@ -24,9 +24,9 @@ pub use self::withdraw_confirm::WithdrawConfirm;
 /// polls relay streams if polled.
 /// updates the database with results returned from relay streams.
 pub struct Bridge<T: Transport, D> {
-    deposit_relay: DepositRelay<T>,
-    withdraw_relay: WithdrawRelay<T>,
-    withdraw_confirm: WithdrawConfirm<T>,
+    deposits_relay: DepositsRelay<T>,
+    withdraws_relay: WithdrawsRelay<T>,
+    withdraws_confirm: WithdrawsConfirm<T>,
     database: D,
 }
 
@@ -63,12 +63,13 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             after: state.checked_deposit_relay,
         });
 
-        let deposit_relay = DepositRelay::new(
-            deposit_log_stream,
-            home_connection.clone(),
-            config.txs.deposit_relay.gas.into(),
-            config.txs.deposit_relay.gas_price.into()
-        );
+        let log_to_deposit_relay = LogToDepositRelay {
+            foreign: foreign_connection.clone(),
+            gas: config.txs.deposit_relay.gas.into(),
+            gas_price: config.txs.deposit_relay.gas_price.into()
+        };
+
+        let deposits_relay = DepositsRelay::new(deposit_log_stream, log_to_deposit_relay);
 
         let withdraw_log_stream = LogStream::new(LogStreamOptions {
             filter: ForeignBridge::default().events().withdraw().create_filter(),
@@ -80,7 +81,7 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             after: state.checked_withdraw_relay,
         });
 
-        let withdraw_confirm = WithdrawConfirm::new(
+        let withdraws_confirm = WithdrawsConfirm::new(
             withdraw_log_stream,
             foreign_connection.clone(),
             config.txs.withdraw_confirm.gas.into(),
@@ -97,7 +98,7 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             after: state.checked_withdraw_relay,
         });
 
-        let withdraw_relay = WithdrawRelay::new(
+        let withdraws_relay = WithdrawsRelay::new(
             collected_signatures_log_stream,
             home_connection.clone(),
             foreign_connection.clone(),
@@ -106,9 +107,9 @@ impl<T: Transport, D: Database> Bridge<T, D> {
         );
 
         Self {
-            deposit_relay,
-            withdraw_confirm,
-            withdraw_relay,
+            deposits_relay,
+            withdraws_confirm,
+            withdraws_relay,
             database,
         }
     }
@@ -120,15 +121,15 @@ impl<T: Transport, D: Database> Stream for Bridge<T, D> {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // only proceed once all three streams are Async::Ready
-        let deposit_relay = try_stream!(self.deposit_relay.poll());
-        let withdraw_relay = try_stream!(self.withdraw_relay.poll());
-        let withdraw_confirm = try_stream!(self.withdraw_confirm.poll());
+        let deposits_relay = try_stream!(self.deposits_relay.poll());
+        let withdraws_relay = try_stream!(self.withdraws_relay.poll());
+        let withdraws_confirm = try_stream!(self.withdraws_confirm.poll());
 
         // update the state
         let mut state = self.database.read();
-        state.checked_deposit_relay = deposit_relay;
-        state.checked_withdraw_relay = withdraw_relay;
-        state.checked_withdraw_confirm = withdraw_confirm;
+        state.checked_deposit_relay = deposits_relay;
+        state.checked_withdraw_relay = withdraws_relay;
+        state.checked_withdraw_confirm = withdraws_confirm;
         self.database.write(&state)?;
 
         return Ok(Async::Ready(Some(())));
