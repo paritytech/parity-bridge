@@ -37,3 +37,4 @@ pub mod database;
 pub mod error;
 pub mod message_to_mainnet;
 pub mod signature;
+pub mod relay_stream;
