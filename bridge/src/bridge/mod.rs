@@ -12,9 +12,10 @@ use log_stream::{LogStream, LogStreamOptions};
 use error::Error;
 use contracts::{HomeBridge, ForeignBridge};
 use contract_connection::ContractConnection;
+use relay_stream::RelayStream;
 
 pub use self::deploy::{DeployForeign, DeployHome};
-pub use self::deposit_relay::{DepositsRelay, LogToDepositRelay};
+pub use self::deposit_relay::DepositRelayFactory;
 pub use self::withdraw_relay::WithdrawsRelay;
 pub use self::withdraw_confirm::WithdrawsConfirm;
 
@@ -24,7 +25,7 @@ pub use self::withdraw_confirm::WithdrawsConfirm;
 /// polls relay streams if polled.
 /// updates the database with results returned from relay streams.
 pub struct Bridge<T: Transport, D> {
-    deposits_relay: DepositsRelay<T>,
+    deposits_relay: RelayStream<T>,
     withdraws_relay: WithdrawsRelay<T>,
     withdraws_confirm: WithdrawsConfirm<T>,
     database: D,
@@ -63,13 +64,13 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             after: state.checked_deposit_relay,
         });
 
-        let log_to_deposit_relay = LogToDepositRelay {
+        let deposit_relay_factory = DepositRelayFactory {
             foreign: foreign_connection.clone(),
             gas: config.txs.deposit_relay.gas.into(),
             gas_price: config.txs.deposit_relay.gas_price.into()
         };
 
-        let deposits_relay = DepositsRelay::new(deposit_log_stream, log_to_deposit_relay);
+        let deposits_relay = RelayStream::new(deposit_log_stream, deposit_relay_factory);
 
         let withdraw_log_stream = LogStream::new(LogStreamOptions {
             filter: ForeignBridge::default().events().withdraw().create_filter(),
