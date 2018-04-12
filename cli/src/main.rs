@@ -69,28 +69,28 @@ Options:
         env!("GIT_HASH")
     );
 
-    info!(target: "parity-bridge", "Parsing cli arguments");
+    info!("Parsing cli arguments");
     let args: Args = Docopt::new(usage)
         .and_then(|d| d.argv(command).deserialize())
         .map_err(|e| e.to_string())?;
 
-    info!(target: "parity-bridge", "Loading config from {:?}", args.arg_config);
+    info!("Loading config from {:?}", args.arg_config);
     let config = Config::load(args.arg_config)?;
 
-    info!(target: "parity-bridge", "Starting event loop");
+    info!("Starting event loop");
     let mut event_loop = Core::new().unwrap();
 
-    info!(target: "parity-bridge", "Establishing IPC connection to home {:?}", config.home.ipc);
+    info!("Establishing IPC connection to home {:?}", config.home.ipc);
     let home_connection = Ipc::with_event_loop(&config.home.ipc, &event_loop.handle())?;
 
-    info!(target: "parity-bridge", "Establishing IPC connection to foreign {:?}", config.foreign.ipc);
+    info!("Establishing IPC connection to foreign {:?}", config.foreign.ipc);
     let foreign_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
-    info!(target: "parity-bridge", "Loading database from {:?}", args.arg_database);
+    info!("Loading database from {:?}", args.arg_database);
     let database = TomlFileDatabase::from_path(&args.arg_database)?;
 
     let bridge_stream = Bridge::new(config, home_connection, foreign_connection, database);
-    info!(target: "parity-bridge", "Listening to events");
+    info!("Listening to events");
     let bridge_future = bridge_stream
         .and_then(|_| future::ok(true))
         .collect();
