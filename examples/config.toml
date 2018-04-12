@@ -3,16 +3,16 @@ max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
-ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
+account = "0x43EC6d0942f7fAeF069F7F63D0384a27f529B062"
+ipc = "/Users/CodeR/Dropbox/ChainSafe/Shyft/shyft_go-ethereum/shyftData/geth.ipc"
 required_confirmations = 0
 
 [home.contract]
 bin = "contracts/EthereumBridge.bin"
 
 [foreign]
-account = "0x006e27b6a72e1f34c626762f3c4761547aff1421"
-ipc = "/Users/marek/Library/Application Support/io.parity.ethereum/jsonrpc.ipc"
+account = "0x43EC6d0942f7fAeF069F7F63D0384a27f529B062"
+ipc = "/Users/CodeR/Dropbox/ChainSafe/Shyft/shyft_go-ethereum/shyftData/geth.ipc"
 required_confirmations = 0
 
 [foreign.contract]
@@ -20,7 +20,7 @@ bin = "contracts/KovanBridge.bin"
 
 [authorities]
 accounts = [
-	"0x006e27b6a72e1f34c626762f3c4761547aff1421",
+	"0x43EC6d0942f7fAeF069F7F63D0384a27f529B062",
 ]
 required_signatures = 1
 
