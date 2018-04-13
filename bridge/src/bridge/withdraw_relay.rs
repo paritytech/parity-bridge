@@ -57,11 +57,8 @@ impl<T: Transport> SideToMainRelay<T> {
         let event = log_to_collected_signatures(&log);
 
         let state = if event.authority_responsible_for_relay != options.address {
-            info!(
-                "bridge not responsible for relaying transaction to home. tx hash: {}",
-                log.transaction_hash.unwrap()
-            );
-            // this authority is not responsible for relaying this transaction.
+            info!("{:?} - this bridge node is not responsible for relaying transaction to main", tx_hash);
+            // this bridge node is not responsible for relaying this transaction.
             // someone else will relay this transaction to home.
             State::NotResponsible
         } else {
@@ -86,14 +83,11 @@ impl<T: Transport> SideToMainRelay<T> {
 
             let future = message_call.join(join_all(signature_calls));
 
+            info!("{:?} - step 1/3 - about to request message and signatures", tx_hash);
             State::AwaitMessageAndSignatures(future)
         };
 
-        Self {
-            tx_hash,
-            options,
-            state,
-        }
+        Self { tx_hash, options, state }
     }
 }
 
@@ -110,7 +104,7 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                 }
                 State::AwaitMessageAndSignatures(ref mut future) => {
                     let (message_raw, signatures_raw) = try_ready!(future.poll());
-                    info!("received message and signatures for {:?}", self.tx_hash);
+                    info!("{:?} - step 2/3 - message and signatures received. about to send transaction", self.tx_hash);
                     let message = ForeignBridge::default()
                         .functions()
                         .message()
@@ -148,7 +142,9 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                     State::AwaitTransaction(future)
                 },
                 State::AwaitTransaction(ref mut future) => {
-                    return Ok(Async::Ready(Some(try_ready!(future.poll()))));
+                    let tx_hash = try_ready!(future.poll());
+                    info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+                    return Ok(Async::Ready(Some(tx_hash)));
                 }
             };
             self.state = next_state;

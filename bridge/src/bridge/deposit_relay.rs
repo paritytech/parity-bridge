@@ -44,6 +44,7 @@ impl<T: Transport> MainToSideRelay<T> {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         let payload = deposit_relay_payload(log);
+        info!("{:?} - step 1/2 - about to send transaction", tx_hash);
 
         Self {
             tx_hash,
@@ -53,14 +54,14 @@ impl<T: Transport> MainToSideRelay<T> {
 }
 
 impl<T: Transport> Future for MainToSideRelay<T> {
-    type Item = ();
+    /// transaction hash
+    type Item = H256;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        info!("sending relay transaction for {:?}", self.tx_hash);
-        let _ = try_ready!(self.future.poll());
-        info!("finished relaying {:?}", self.tx_hash);
-        Ok(Async::Ready(()))
+        let tx_hash = try_ready!(self.future.poll());
+        info!("{:?} - step 2/2 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+        Ok(Async::Ready(tx_hash))
     }
 }
 

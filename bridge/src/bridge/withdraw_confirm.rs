@@ -1,7 +1,7 @@
 /// concerning the collection of signatures on `side`
 
 use std::ops;
-use futures::{Future, Poll, Stream};
+use futures::{Future, Poll, Stream, Async};
 use futures::future::{join_all, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
@@ -61,6 +61,7 @@ impl<T: Transport> SideToMainSign<T> {
 
         let future = options.side.sign(Bytes(message_bytes));
         let state = State::AwaitSignature(future);
+        info!("{:?} - step 1/3 - about to sign message", tx_hash);
 
         Self { options, tx_hash, message, state}
     }
@@ -75,7 +76,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitSignature(ref mut future) => {
+                    info!("sending relay transaction for {:?}", self.tx_hash);
                     let signature = try_ready!(future.poll());
+                    info!("{:?} - step 2/3 - message signed. about to send transaction", self.tx_hash);
 
                     let payload = ForeignBridge::default()
                         .functions()
@@ -86,9 +89,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     State::AwaitTransaction(future)
                 },
                 State::AwaitTransaction(ref mut future) => {
-                    // TODO try just returning future.poll
-                    // return Ok(Async::Ready(try_ready!(future.poll())));
-                    return future.poll();
+                    let tx_hash = try_ready!(future.poll());
+                    info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+                    return Ok(Async::Ready(tx_hash));
                 }
             };
             self.state = next_state;

@@ -17,7 +17,8 @@ use relay_stream::RelayStream;
 /// combines relays streams with the database.
 /// (relay streams have no knowledge of the database.)
 /// wraps the relay streams.
-/// polls relay streams if polled.
+/// if polled polls all relay streams which causes them fetch
+/// all pending relays and relay them
 /// updates the database with results returned from relay streams.
 pub struct Bridge<T: Transport, D> {
     deposits_relay: RelayStream<T, deposit_relay::Options<T>>,
