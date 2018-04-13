@@ -16,7 +16,7 @@ use docopt::Docopt;
 use tokio_core::reactor::Core;
 use web3::transports::ipc::Ipc;
 
-use bridge::bridge::{DeployForeign, DeployHome};
+use bridge::bridge::deploy::{DeployForeign, DeployHome};
 use bridge::config::Config;
 use bridge::error::Error;
 use bridge::database::State;

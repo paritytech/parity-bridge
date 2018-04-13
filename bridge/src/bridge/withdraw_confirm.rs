@@ -1,161 +1,95 @@
+/// concerning the collection of signatures on `side`
+
 use std::ops;
 use futures::{Future, Poll, Stream};
 use futures::future::{join_all, JoinAll, FromErr};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Bytes, H256, H520, U256};
+use web3::types::{Bytes, H256, H520, U256, Address, Log};
 use log_stream::LogStream;
 use contracts::foreign::ForeignBridge;
 use error;
 use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
 use contract_connection::ContractConnection;
 use web3::helpers::CallResult;
+use relay_stream::RelayFactory;
 
-fn withdraw_submit_signature_payload(
-    withdraw_message: Vec<u8>,
-    signature: H520,
-) -> Bytes {
-    assert_eq!(
-        withdraw_message.len(),
-        MESSAGE_LENGTH,
-        "ForeignBridge never accepts messages with len != {} bytes; qed",
-        MESSAGE_LENGTH
-    );
-    ForeignBridge::default()
-        .functions()
-        .submit_signature()
-        .input(signature.0.to_vec(), withdraw_message)
-        .into()
+enum State<T: Transport> {
+    AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
+    AwaitTransaction(Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>),
 }
 
-/// State of withdraw confirmation.
-enum WithdrawsConfirmState<T: Transport> {
-    /// Withdraw confirm is waiting for logs.
-    WaitForLogs,
-    /// Signing withdraws.
-    SignWithdraws {
-        messages: Vec<Vec<u8>>,
-        future: JoinAll<Vec<Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>>>,
-        block: u64,
-    },
-    /// Confirming withdraws.
-    ConfirmWithdraws {
-        future: JoinAll<Vec<Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>>>,
-        block: u64,
-    },
-    /// All withdraws till given block has been confirmed.
-    Yield(Option<u64>),
+pub struct SideToMainSign<T: Transport> {
+    tx_hash: H256,
+    options: Options<T>,
+    message: MessageToMainnet,
+    state: State<T>,
 }
 
-pub struct WithdrawsConfirm<T: Transport> {
-    logs: LogStream<T>,
-    foreign: ContractConnection<T>,
-    gas: U256,
-    gas_price: U256,
-    state: WithdrawsConfirmState<T>,
+#[derive(Clone)]
+pub struct Options<T: Transport> {
+    pub gas: U256,
+    pub gas_price: U256,
+    pub address: Address,
+    pub side: ContractConnection<T>,
 }
 
-impl<T: Transport> WithdrawsConfirm<T> {
-    pub fn new(
-        logs: LogStream<T>,
-        foreign: ContractConnection<T>,
-        gas: U256,
-        gas_price: U256,
-    ) -> Self {
-        Self {
-            logs,
-            foreign,
-            gas,
-            gas_price,
-            state: WithdrawsConfirmState::WaitForLogs,
-        }
+/// from the options and a log a relay future can be made
+impl<T: Transport> RelayFactory for Options<T> {
+    type Relay = SideToMainSign<T>;
+
+    fn log_to_relay(&self, log: Log) -> Self::Relay {
+        SideToMainSign::new(log, self.clone())
     }
 }
 
-impl<T: Transport> Stream for WithdrawsConfirm<T> {
-    type Item = u64;
+impl<T: Transport> SideToMainSign<T> {
+    pub fn new(log: Log, options: Options<T>) -> Self {
+        let tx_hash = log.transaction_hash
+            .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
+
+        let message = MessageToMainnet::from_log(log)
+            .expect("`log` must contain valid message. q.e.d.");
+        let message_bytes = message.to_bytes();
+
+        assert_eq!(
+            message_bytes.len(),
+            MESSAGE_LENGTH,
+            "ForeignBridge never accepts messages with len != {} bytes; qed",
+            MESSAGE_LENGTH
+        );
+
+        let future = options.side.sign(Bytes(message_bytes));
+        let state = State::AwaitSignature(future);
+
+        Self { options, tx_hash, message, state}
+    }
+}
+
+impl<T: Transport> Future for SideToMainSign<T> {
+    /// transaction hash
+    type Item = H256;
     type Error = error::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
-                WithdrawsConfirmState::WaitForLogs => {
-                    let item = try_stream!(self.logs.poll());
-                    info!("got {} new withdraws to sign", item.logs.len());
-                    let withdraw_messages = item.logs
-                        .into_iter()
-                        .map(|log| {
-                            info!(
-                                "withdraw is ready for signature submission. tx hash {}",
-                                log.transaction_hash.unwrap()
-                            );
-                            Ok(MessageToMainnet::from_log(log)?.to_bytes())
-                        })
-                        .collect::<Result<Vec<_>, Self::Error>>()?;
+                State::AwaitSignature(ref mut future) => {
+                    let signature = try_ready!(future.poll());
 
-                    // borrow checker...
-                    let foreign = &self.foreign;
-                    let sign_requests = withdraw_messages
-                        .clone()
-                        .into_iter()
-                        .map(|message| foreign.sign(Bytes(message)))
-                        .collect::<Vec<_>>();
+                    let payload = ForeignBridge::default()
+                        .functions()
+                        .submit_signature()
+                        .input(signature.0.to_vec(), self.message.to_bytes());
 
-                    info!("signing");
-                    WithdrawsConfirmState::SignWithdraws {
-                        future: join_all(sign_requests),
-                        messages: withdraw_messages,
-                        block: item.to,
-                    }
-                }
-                WithdrawsConfirmState::SignWithdraws {
-                    ref mut future,
-                    ref mut messages,
-                    block,
-                } => {
-                    let signatures = try_ready!(future.poll());
-                    info!("signing complete");
-
-                    // borrow checker...
-                    let foreign = &self.foreign;
-                    let gas = self.gas;
-                    let gas_price = self.gas_price;
-                    let requests = messages
-                        .drain(ops::RangeFull)
-                        .zip(signatures.into_iter())
-                        .map(|(withdraw_message, signature)| {
-                            withdraw_submit_signature_payload(
-                                withdraw_message,
-                                signature,
-                            )
-                        })
-                        .map(|payload| {
-                            info!("submitting signature");
-                            foreign.send_transaction(payload, gas, gas_price)
-                        })
-                        .collect::<Vec<_>>();
-
-                    info!("submitting {} signatures", requests.len());
-                    WithdrawsConfirmState::ConfirmWithdraws {
-                        future: join_all(requests),
-                        block,
-                    }
-                }
-                WithdrawsConfirmState::ConfirmWithdraws {
-                    ref mut future,
-                    block,
-                } => {
-                    let _ = try_ready!(future.poll());
-                    info!("submitting signatures complete");
-                    WithdrawsConfirmState::Yield(Some(block))
-                }
-                WithdrawsConfirmState::Yield(ref mut block) => match block.take() {
-                    None => {
-                        info!("waiting for new withdraws that should get signed");
-                        WithdrawsConfirmState::WaitForLogs
-                    }
-                    some => return Ok(some.into()),
+                    let future = self.options.side.send_transaction(Bytes(payload), self.options.gas, self.options.gas_price);
+                    State::AwaitTransaction(future)
                 },
+                State::AwaitTransaction(ref mut future) => {
+                    // TODO try just returning future.poll
+                    // return Ok(Async::Ready(try_ready!(future.poll())));
+                    return future.poll();
+                }
             };
             self.state = next_state;
         }

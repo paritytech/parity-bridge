@@ -34,30 +34,25 @@ fn deposit_relay_payload(
 }
 
 /// `Future` that relays a single deposit
-pub struct DepositRelay<T: Transport> {
+pub struct MainToSideRelay<T: Transport> {
     tx_hash: H256,
     future: Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>,
 }
 
-impl<T: Transport DepositRelay<T> {
-    pub fn new(
-        log: Log,
-        foreign: ContractConnection<T>,
-        gas: U256,
-        gas_price: U256,
-    ) -> Self {
+impl<T: Transport> MainToSideRelay<T> {
+    pub fn new(log: Log, options: Options<T>) -> Self {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         let payload = deposit_relay_payload(log);
 
         Self {
             tx_hash,
-            future: foreign.send_transaction(Bytes(payload), gas, gas_price),
+            future: options.foreign.send_transaction(Bytes(payload), options.gas, options.gas_price),
         }
     }
 }
 
-impl<T: Transport> Future for DepositRelay<T> {
+impl<T: Transport> Future for MainToSideRelay<T> {
     type Item = ();
     type Error = error::Error;
 
@@ -69,18 +64,20 @@ impl<T: Transport> Future for DepositRelay<T> {
     }
 }
 
-/// a thing that contains configuration for `DepositRelay`s
-/// so it can take a `Log` and return a `DepositRelay`
-pub struct DepositRelayFactory<T> {
+/// options for relays from side to main
+#[derive(Clone)]
+pub struct Options<T> {
     pub gas: U256,
     pub gas_price: U256,
     pub foreign: ContractConnection<T>,
 }
 
-impl<T: Transport> RelayFactory for DepositRelayFactory<T> {
-    type Relay = DepositRelay<T>;
+/// from the options and a log a relay future can be made
+impl<T: Transport> RelayFactory for Options<T> {
+    type Relay = MainToSideRelay<T>;
+
     fn log_to_relay(&self, log: Log) -> Self::Relay {
-        DepositRelay::new(log, self.foreign.clone(), self.gas, self.gas_price)
+        MainToSideRelay::new(log, self.clone())
     }
 }
 
