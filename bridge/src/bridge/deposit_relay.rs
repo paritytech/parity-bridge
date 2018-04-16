@@ -45,10 +45,11 @@ impl<T: Transport> MainToSideRelay<T> {
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         let payload = deposit_relay_payload(log);
         info!("{:?} - step 1/2 - about to send transaction", tx_hash);
+        let future = options.foreign.send_transaction(Bytes(payload), options.gas, options.gas_price);
 
         Self {
             tx_hash,
-            future: options.foreign.send_transaction(Bytes(payload), options.gas, options.gas_price),
+            future,
         }
     }
 }
