@@ -6,7 +6,7 @@ mod withdraw_relay;
 use futures::{Poll, Stream, Async};
 use web3::Transport;
 
-use database::Database;
+use database::{Database, State};
 use config::{Config};
 use log_stream::{LogStream, LogStreamOptions};
 use error::Error;
@@ -20,32 +20,31 @@ use relay_stream::RelayStream;
 /// if polled polls all relay streams which causes them fetch
 /// all pending relays and relay them
 /// updates the database with results returned from relay streams.
-pub struct Bridge<T: Transport, D> {
-    deposits_relay: RelayStream<T, deposit_relay::Options<T>>,
-    withdraws_relay: RelayStream<T, withdraw_relay::Options<T>>,
-    withdraws_confirm: RelayStream<T, withdraw_confirm::Options<T>>,
-    database: D,
+pub struct Bridge<T: Transport> {
+    deposits_relay: RelayStream<LogStream<T>, deposit_relay::Options<T>>,
+    withdraws_relay: RelayStream<LogStream<T>, withdraw_relay::Options<T>>,
+    withdraws_confirm: RelayStream<LogStream<T>, withdraw_confirm::Options<T>>,
+    state: State
 }
 
-impl<T: Transport, D: Database> Bridge<T, D> {
+impl<T: Transport> Bridge<T> {
     pub fn new(
         config: Config,
+        initial_state: State,
         home_transport: T,
-        foreign_transport: T,
-        database: D
+        foreign_transport: T
     ) -> Self {
-        let state = database.read();
 
         let home_connection = ContractConnection::new(
             config.address,
-            state.home_contract_address,
+            initial_state.home_contract_address,
             home_transport.clone(),
             config.home.request_timeout
         );
 
         let foreign_connection = ContractConnection::new(
             config.address,
-            state.foreign_contract_address,
+            initial_state.foreign_contract_address,
             foreign_transport.clone(),
             config.foreign.request_timeout
         );
@@ -56,8 +55,8 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             poll_interval: config.home.poll_interval,
             confirmations: config.home.required_confirmations,
             transport: home_transport.clone(),
-            contract_address: state.home_contract_address,
-            after: state.checked_deposit_relay,
+            contract_address: initial_state.home_contract_address,
+            after: initial_state.checked_deposit_relay,
         });
 
         let main_to_side_options = deposit_relay::Options {
@@ -74,8 +73,8 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             poll_interval: config.foreign.poll_interval,
             confirmations: config.foreign.required_confirmations,
             transport: foreign_transport.clone(),
-            contract_address: state.foreign_contract_address,
-            after: state.checked_withdraw_relay,
+            contract_address: initial_state.foreign_contract_address,
+            after: initial_state.checked_withdraw_confirm,
         });
 
         let withdraw_confirm_options = withdraw_confirm::Options {
@@ -93,8 +92,8 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             poll_interval: config.foreign.poll_interval,
             confirmations: config.foreign.required_confirmations,
             transport: foreign_transport.clone(),
-            contract_address: state.foreign_contract_address,
-            after: state.checked_withdraw_relay,
+            contract_address: initial_state.foreign_contract_address,
+            after: initial_state.checked_withdraw_relay,
         });
 
         let side_to_main_options = withdraw_relay::Options {
@@ -111,28 +110,42 @@ impl<T: Transport, D: Database> Bridge<T, D> {
             deposits_relay,
             withdraws_confirm,
             withdraws_relay,
-            database,
+            state: initial_state
         }
     }
 }
 
-impl<T: Transport, D: Database> Stream for Bridge<T, D> {
-    type Item = ();
+impl<T: Transport> Stream for Bridge<T> {
+    type Item = State;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        // only proceed once all three streams are Async::Ready
-        let deposits_relay = try_stream!(self.deposits_relay.poll());
-        let withdraws_relay = try_stream!(self.withdraws_relay.poll());
-        let withdraws_confirm = try_stream!(self.withdraws_confirm.poll());
+        loop {
+            let maybe_deposits_relay = try_maybe_stream!(self.deposits_relay.poll());
+            let maybe_withdraws_relay = try_maybe_stream!(self.withdraws_relay.poll());
+            let maybe_withdraws_confirm = try_maybe_stream!(self.withdraws_confirm.poll());
 
-        // update the state
-        let mut state = self.database.read();
-        state.checked_deposit_relay = deposits_relay;
-        state.checked_withdraw_relay = withdraws_relay;
-        state.checked_withdraw_confirm = withdraws_confirm;
-        self.database.write(&state)?;
+            let mut has_state_changed = false;
 
-        return Ok(Async::Ready(Some(())));
+            if let Some(deposits_relay) = maybe_deposits_relay {
+                info!("last block checked for deposit relay is now {}", deposits_relay);
+                self.state.checked_deposit_relay = deposits_relay;
+                has_state_changed = true;
+            }
+            if let Some(withdraws_relay) = maybe_withdraws_relay {
+                info!("last block checked for withdraw relay is now {}", withdraws_relay);
+                self.state.checked_withdraw_relay = withdraws_relay;
+                has_state_changed = true;
+            }
+            if let Some(withdraws_confirm) = maybe_withdraws_confirm {
+                info!("last block checked for withdraw confirm is now {}", withdraws_confirm);
+                self.state.checked_withdraw_confirm = withdraws_confirm;
+                has_state_changed = true;
+            }
+
+            if has_state_changed {
+                return Ok(Async::Ready(Some(self.state.clone())));
+            }
+        }
     }
 }

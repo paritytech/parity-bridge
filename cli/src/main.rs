@@ -20,7 +20,7 @@ use web3::transports::ipc::Ipc;
 use bridge::bridge::Bridge;
 use bridge::config::Config;
 use bridge::error::Error;
-use bridge::database::TomlFileDatabase;
+use bridge::database::{TomlFileDatabase, Database};
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
@@ -87,14 +87,26 @@ Options:
     let foreign_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
     info!("Loading database from {:?}", args.arg_database);
-    let database = TomlFileDatabase::from_path(&args.arg_database)?;
+    let mut database = TomlFileDatabase::from_path(&args.arg_database)?;
 
-    let bridge_stream = Bridge::new(config, home_connection, foreign_connection, database);
+    info!("Reading initial state from database");
+    let initial_state = database.read();
+
+    let bridge_stream = Bridge::new(config, initial_state, home_connection, foreign_connection);
     info!("Listening to events");
-    let bridge_future = bridge_stream
-        .and_then(|_| future::ok(true))
-        .collect();
-    event_loop.run(bridge_future)?;
+    let persisted_bridge_stream = bridge_stream
+        .and_then(|state| {
+            database.write(&state)?;
+            info!("state change:");
+            info!("{}", state);
+            Ok(())
+        });
+
+    event_loop.run(persisted_bridge_stream.collect())?;
+
+    // for result in persisted_bridge_stream.wait() {
+    //     let _ = result?;
+    // }
 
     Ok("Done".into())
 }
