@@ -148,6 +148,8 @@ impl<T: Transport> Stream for Bridge<T> {
 
             if has_state_changed {
                 return Ok(Async::Ready(Some(self.state.clone())));
+            } else {
+                return Ok(Async::NotReady);
             }
         }
     }
