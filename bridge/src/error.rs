@@ -18,9 +18,8 @@ error_chain! {
     }
 
     errors {
-        // api timeout
-        Timeout {
-            description("Request timeout"),
+        TimedOut {
+            description("Request timed out"),
             display("Request timed out"),
         }
         // workaround for error_chain not allowing to check internal error kind
@@ -52,8 +51,11 @@ error_chain! {
 // you cant implement from TimeoutError for web3::Error
 
 impl<F> From<TimeoutError<F>> for Error {
-    fn from(_err: TimeoutError<F>) -> Self {
-        ErrorKind::Timeout.into()
+    fn from(err: TimeoutError<F>) -> Self {
+        match err {
+            TimeoutError::Timer(_, timer_error) => timer_error.into(),
+            TimeoutError::TimedOut(_) => ErrorKind::TimedOut.into()
+        }
     }
 }
 
