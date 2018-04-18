@@ -97,16 +97,13 @@ Options:
     let persisted_bridge_stream = bridge_stream
         .and_then(|state| {
             database.write(&state)?;
-            info!("state change:");
-            info!("{}", state);
+            info!("state change: {}", state);
             Ok(())
         });
 
-    event_loop.run(persisted_bridge_stream.collect())?;
-
-    // for result in persisted_bridge_stream.wait() {
-    //     let _ = result?;
-    // }
+    for result in persisted_bridge_stream.wait() {
+        let _ = result?;
+    }
 
     Ok("Done".into())
 }
