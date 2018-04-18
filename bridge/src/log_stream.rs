@@ -6,7 +6,7 @@ use web3;
 use web3::api::Namespace;
 use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::helpers::CallResult;
-use futures::{Future, Poll, Stream};
+use futures::{Future, Poll, Stream, Async};
 use futures::future::FromErr;
 use web3::Transport;
 use error::{self, ResultExt};
@@ -40,7 +40,29 @@ pub struct LogStreamOptions<T> {
     pub confirmations: usize,
     pub transport: T,
     pub contract_address: Address,
-    pub after: u64,
+    pub after: U256,
+}
+
+/// Contains all logs matching `LogStream` filter in inclusive block range `[from, to]`.
+#[derive(Debug, PartialEq)]
+pub struct LogRange {
+    pub from: U256,
+    pub to: U256,
+    pub logs: Vec<Log>,
+}
+
+/// Log Stream state.
+enum State<T: Transport> {
+    /// Log Stream is waiting for timer to poll.
+    AwaitInterval,
+    /// Fetching best block number.
+    AwaitBlockNumber(Timeout<FromErr<CallResult<U256, T::Out>, error::Error>>),
+    /// Fetching logs for new best block.
+    AwaitLogs {
+        from: U256,
+        to: U256,
+        future: Timeout<FromErr<CallResult<Vec<Log>, T::Out>, error::Error>>,
+    },
 }
 
 /// Stream of confirmed logs.
@@ -48,10 +70,10 @@ pub struct LogStream<T: Transport> {
     request_timeout: Duration,
     confirmations: usize,
     transport: T,
-    after: u64,
+    last_checked_block: U256,
     timer: Timer,
     interval: Interval,
-    state: LogStreamState<T>,
+    state: State<T>,
     filter: FilterBuilder,
 }
 
@@ -64,36 +86,12 @@ impl<T: Transport> LogStream<T> {
             confirmations: options.confirmations,
             interval: timer.interval(options.poll_interval),
             transport: options.transport,
-            after: options.after,
+            last_checked_block: options.after,
             timer: timer,
-            state: LogStreamState::Wait,
+            state: State::AwaitInterval,
             filter: web3_filter(options.filter, options.contract_address),
         }
     }
-}
-
-/// Contains all logs matching `LogStream` filter in inclusive block range `[from, to]`.
-#[derive(Debug, PartialEq)]
-pub struct LogRange {
-    pub from: u64,
-    pub to: u64,
-    pub logs: Vec<Log>,
-}
-
-/// Log Stream state.
-enum LogStreamState<T: Transport> {
-    /// Log Stream is waiting for timer to poll.
-    Wait,
-    /// Fetching best block number.
-    FetchBlockNumber(Timeout<FromErr<CallResult<U256, T::Out>, error::Error>>),
-    /// Fetching logs for new best block.
-    FetchLogs {
-        from: u64,
-        to: u64,
-        future: Timeout<FromErr<CallResult<Vec<Log>, T::Out>, error::Error>>,
-    },
-    /// All logs has been fetched.
-    NextItem(Option<LogRange>),
 }
 
 impl<T: Transport> Stream for LogStream<T> {
@@ -102,55 +100,59 @@ impl<T: Transport> Stream for LogStream<T> {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
-            let next_state = match self.state {
-                LogStreamState::Wait => {
+            let (next_state, value_to_yield) = match self.state {
+                State::AwaitInterval => {
                     // wait until `interval` has passed
-                    let _ = try_stream!(self.interval.poll());
+                    let _ = try_stream!(self.interval.poll()
+                        .chain_err(|| "LogStream: polling interval failed"));
                     let future = web3::api::Eth::new(&self.transport)
                         .block_number();
-                    LogStreamState::FetchBlockNumber(
-                        self.timer.timeout(future.from_err(), self.request_timeout),
-                    )
+                    let next_state = State::AwaitBlockNumber(
+                        self.timer.timeout(future.from_err(), self.request_timeout)
+                    );
+                    (next_state, None)
                 }
-                LogStreamState::FetchBlockNumber(ref mut future) => {
-                    let last_block = try_ready!(future.poll()).low_u64();
-                    let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
-                    if last_confirmed_block > self.after {
-                        let from = self.after + 1;
+                State::AwaitBlockNumber(ref mut future) => {
+                    let last_block = try_ready!(future.poll()
+                        .chain_err(|| "LogStream: fetching of block number failed"));
+                    // subtraction that saturates at zero
+                    let last_confirmed_block = last_block
+                        .saturating_sub(self.confirmations.into());
+
+                    let next_state = if self.last_checked_block < last_confirmed_block {
+                        let from = self.last_checked_block + 1.into();
                         let filter = self.filter
                             .clone()
-                            .from_block(from.into())
-                            .to_block(last_confirmed_block.into())
+                            .from_block(from.as_u64().into())
+                            .to_block(last_confirmed_block.as_u64().into())
                             .build();
-                        let future = web3::api::Eth::new(&self.transport)
-                            .logs(&filter);
-                        LogStreamState::FetchLogs {
+                        let future = web3::api::Eth::new(&self.transport).logs(&filter);
+
+                        State::AwaitLogs {
                             from: from,
                             to: last_confirmed_block,
                             future: self.timer.timeout(future.from_err(), self.request_timeout),
                         }
                     } else {
-                        LogStreamState::Wait
-                    }
-                }
-                LogStreamState::FetchLogs {
-                    ref mut future,
-                    from,
-                    to,
-                } => {
-                    let logs = try_ready!(future.poll());
-                    let item = LogRange { from, to, logs };
+                        trace!("LogStream: no blocks confirmed since we last checked. waiting some more");
+                        State::AwaitInterval
+                    };
 
-                    self.after = to;
-                    LogStreamState::NextItem(Some(item))
-                }
-                LogStreamState::NextItem(ref mut item) => match item.take() {
-                    None => LogStreamState::Wait,
-                    some => return Ok(some.into()),
+                    (next_state, None)
                 },
+                State::AwaitLogs { ref mut future, from, to } => {
+                    let logs = try_ready!(future.poll()
+                        .chain_err(|| "LogStream: polling web3 logs failed"));
+                    let log_range_to_yield = LogRange { from, to, logs };
+
+                    self.last_checked_block = to;
+                    (State::AwaitInterval, Some(log_range_to_yield))
+                }
             };
 
             self.state = next_state;
+
+            if value_to_yield.is_some() { return Ok(Async::Ready(value_to_yield)); }
         }
     }
 }

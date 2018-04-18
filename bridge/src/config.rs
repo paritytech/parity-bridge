@@ -159,21 +159,7 @@ mod load {
     use std::path::PathBuf;
     use web3::types::Address;
     use ethereum_types::U256;
-    use serde::{Deserialize, Deserializer};
-    use serde::de::Error;
-
-    /// the toml crate parses integer literals as `i64`.
-    /// certain config options (example: `max_total_home_contract_balance`)
-    /// frequently don't fit into `i64`.
-    /// workaround: put them in string literals, use this custom
-    /// deserializer and parse them as U256.
-    fn deserialize_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
-    }
+    use helpers::deserialize_u256;
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]

@@ -6,24 +6,36 @@ use std::io::{Read, Write};
 use web3::types::{Address, TransactionReceipt};
 use toml;
 use error::{Error, ErrorKind, ResultExt};
+use helpers::{serialize_u256, deserialize_u256};
+use ethereum_types::U256;
 
 /// bridge process state
-#[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone)]
 pub struct State {
     /// Address of home contract.
     pub home_contract_address: Address,
     /// Address of foreign contract.
     pub foreign_contract_address: Address,
     /// Number of block at which home contract has been deployed.
-    pub home_deploy: u64,
+    #[serde(deserialize_with = "deserialize_u256")]
+    #[serde(serialize_with = "serialize_u256")]
+    pub home_deploy: U256,
     /// Number of block at which foreign contract has been deployed.
-    pub foreign_deploy: u64,
+    #[serde(deserialize_with = "deserialize_u256")]
+    #[serde(serialize_with = "serialize_u256")]
+    pub foreign_deploy: U256,
     /// Number of last block which has been checked for deposit relays.
-    pub checked_deposit_relay: u64,
+    #[serde(deserialize_with = "deserialize_u256")]
+    #[serde(serialize_with = "serialize_u256")]
+    pub checked_deposit_relay: U256,
     /// Number of last block which has been checked for withdraw relays.
-    pub checked_withdraw_relay: u64,
+    #[serde(deserialize_with = "deserialize_u256")]
+    #[serde(serialize_with = "serialize_u256")]
+    pub checked_withdraw_relay: U256,
     /// Number of last block which has been checked for withdraw confirms.
-    pub checked_withdraw_confirm: u64,
+    #[serde(deserialize_with = "deserialize_u256")]
+    #[serde(serialize_with = "serialize_u256")]
+    pub checked_withdraw_confirm: U256,
 }
 
 impl State {
@@ -40,11 +52,11 @@ impl State {
             foreign_contract_address: foreign_contract_deployment_receipt
                 .contract_address
                 .expect("contract creation receipt must have an address; qed"),
-            home_deploy: home_contract_deployment_receipt.block_number.low_u64(),
-            foreign_deploy: foreign_contract_deployment_receipt.block_number.low_u64(),
-            checked_deposit_relay: home_contract_deployment_receipt.block_number.low_u64(),
-            checked_withdraw_relay: foreign_contract_deployment_receipt.block_number.low_u64(),
-            checked_withdraw_confirm: foreign_contract_deployment_receipt.block_number.low_u64(),
+            home_deploy: home_contract_deployment_receipt.block_number,
+            foreign_deploy: foreign_contract_deployment_receipt.block_number,
+            checked_deposit_relay: home_contract_deployment_receipt.block_number,
+            checked_withdraw_relay: foreign_contract_deployment_receipt.block_number,
+            checked_withdraw_confirm: foreign_contract_deployment_receipt.block_number,
         }
     }
 }
@@ -100,7 +112,7 @@ impl TomlFileDatabase {
 
 impl Database for TomlFileDatabase {
     fn read(&self) -> State {
-        self.state
+        self.state.clone()
     }
 
     fn write(&mut self, state: &State) -> Result<(), Error> {

@@ -20,11 +20,11 @@ pub trait RelayFactory {
 }
 
 /// state of the state machine that is the relay stream
-enum RelayStreamState<R: Future> {
-    WaitForLogs,
-    WaitForRelays {
+enum State<R: Future> {
+    AwaitLogs,
+    AwaitRelays {
         future: JoinAll<Vec<R>>,
-        block: u64,
+        block: U256,
     },
 }
 
@@ -35,7 +35,7 @@ enum RelayStreamState<R: Future> {
 pub struct RelayStream<S: Stream<Item=LogRange, Error=error::Error>, F: RelayFactory> {
     log_stream: S,
     relay_factory: F,
-    state: RelayStreamState<F::Relay>
+    state: State<F::Relay>
 }
 
 impl<S: Stream<Item=LogRange, Error=error::Error>, F: RelayFactory> RelayStream<S, F> {
