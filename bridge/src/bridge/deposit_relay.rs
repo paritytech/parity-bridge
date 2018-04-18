@@ -5,7 +5,7 @@ use web3::Transport;
 use web3::types::{Bytes, H256, U256, Log};
 use web3::helpers::CallResult;
 use ethabi::RawLog;
-use error;
+use error::{self, ResultExt};
 use contracts::{HomeBridge, ForeignBridge};
 use contract_connection::ContractConnection;
 use relay_stream::RelayFactory;
@@ -60,7 +60,8 @@ impl<T: Transport> Future for MainToSideRelay<T> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let tx_hash = try_ready!(self.future.poll());
+        let tx_hash = try_ready!(self.future.poll()
+            .chain_err(|| "DepositRelay: sending transaction failed"));
         info!("{:?} - step 2/2 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
         Ok(Async::Ready(tx_hash))
     }

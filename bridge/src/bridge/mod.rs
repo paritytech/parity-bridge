@@ -9,7 +9,7 @@ use web3::Transport;
 use database::{Database, State};
 use config::{Config};
 use log_stream::{LogStream, LogStreamOptions};
-use error::Error;
+use error::{self, ResultExt};
 use contracts::{HomeBridge, ForeignBridge};
 use contract_connection::ContractConnection;
 use relay_stream::RelayStream;
@@ -117,13 +117,16 @@ impl<T: Transport> Bridge<T> {
 
 impl<T: Transport> Stream for Bridge<T> {
     type Item = State;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
-            let maybe_deposits_relay = try_maybe_stream!(self.deposits_relay.poll());
-            let maybe_withdraws_relay = try_maybe_stream!(self.withdraws_relay.poll());
-            let maybe_withdraws_confirm = try_maybe_stream!(self.withdraws_confirm.poll());
+            let maybe_deposits_relay = try_maybe_stream!(self.deposits_relay.poll()
+                .chain_err(|| "Bridge: polling deposits relay failed"));
+            let maybe_withdraws_relay = try_maybe_stream!(self.withdraws_relay.poll()
+                .chain_err(|| "Bridge: polling withdraws relay failed"));
+            let maybe_withdraws_confirm = try_maybe_stream!(self.withdraws_confirm.poll()
+                .chain_err(|| "Bridge: polling withdraws confirm failed"));
 
             let mut has_state_changed = false;
 

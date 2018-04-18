@@ -9,7 +9,7 @@ use web3::helpers::CallResult;
 use futures::{Future, Poll, Stream};
 use futures::future::FromErr;
 use web3::Transport;
-use error;
+use error::{self, ResultExt};
 use ethabi;
 
 fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {

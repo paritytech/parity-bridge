@@ -6,7 +6,7 @@ use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use error::Error;
+use error::{self, ResultExt};
 use rustc_hex::ToHex;
 use config::Config;
 use contracts::foreign::ForeignBridge;
@@ -41,7 +41,7 @@ impl<T: Transport + Clone> DeployHome<T> {
 
 impl<T: Transport + Clone> Future for DeployHome<T> {
     type Item = DeployedContract;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
@@ -86,7 +86,8 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll());
+                    let receipt = try_ready!(future.poll()
+                        .chain_err(|| "DeployHome: deployment transaction failed"));
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
@@ -128,7 +129,7 @@ impl<T: Transport + Clone> DeployForeign<T> {
 
 impl<T: Transport + Clone> Future for DeployForeign<T> {
     type Item = DeployedContract;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
@@ -171,7 +172,8 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll());
+                    let receipt = try_ready!(future.poll()
+                        .chain_err(|| "DeployForeign: deployment transaction failed"));
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
@@ -248,7 +250,7 @@ impl DeployedContract {
     /// - contract byte code
     /// - input data for contract creation transaction
     /// - ...
-    pub fn dump_info<P: AsRef<Path>>(&self, dir: P) -> Result<(), Error> {
+    pub fn dump_info<P: AsRef<Path>>(&self, dir: P) -> Result<(), error::Error> {
         let dir = dir.as_ref();
 
         if Path::new(dir).exists() {

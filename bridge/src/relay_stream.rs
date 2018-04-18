@@ -8,7 +8,8 @@ use futures::{Future, Poll, Stream, Async};
 use futures::future::{join_all, JoinAll};
 use web3::Transport;
 use log_stream::LogRange;
-use error;
+use error::{self, ResultExt};
+use ethereum_types::U256;
 
 /// something that can create relay futures from logs.
 /// called by `RelayStream` for every log.
@@ -45,20 +46,22 @@ impl<S: Stream<Item=LogRange, Error=error::Error>, F: RelayFactory> RelayStream<
         Self {
             log_stream,
             relay_factory,
-            state: RelayStreamState::WaitForLogs,
+            state: State::AwaitLogs,
         }
     }
 }
 
 impl<S: Stream<Item=LogRange, Error=error::Error>, F: RelayFactory> Stream for RelayStream<S, F> {
-    type Item = u64;
+    type Item = U256;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let (next_state, value_to_yield) = match self.state {
-                RelayStreamState::WaitForLogs => {
-                    let log_range = try_stream!(self.log_stream.poll());
+                State::AwaitLogs => {
+                    let log_range = try_stream!(self.log_stream.poll()
+                        .chain_err(|| "RelayStream: fetching logs failed"));
+
 
                     // borrow checker...
                     let relay_factory = &self.relay_factory;
@@ -68,17 +71,20 @@ impl<S: Stream<Item=LogRange, Error=error::Error>, F: RelayFactory> Stream for R
                         .map(|log| relay_factory.log_to_relay(log))
                         .collect::<Vec<_>>();
 
-                    (RelayStreamState::WaitForRelays {
+                    (State::AwaitRelays {
                         future: join_all(relays),
                         block: log_range.to,
                     }, None)
                 }
-                RelayStreamState::WaitForRelays { ref mut future, block } => {
-                    try_ready!(future.poll());
-                    (RelayStreamState::WaitForLogs, Some(block))
+                State::AwaitRelays { ref mut future, block } => {
+                    try_ready!(future.poll()
+                        .chain_err(|| "RelayStream: relay failed"));
+                    (State::AwaitLogs, Some(block))
                 }
             };
+
             self.state = next_state;
+
             if value_to_yield.is_some() { return Ok(Async::Ready(value_to_yield)); }
         }
     }

@@ -8,7 +8,7 @@ use web3::Transport;
 use web3::types::{Bytes, H256, H520, U256, Address, Log};
 use log_stream::LogStream;
 use contracts::foreign::ForeignBridge;
-use error;
+use error::{self, ResultExt};
 use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
 use contract_connection::ContractConnection;
 use web3::helpers::CallResult;
@@ -76,8 +76,8 @@ impl<T: Transport> Future for SideToMainSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitSignature(ref mut future) => {
-                    info!("sending relay transaction for {:?}", self.tx_hash);
-                    let signature = try_ready!(future.poll());
+                    let signature = try_ready!(future.poll()
+                        .chain_err(|| "WithdrawConfirm: message signing failed"));
                     info!("{:?} - step 2/3 - message signed. about to send transaction", self.tx_hash);
 
                     let payload = ForeignBridge::default()
@@ -89,7 +89,8 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     State::AwaitTransaction(future)
                 },
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future.poll());
+                    let tx_hash = try_ready!(future.poll()
+                        .chain_err(|| "WithdrawConfirm: sending transaction failed"));
                     info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
                     return Ok(Async::Ready(tx_hash));
                 }

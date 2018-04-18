@@ -7,7 +7,7 @@ use web3;
 use ethabi::{self, RawLog};
 use log_stream::LogStream;
 use contracts::{foreign, ForeignBridge, HomeBridge};
-use error;
+use error::{self, ResultExt};
 use message_to_mainnet::MessageToMainnet;
 use signature::Signature;
 use contract_connection::ContractConnection;
@@ -103,13 +103,14 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                     return Ok(Async::Ready(None));
                 }
                 State::AwaitMessageAndSignatures(ref mut future) => {
-                    let (message_raw, signatures_raw) = try_ready!(future.poll());
-                    info!("{:?} - step 2/3 - message and signatures received. about to send transaction", self.tx_hash);
+                    let (message_raw, signatures_raw) = try_ready!(future.poll()
+                        .chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
+
                     let message = ForeignBridge::default()
                         .functions()
                         .message()
                         .output(message_raw.0.as_slice())
-                        .map(Bytes)?;
+                        .chain_err(|| "WithdrawRelay: decoding message failed")?;
 
                     let signatures = signatures_raw
                         .iter()
@@ -118,7 +119,8 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                                 ForeignBridge::default()
                                     .functions()
                                     .signature()
-                                    .output(signature.0.as_slice())?
+                                    .output(signature.0.as_slice())
+                                    .chain_err(|| "WithdrawRelay: decoding signature failed")?
                                     .as_slice(),
                             )
                         })
@@ -131,18 +133,22 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                             signatures.iter().map(|x| x.v),
                             signatures.iter().map(|x| x.r),
                             signatures.iter().map(|x| x.s),
-                            message.clone().0,
+                            message.clone()
                         )
                         .into();
 
-                    let gas_price = MessageToMainnet::from_bytes(message.0.as_slice())
+                    let gas_price = MessageToMainnet::from_bytes(&message)
                         .mainnet_gas_price;
+
+                    info!("{:?} - step 2/3 - message and signatures received. about to send transaction", self.tx_hash);
+
                     let future = self.options.main.send_transaction(payload, self.options.gas, gas_price);
 
                     State::AwaitTransaction(future)
                 },
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future.poll());
+                    let tx_hash = try_ready!(future.poll()
+                        .chain_err(|| "WithdrawRelay: sending transaction failed"));
                     info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
                     return Ok(Async::Ready(Some(tx_hash)));
                 }
