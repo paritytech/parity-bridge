@@ -64,8 +64,3 @@ impl From<web3::Error> for Error {
         ErrorKind::Web3(err).into()
     }
 }
-
-// /// captures a string describing the context
-// pub fn annotate<T: AsRef<String>> (err: Error, context_description: T) -> {
-//     format!("error occured while `{}`: {?}", context_description, err);
-// }
