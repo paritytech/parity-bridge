@@ -14,12 +14,14 @@ use std::{env, fs};
 use std::path::PathBuf;
 use docopt::Docopt;
 use tokio_core::reactor::Core;
-use web3::transports::ipc::Ipc;
+use web3::transports::http::Http;
 
 use bridge::bridge::deploy::{DeployForeign, DeployHome};
 use bridge::config::Config;
-use bridge::error::Error;
+use bridge::error::{self, ResultExt};
 use bridge::database::State;
+
+const MAX_PARALLEL_REQUESTS: usize = 10;
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
@@ -37,7 +39,7 @@ fn main() {
     }
 }
 
-fn print_err(err: Error) {
+fn print_err(err: error::Error) {
     let message = err.iter()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
@@ -45,7 +47,7 @@ fn print_err(err: Error) {
     println!("{}", message);
 }
 
-fn execute<S, I>(command: I) -> Result<String, Error>
+fn execute<S, I>(command: I) -> Result<String, error::Error>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
@@ -79,14 +81,30 @@ Options:
     info!(target: "parity-bridge-deploy", "Starting event loop");
     let mut event_loop = Core::new().unwrap();
 
-    info!(target: "parity-bridge-deploy", "Establishing IPC connection to home");
-    let home_ipc_connection = Ipc::with_event_loop(&config.home.ipc, &event_loop.handle())?;
+    info!(
+        "Establishing HTTP connection to home {:?}",
+        config.home.http
+    );
+    let home_transport =
+        Http::with_event_loop(
+            &config.home.http,
+            &event_loop.handle(),
+            MAX_PARALLEL_REQUESTS,
+        ).chain_err(|| format!("Cannot connect to home at {}", config.home.http))?;
 
-    info!(target: "parity-bridge-deploy", "Establishing IPC connection to foreign");
-    let foreign_ipc_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
+    info!(
+        "Establishing HTTP connection to foreign {:?}",
+        config.foreign.http
+    );
+    let foreign_transport =
+        Http::with_event_loop(
+            &config.foreign.http,
+            &event_loop.handle(),
+            MAX_PARALLEL_REQUESTS,
+        ).chain_err(|| format!("Cannot connect to foreign at {}", config.foreign.http))?;
 
     info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
-    let home_deployed = event_loop.run(DeployHome::new(config.clone(), home_ipc_connection))?;
+    let home_deployed = event_loop.run(DeployHome::new(config.clone(), home_transport))?;
     info!(target: "parity-bridge-deploy", "Successfully deployed HomeBridge contract");
 
     home_deployed.dump_info(format!(
@@ -95,8 +113,7 @@ Options:
     ))?;
 
     info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
-    let foreign_deployed =
-        event_loop.run(DeployForeign::new(config.clone(), foreign_ipc_connection))?;
+    let foreign_deployed = event_loop.run(DeployForeign::new(config.clone(), foreign_transport))?;
     info!(target: "parity-bridge-deploy", "Successfully deployed ForeignBridge contract");
 
     foreign_deployed.dump_info(format!(

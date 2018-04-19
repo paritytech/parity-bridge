@@ -63,7 +63,7 @@ impl Config {
 #[derive(Debug, PartialEq, Clone)]
 pub struct NodeConfig {
     pub contract: ContractConfig,
-    pub ipc: PathBuf,
+    pub http: String,
     pub request_timeout: Duration,
     pub poll_interval: Duration,
     pub required_confirmations: usize,
@@ -85,7 +85,7 @@ impl NodeConfig {
                     Bytes(read.from_hex()?)
                 },
             },
-            ipc: node.ipc,
+            http: node.http,
             request_timeout: Duration::from_secs(node.request_timeout.unwrap_or(DEFAULT_TIMEOUT)),
             poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
             required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
@@ -181,7 +181,7 @@ mod load {
     #[serde(deny_unknown_fields)]
     pub struct NodeConfig {
         pub contract: ContractConfig,
-        pub ipc: PathBuf,
+        pub http: String,
         pub request_timeout: Option<u64>,
         pub poll_interval: Option<u64>,
         pub required_confirmations: Option<usize>,
@@ -234,7 +234,7 @@ max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-ipc = "/home.ipc"
+http = "http://localhost:8545"
 poll_interval = 2
 required_confirmations = 100
 
@@ -242,7 +242,7 @@ required_confirmations = 100
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
-ipc = "/foreign.ipc"
+http = "http://localhost:8546"
 
 [foreign.contract]
 bin = "../compiled_contracts/ForeignBridge.bin"
@@ -263,7 +263,7 @@ home_deploy = { gas = 20 }
             address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
             txs: Transactions::default(),
             home: NodeConfig {
-                ipc: "/home.ipc".into(),
+                http: "http://localhost:8545".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/HomeBridge.bin")
                         .from_hex()
@@ -281,7 +281,7 @@ home_deploy = { gas = 20 }
                         .unwrap()
                         .into(),
                 },
-                ipc: "/foreign.ipc".into(),
+                http: "http://localhost:8546".into(),
                 poll_interval: Duration::from_secs(1),
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 12,
@@ -317,13 +317,13 @@ max_total_home_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [home]
-ipc = ""
+http = ""
 
 [home.contract]
 bin = "../compiled_contracts/HomeBridge.bin"
 
 [foreign]
-ipc = ""
+http = ""
 
 [foreign.contract]
 bin = "../compiled_contracts/ForeignBridge.bin"
@@ -340,7 +340,7 @@ required_signatures = 2
             address: "0000000000000000000000000000000000000001".into(),
             txs: Transactions::default(),
             home: NodeConfig {
-                ipc: "".into(),
+                http: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/HomeBridge.bin")
                         .from_hex()
@@ -352,7 +352,7 @@ required_signatures = 2
                 required_confirmations: 12,
             },
             foreign: NodeConfig {
-                ipc: "".into(),
+                http: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
                         .from_hex()
