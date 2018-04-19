@@ -77,7 +77,7 @@ impl<T: Transport> SideToMainRelay<T> {
                         .functions()
                         .signature()
                         .input(event.message_hash, index);
-                    options.main.call(Bytes(payload))
+                    options.side.call(Bytes(payload))
                 })
                 .collect::<Vec<_>>();
 
