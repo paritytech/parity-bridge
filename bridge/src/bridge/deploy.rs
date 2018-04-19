@@ -1,6 +1,6 @@
 use futures::{Future, Poll};
 use web3::Transport;
-use web3::confirm::{SendTransactionWithConfirmation, send_transaction_with_confirmation};
+use web3::confirm::{send_transaction_with_confirmation, SendTransactionWithConfirmation};
 use web3::types::{TransactionReceipt, TransactionRequest};
 use std::path::Path;
 use std::fs;
@@ -86,8 +86,11 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll()
-                        .chain_err(|| "DeployHome: deployment transaction failed"));
+                    let receipt = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "DeployHome: deployment transaction failed")
+                    );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
@@ -172,8 +175,11 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll()
-                        .chain_err(|| "DeployForeign: deployment transaction failed"));
+                    let receipt = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "DeployForeign: deployment transaction failed")
+                    );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");

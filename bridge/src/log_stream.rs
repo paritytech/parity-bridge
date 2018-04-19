@@ -1,12 +1,12 @@
 /// concerning logs
 
 use std::time::Duration;
-use tokio_timer::{Timer, Interval, Timeout};
+use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::helpers::CallResult;
-use futures::{Future, Poll, Stream, Async};
+use futures::{Async, Future, Poll, Stream};
 use futures::future::FromErr;
 use web3::Transport;
 use error::{self, ResultExt};
@@ -103,21 +103,25 @@ impl<T: Transport> Stream for LogStream<T> {
             let (next_state, value_to_yield) = match self.state {
                 State::AwaitInterval => {
                     // wait until `interval` has passed
-                    let _ = try_stream!(self.interval.poll()
-                        .chain_err(|| "LogStream: polling interval failed"));
-                    let future = web3::api::Eth::new(&self.transport)
-                        .block_number();
+                    let _ = try_stream!(
+                        self.interval
+                            .poll()
+                            .chain_err(|| "LogStream: polling interval failed")
+                    );
+                    let future = web3::api::Eth::new(&self.transport).block_number();
                     let next_state = State::AwaitBlockNumber(
-                        self.timer.timeout(future.from_err(), self.request_timeout)
+                        self.timer.timeout(future.from_err(), self.request_timeout),
                     );
                     (next_state, None)
                 }
                 State::AwaitBlockNumber(ref mut future) => {
-                    let last_block = try_ready!(future.poll()
-                        .chain_err(|| "LogStream: fetching of block number failed"));
+                    let last_block = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "LogStream: fetching of block number failed")
+                    );
                     // subtraction that saturates at zero
-                    let last_confirmed_block = last_block
-                        .saturating_sub(self.confirmations.into());
+                    let last_confirmed_block = last_block.saturating_sub(self.confirmations.into());
 
                     let next_state = if self.last_checked_block < last_confirmed_block {
                         let from = self.last_checked_block + 1.into();
@@ -139,10 +143,17 @@ impl<T: Transport> Stream for LogStream<T> {
                     };
 
                     (next_state, None)
-                },
-                State::AwaitLogs { ref mut future, from, to } => {
-                    let logs = try_ready!(future.poll()
-                        .chain_err(|| "LogStream: polling web3 logs failed"));
+                }
+                State::AwaitLogs {
+                    ref mut future,
+                    from,
+                    to,
+                } => {
+                    let logs = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "LogStream: polling web3 logs failed")
+                    );
                     let log_range_to_yield = LogRange { from, to, logs };
 
                     self.last_checked_block = to;
@@ -152,7 +163,9 @@ impl<T: Transport> Stream for LogStream<T> {
 
             self.state = next_state;
 
-            if value_to_yield.is_some() { return Ok(Async::Ready(value_to_yield)); }
+            if value_to_yield.is_some() {
+                return Ok(Async::Ready(value_to_yield));
+            }
         }
     }
 }

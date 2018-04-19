@@ -13,14 +13,14 @@ extern crate web3;
 use std::env;
 use std::path::PathBuf;
 use docopt::Docopt;
-use futures::{Stream, future};
+use futures::{future, Stream};
 use tokio_core::reactor::Core;
 use web3::transports::ipc::Ipc;
 
 use bridge::bridge::Bridge;
 use bridge::config::Config;
 use bridge::error::Error;
-use bridge::database::{TomlFileDatabase, Database};
+use bridge::database::{Database, TomlFileDatabase};
 use bridge::helpers::StreamExt;
 
 #[derive(Debug, Deserialize)]
@@ -84,7 +84,10 @@ Options:
     info!("Establishing IPC connection to home {:?}", config.home.ipc);
     let home_connection = Ipc::with_event_loop(&config.home.ipc, &event_loop.handle())?;
 
-    info!("Establishing IPC connection to foreign {:?}", config.foreign.ipc);
+    info!(
+        "Establishing IPC connection to foreign {:?}",
+        config.foreign.ipc
+    );
     let foreign_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
     info!("Loading database from {:?}", args.arg_database);
@@ -95,12 +98,11 @@ Options:
 
     let bridge_stream = Bridge::new(config, initial_state, home_connection, foreign_connection);
     info!("Listening to events");
-    let persisted_bridge_stream = bridge_stream
-        .and_then(|state| {
-            database.write(&state)?;
-            info!("state change: {}", state);
-            Ok(())
-        });
+    let persisted_bridge_stream = bridge_stream.and_then(|state| {
+        database.write(&state)?;
+        info!("state change: {}", state);
+        Ok(())
+    });
 
     event_loop.run(persisted_bridge_stream.consume())?;
 

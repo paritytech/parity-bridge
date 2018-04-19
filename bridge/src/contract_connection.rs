@@ -5,8 +5,7 @@ use std::time::Duration;
 use tokio_timer::{Timeout, Timer};
 use web3::{self, Transport};
 use web3::api::Namespace;
-use web3::types::{Address, Bytes, CallRequest, H256, H520, U256,
-                  TransactionRequest};
+use web3::types::{Address, Bytes, CallRequest, H256, H520, TransactionRequest, U256};
 use web3::helpers::CallResult;
 use error;
 
@@ -32,11 +31,14 @@ impl<T: Transport> ContractConnection<T> {
             contract_address,
             timeout_duration,
             transport,
-            timer: Timer::default()
+            timer: Timer::default(),
         }
     }
 
-    pub fn call(&self, payload: Bytes) -> Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>> {
+    pub fn call(
+        &self,
+        payload: Bytes,
+    ) -> Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>> {
         let call_request = CallRequest {
             from: None,
             to: self.contract_address,
@@ -54,7 +56,12 @@ impl<T: Transport> ContractConnection<T> {
         self.timer.timeout(future.from_err(), self.timeout_duration)
     }
 
-    pub fn send_transaction(&self, payload: Bytes, gas: U256, gas_price: U256) -> Timeout<FromErr<CallResult<H256, T::Out>, error::Error>> {
+    pub fn send_transaction(
+        &self,
+        payload: Bytes,
+        gas: U256,
+        gas_price: U256,
+    ) -> Timeout<FromErr<CallResult<H256, T::Out>, error::Error>> {
         let tx_request = TransactionRequest {
             from: self.authority_address,
             to: Some(self.contract_address),

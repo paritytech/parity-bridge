@@ -1,11 +1,11 @@
 /// concerning the collection of signatures on `side`
 
 use std::ops;
-use futures::{Future, Poll, Stream, Async};
-use futures::future::{join_all, JoinAll, FromErr};
+use futures::{Async, Future, Poll, Stream};
+use futures::future::{join_all, FromErr, JoinAll};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Bytes, H256, H520, U256, Address, Log};
+use web3::types::{Address, Bytes, H256, H520, Log, U256};
 use log_stream::LogStream;
 use contracts::foreign::ForeignBridge;
 use error::{self, ResultExt};
@@ -48,8 +48,8 @@ impl<T: Transport> SideToMainSign<T> {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message = MessageToMainnet::from_log(log)
-            .expect("`log` must contain valid message. q.e.d.");
+        let message =
+            MessageToMainnet::from_log(log).expect("`log` must contain valid message. q.e.d.");
         let message_bytes = message.to_bytes();
 
         assert_eq!(
@@ -63,7 +63,12 @@ impl<T: Transport> SideToMainSign<T> {
         let state = State::AwaitSignature(future);
         info!("{:?} - step 1/3 - about to sign message", tx_hash);
 
-        Self { options, tx_hash, message, state}
+        Self {
+            options,
+            tx_hash,
+            message,
+            state,
+        }
     }
 }
 
@@ -76,22 +81,38 @@ impl<T: Transport> Future for SideToMainSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitSignature(ref mut future) => {
-                    let signature = try_ready!(future.poll()
-                        .chain_err(|| "WithdrawConfirm: message signing failed"));
-                    info!("{:?} - step 2/3 - message signed. about to send transaction", self.tx_hash);
+                    let signature = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: message signing failed")
+                    );
+                    info!(
+                        "{:?} - step 2/3 - message signed. about to send transaction",
+                        self.tx_hash
+                    );
 
                     let payload = ForeignBridge::default()
                         .functions()
                         .submit_signature()
                         .input(signature.0.to_vec(), self.message.to_bytes());
 
-                    let future = self.options.side.send_transaction(Bytes(payload), self.options.gas, self.options.gas_price);
+                    let future = self.options.side.send_transaction(
+                        Bytes(payload),
+                        self.options.gas,
+                        self.options.gas_price,
+                    );
                     State::AwaitTransaction(future)
-                },
+                }
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future.poll()
-                        .chain_err(|| "WithdrawConfirm: sending transaction failed"));
-                    info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+                    let tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: sending transaction failed")
+                    );
+                    info!(
+                        "{:?} - step 3/3 - DONE - transaction sent {:?}",
+                        self.tx_hash, tx_hash
+                    );
                     return Ok(Async::Ready(tx_hash));
                 }
             };

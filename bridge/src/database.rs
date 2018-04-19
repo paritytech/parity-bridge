@@ -1,12 +1,12 @@
 /// the state of a bridge node process and ways to persist it
 
 use std::path::{Path, PathBuf};
-use std::{fs, io, str, fmt};
+use std::{fmt, fs, io, str};
 use std::io::{Read, Write};
 use web3::types::{Address, TransactionReceipt};
 use toml;
 use error::{Error, ErrorKind, ResultExt};
-use helpers::{serialize_u256, deserialize_u256};
+use helpers::{deserialize_u256, serialize_u256};
 use ethereum_types::U256;
 
 /// bridge process state
@@ -105,7 +105,7 @@ impl TomlFileDatabase {
         let state: State = toml::from_str(&buffer).chain_err(|| "Cannot parse database")?;
         Ok(Self {
             filepath: filepath.as_ref().to_path_buf(),
-            state
+            state,
         })
     }
 }

@@ -1,8 +1,8 @@
-use futures::{Future, Poll, Stream, Async};
-use futures::future::{join_all, Join, JoinAll, FromErr};
+use futures::{Async, Future, Poll, Stream};
+use futures::future::{join_all, FromErr, Join, JoinAll};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Address, Bytes, U256, H256, Log};
+use web3::types::{Address, Bytes, H256, Log, U256};
 use web3;
 use ethabi::{self, RawLog};
 use log_stream::LogStream;
@@ -36,10 +36,12 @@ fn log_to_collected_signatures(web3_log: &web3::types::Log) -> foreign::logs::Co
 enum State<T: Transport> {
     /// authority is not responsible for relaying this. noop.
     NotResponsible,
-    AwaitMessageAndSignatures(Join<
-        Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>,
-        JoinAll<Vec<Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>>>,
-    >),
+    AwaitMessageAndSignatures(
+        Join<
+            Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>,
+            JoinAll<Vec<Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>>>,
+        >,
+    ),
     AwaitTransaction(Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>),
 }
 
@@ -57,7 +59,10 @@ impl<T: Transport> SideToMainRelay<T> {
         let event = log_to_collected_signatures(&log);
 
         let state = if event.authority_responsible_for_relay != options.address {
-            info!("{:?} - this bridge node is not responsible for relaying transaction to main", tx_hash);
+            info!(
+                "{:?} - this bridge node is not responsible for relaying transaction to main",
+                tx_hash
+            );
             // this bridge node is not responsible for relaying this transaction.
             // someone else will relay this transaction to home.
             State::NotResponsible
@@ -81,12 +86,20 @@ impl<T: Transport> SideToMainRelay<T> {
                 })
                 .collect::<Vec<_>>();
 
-            info!("{:?} - step 1/3 - about to fetch message and {} signatures", tx_hash, signature_calls.len());
+            info!(
+                "{:?} - step 1/3 - about to fetch message and {} signatures",
+                tx_hash,
+                signature_calls.len()
+            );
             let future = message_call.join(join_all(signature_calls));
             State::AwaitMessageAndSignatures(future)
         };
 
-        Self { tx_hash, options, state }
+        Self {
+            tx_hash,
+            options,
+            state,
+        }
     }
 }
 
@@ -102,8 +115,11 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                     return Ok(Async::Ready(None));
                 }
                 State::AwaitMessageAndSignatures(ref mut future) => {
-                    let (message_raw, signatures_raw) = try_ready!(future.poll()
-                        .chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
+                    let (message_raw, signatures_raw) = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawRelay: fetching message and signatures failed")
+                    );
 
                     let message = ForeignBridge::default()
                         .functions()
@@ -132,23 +148,31 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                             signatures.iter().map(|x| x.v),
                             signatures.iter().map(|x| x.r),
                             signatures.iter().map(|x| x.s),
-                            message.clone()
+                            message.clone(),
                         )
                         .into();
 
-                    let gas_price = MessageToMainnet::from_bytes(&message)
-                        .mainnet_gas_price;
+                    let gas_price = MessageToMainnet::from_bytes(&message).mainnet_gas_price;
 
                     info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.tx_hash, signatures.len());
 
-                    let future = self.options.main.send_transaction(payload, self.options.gas, gas_price);
+                    let future =
+                        self.options
+                            .main
+                            .send_transaction(payload, self.options.gas, gas_price);
 
                     State::AwaitTransaction(future)
-                },
+                }
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future.poll()
-                        .chain_err(|| "WithdrawRelay: sending transaction failed"));
-                    info!("{:?} - step 3/3 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+                    let tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawRelay: sending transaction failed")
+                    );
+                    info!(
+                        "{:?} - step 3/3 - DONE - transaction sent {:?}",
+                        self.tx_hash, tx_hash
+                    );
                     return Ok(Async::Ready(Some(tx_hash)));
                 }
             };

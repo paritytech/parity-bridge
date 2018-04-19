@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serializer};
 use serde::de::Error;
 use ethereum_types::U256;
-use futures::{Stream, Future, Async, Poll};
+use futures::{Async, Future, Poll, Stream};
 
 /// the toml crate parses integer literals as `i64`.
 /// certain config options (example: `max_total_home_contract_balance`)
@@ -16,27 +16,39 @@ where
     U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
 }
 
-pub fn serialize_u256<S>(value: &U256, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+pub fn serialize_u256<S>(value: &U256, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
     serializer.serialize_str(&format!("{}", value))
 }
 
 pub trait StreamExt {
-// if you're interested in the side effects of the stream and not the values
-    fn consume(self) -> Consume<Self> where Self: Sized;
+    // if you're interested in the side effects of the stream and not the values
+    fn consume(self) -> Consume<Self>
+    where
+        Self: Sized;
 }
 
-impl<S> StreamExt for S where S: Stream {
-    fn consume(self) -> Consume<Self> where Self: Sized {
+impl<S> StreamExt for S
+where
+    S: Stream,
+{
+    fn consume(self) -> Consume<Self>
+    where
+        Self: Sized,
+    {
         Consume { stream: self }
     }
 }
 
 pub struct Consume<S> {
-    stream: S
+    stream: S,
 }
 
 impl<S> Future for Consume<S>
-    where S: Stream
+where
+    S: Stream,
 {
     type Item = ();
     type Error = S::Error;
@@ -49,7 +61,7 @@ impl<S> Future for Consume<S>
                 // stream is finished
                 Ok(Async::Ready(None)) => return Ok(Async::Ready(())),
                 // there's more. ignore values
-                Ok(Async::Ready(Some(_))) => {},
+                Ok(Async::Ready(Some(_))) => {}
             }
         }
     }

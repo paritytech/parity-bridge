@@ -1,21 +1,20 @@
-use futures::{Future, Poll, Stream, Async};
-use futures::future::{join_all, JoinAll, FromErr};
+use futures::{Async, Future, Poll, Stream};
+use futures::future::{join_all, FromErr, JoinAll};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Bytes, H256, U256, Log};
+use web3::types::{Bytes, H256, Log, U256};
 use web3::helpers::CallResult;
 use ethabi::RawLog;
 use error::{self, ResultExt};
-use contracts::{HomeBridge, ForeignBridge};
+use contracts::{ForeignBridge, HomeBridge};
 use contract_connection::ContractConnection;
 use relay_stream::RelayFactory;
 
 /// takes `deposit_log` which must be a `HomeBridge.Deposit` event
 /// and returns the payload for the call to `ForeignBridge.deposit()`
-fn deposit_relay_payload(
-    web3_log: Log,
-) -> Vec<u8> {
-    let tx_hash = web3_log.transaction_hash
+fn deposit_relay_payload(web3_log: Log) -> Vec<u8> {
+    let tx_hash = web3_log
+        .transaction_hash
         .expect("log must be mined and contain `transaction_hash`. q.e.d.");
     let raw_ethabi_log = RawLog {
         topics: web3_log.topics,
@@ -45,12 +44,12 @@ impl<T: Transport> MainToSideRelay<T> {
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         let payload = deposit_relay_payload(log);
         info!("{:?} - step 1/2 - about to send transaction", tx_hash);
-        let future = options.foreign.send_transaction(Bytes(payload), options.gas, options.gas_price);
+        let future =
+            options
+                .foreign
+                .send_transaction(Bytes(payload), options.gas, options.gas_price);
 
-        Self {
-            tx_hash,
-            future,
-        }
+        Self { tx_hash, future }
     }
 }
 
@@ -60,9 +59,15 @@ impl<T: Transport> Future for MainToSideRelay<T> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let tx_hash = try_ready!(self.future.poll()
-            .chain_err(|| "DepositRelay: sending transaction failed"));
-        info!("{:?} - step 2/2 - DONE - transaction sent {:?}", self.tx_hash, tx_hash);
+        let tx_hash = try_ready!(
+            self.future
+                .poll()
+                .chain_err(|| "DepositRelay: sending transaction failed")
+        );
+        info!(
+            "{:?} - step 2/2 - DONE - transaction sent {:?}",
+            self.tx_hash, tx_hash
+        );
         Ok(Async::Ready(tx_hash))
     }
 }

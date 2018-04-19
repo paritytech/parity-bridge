@@ -54,7 +54,7 @@ impl<F> From<TimeoutError<F>> for Error {
     fn from(err: TimeoutError<F>) -> Self {
         match err {
             TimeoutError::Timer(_, timer_error) => timer_error.into(),
-            TimeoutError::TimedOut(_) => ErrorKind::TimedOut.into()
+            TimeoutError::TimedOut(_) => ErrorKind::TimedOut.into(),
         }
     }
 }
