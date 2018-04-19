@@ -86,8 +86,7 @@ Options:
     let foreign_ipc_connection = Ipc::with_event_loop(&config.foreign.ipc, &event_loop.handle())?;
 
     info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
-    let home_deployed = event_loop.run(DeployHome::new(
-        config.clone(), home_ipc_connection))?;
+    let home_deployed = event_loop.run(DeployHome::new(config.clone(), home_ipc_connection))?;
     info!(target: "parity-bridge-deploy", "Successfully deployed HomeBridge contract");
 
     home_deployed.dump_info(format!(
@@ -96,8 +95,8 @@ Options:
     ))?;
 
     info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
-    let foreign_deployed = event_loop.run(DeployForeign::new(
-        config.clone(), foreign_ipc_connection))?;
+    let foreign_deployed =
+        event_loop.run(DeployForeign::new(config.clone(), foreign_ipc_connection))?;
     info!(target: "parity-bridge-deploy", "Successfully deployed ForeignBridge contract");
 
     foreign_deployed.dump_info(format!(
