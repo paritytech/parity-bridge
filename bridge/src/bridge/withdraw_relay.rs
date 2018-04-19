@@ -81,9 +81,8 @@ impl<T: Transport> SideToMainRelay<T> {
                 })
                 .collect::<Vec<_>>();
 
+            info!("{:?} - step 1/3 - about to fetch message and {} signatures", tx_hash, signature_calls.len());
             let future = message_call.join(join_all(signature_calls));
-
-            info!("{:?} - step 1/3 - about to request message and signatures", tx_hash);
             State::AwaitMessageAndSignatures(future)
         };
 
@@ -140,7 +139,7 @@ impl<T: Transport> Future for SideToMainRelay<T> {
                     let gas_price = MessageToMainnet::from_bytes(&message)
                         .mainnet_gas_price;
 
-                    info!("{:?} - step 2/3 - message and signatures received. about to send transaction", self.tx_hash);
+                    info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.tx_hash, signatures.len());
 
                     let future = self.options.main.send_transaction(payload, self.options.gas, gas_price);
 
