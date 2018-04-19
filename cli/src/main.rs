@@ -21,7 +21,7 @@ use bridge::bridge::Bridge;
 use bridge::config::Config;
 use bridge::error::Error;
 use bridge::database::{TomlFileDatabase, Database};
-use bridge::consume::Consume;
+use bridge::helpers::StreamExt;
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
@@ -98,16 +98,11 @@ Options:
     let persisted_bridge_stream = bridge_stream
         .and_then(|state| {
             database.write(&state)?;
-            info!("state change:");
-            info!("{}", state);
+            info!("state change: {}", state);
             Ok(())
         });
 
-    event_loop.run(Consume::new(persisted_bridge_stream))?;
-
-    // for result in persisted_bridge_stream.wait() {
-    //     let _ = result?;
-    // }
+    event_loop.run(persisted_bridge_stream.consume())?;
 
     Ok("Done".into())
 }

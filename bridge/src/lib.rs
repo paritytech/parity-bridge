@@ -39,4 +39,3 @@ pub mod message_to_mainnet;
 pub mod signature;
 pub mod relay_stream;
 pub mod helpers;
-pub mod consume;
