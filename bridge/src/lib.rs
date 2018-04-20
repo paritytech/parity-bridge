@@ -31,11 +31,17 @@ mod macros;
 pub mod contract_connection;
 pub mod config;
 pub mod bridge;
-pub mod log_stream;
 pub mod contracts;
 pub mod database;
 pub mod error;
-pub mod message_to_mainnet;
-pub mod signature;
 pub mod relay_stream;
 pub mod helpers;
+
+mod log_stream;
+pub use log_stream::{LogStream, LogStreamOptions};
+
+mod signature;
+pub use signature::Signature;
+
+mod message_to_mainnet;
+pub use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};

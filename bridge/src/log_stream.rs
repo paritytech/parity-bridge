@@ -1,5 +1,3 @@
-/// concerning logs
-
 use std::time::Duration;
 use tokio_timer::{Interval, Timeout, Timer};
 use web3;
@@ -22,7 +20,7 @@ fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
     }
 }
 
-pub fn web3_filter(filter: ethabi::TopicFilter, address: Address) -> FilterBuilder {
+fn web3_filter(filter: ethabi::TopicFilter, address: Address) -> FilterBuilder {
     let t0 = web3_topic(filter.topic0);
     let t1 = web3_topic(filter.topic1);
     let t2 = web3_topic(filter.topic2);
@@ -32,7 +30,7 @@ pub fn web3_filter(filter: ethabi::TopicFilter, address: Address) -> FilterBuild
         .topics(t0, t1, t2, t3)
 }
 
-/// passed to `LogStream::new`
+/// options for creating a `LogStream`. passed to `LogStream::new`
 pub struct LogStreamOptions<T> {
     pub filter: ethabi::TopicFilter,
     pub request_timeout: Duration,
@@ -65,26 +63,28 @@ enum State<T: Transport> {
     },
 }
 
-/// Stream of confirmed logs.
+/// `futures::Stream` that fetches logs from `contract_address` matching `filter`
+/// with adjustable `poll_interval` and `request_timeout`.
+/// yields new logs that are `confirmations` blocks deep
 pub struct LogStream<T: Transport> {
     request_timeout: Duration,
     confirmations: usize,
     transport: T,
     last_checked_block: U256,
     timer: Timer,
-    interval: Interval,
+    poll_interval: Interval,
     state: State<T>,
     filter: FilterBuilder,
 }
 
 impl<T: Transport> LogStream<T> {
-    /// creates a new LogStream
+    /// creates a `LogStream`
     pub fn new(options: LogStreamOptions<T>) -> Self {
         let timer = Timer::default();
         LogStream {
             request_timeout: options.request_timeout,
             confirmations: options.confirmations,
-            interval: timer.interval(options.poll_interval),
+            poll_interval: timer.interval(options.poll_interval),
             transport: options.transport,
             last_checked_block: options.after,
             timer: timer,
@@ -104,7 +104,7 @@ impl<T: Transport> Stream for LogStream<T> {
                 State::AwaitInterval => {
                     // wait until `interval` has passed
                     let _ = try_stream!(
-                        self.interval
+                        self.poll_interval
                             .poll()
                             .chain_err(|| "LogStream: polling interval failed")
                     );
