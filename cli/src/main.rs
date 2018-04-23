@@ -119,7 +119,7 @@ Options:
         Ok(())
     });
 
-    event_loop.run(persisted_bridge_stream.consume())?;
+    event_loop.run(persisted_bridge_stream.last())?;
 
     Ok("Done".into())
 }

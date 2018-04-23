@@ -23,34 +23,35 @@ where
     serializer.serialize_str(&format!("{}", value))
 }
 
-pub trait StreamExt {
-    // if you're interested in the side effects of the stream and not the values
-    fn consume(self) -> Consume<Self>
+pub trait StreamExt<I> {
+    // if you're interested only in the last item in a stream
+    fn last(self) -> Last<Self, I>
     where
         Self: Sized;
 }
 
-impl<S> StreamExt for S
+impl<S, I> StreamExt<I> for S
 where
     S: Stream,
 {
-    fn consume(self) -> Consume<Self>
+    fn last(self) -> Last<Self, I>
     where
         Self: Sized,
     {
-        Consume { stream: self }
+        Last { stream: self, last: None }
     }
 }
 
-pub struct Consume<S> {
+pub struct Last<S, I> {
     stream: S,
+    last: Option<I>,
 }
 
-impl<S> Future for Consume<S>
+impl<S, I> Future for Last<S, I>
 where
-    S: Stream,
+    S: Stream<Item = I>
 {
-    type Item = ();
+    type Item = Option<I>;
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, S::Error> {
@@ -59,9 +60,9 @@ where
                 Err(err) => return Err(err),
                 Ok(Async::NotReady) => return Ok(Async::NotReady),
                 // stream is finished
-                Ok(Async::Ready(None)) => return Ok(Async::Ready(())),
-                // there's more. ignore values
-                Ok(Async::Ready(Some(_))) => {}
+                Ok(Async::Ready(None)) => return Ok(Async::Ready(self.last.take())),
+                // there is more
+                Ok(Async::Ready(item)) => self.last = item,
             }
         }
     }
