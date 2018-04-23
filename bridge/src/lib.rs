@@ -19,6 +19,7 @@ extern crate rustc_hex;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
 extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_timer;
@@ -27,6 +28,10 @@ extern crate web3;
 
 #[macro_use]
 mod macros;
+
+#[cfg(test)]
+#[macro_use]
+mod test;
 
 pub mod contract_connection;
 pub mod config;
@@ -45,3 +50,9 @@ pub use signature::Signature;
 
 mod message_to_mainnet;
 pub use message_to_mainnet::{MessageToMainnet, MESSAGE_LENGTH};
+
+#[cfg(test)]
+extern crate jsonrpc_core;
+
+#[cfg(test)]
+pub use test::MockTransport;
