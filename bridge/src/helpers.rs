@@ -67,3 +67,38 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio_core::reactor::Core;
+    use futures;
+
+    #[test]
+    fn test_stream_ext_last_empty() {
+        let stream = futures::stream::empty::<(), ()>();
+        let mut event_loop = Core::new().unwrap();
+        assert_eq!(event_loop.run(stream.last()).unwrap(), None);
+    }
+
+    #[test]
+    fn test_stream_ext_last_once_ok() {
+        let stream = futures::stream::once::<u32, ()>(Ok(42));
+        let mut event_loop = Core::new().unwrap();
+        assert_eq!(event_loop.run(stream.last()).unwrap(), Some(42));
+    }
+
+    #[test]
+    fn test_stream_ext_last_once_err() {
+        let stream = futures::stream::once::<u32, u32>(Err(42));
+        let mut event_loop = Core::new().unwrap();
+        assert_eq!(event_loop.run(stream.last()).unwrap_err(), 42);
+    }
+
+    #[test]
+    fn test_stream_ext_last_three() {
+        let stream = futures::stream::iter_ok::<_, ()>(vec![17, 19, 3]);
+        let mut event_loop = Core::new().unwrap();
+        assert_eq!(event_loop.run(stream.last()).unwrap(), Some(3));
+    }
+}
