@@ -169,3 +169,62 @@ impl<T: Transport> Stream for LogStream<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use contracts::HomeBridge;
+    use helpers::StreamExt;
+    use tokio_core::reactor::Core;
+
+    #[test]
+    fn test_log_stream() {
+        let deposit_topic = HomeBridge::default()
+            .events()
+            .deposit()
+            .create_filter()
+            .topic0;
+
+        let transport = mock_transport!(
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1011");
+            "eth_getLogs" =>
+                req => json!([{
+                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "fromBlock": "0x4",
+                    "limit": null,
+                    "toBlock": "0x1005",
+                    "topics": [[deposit_topic], null, null, null]
+                }]),
+                res => json!([]);
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1012");
+            "eth_getLogs" =>
+                req => json!([{
+                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "fromBlock": "0x1006",
+                    "limit": null,
+                    "toBlock": "0x1006",
+                    "topics": [[deposit_topic], null, null, null]
+                }]),
+                res => json!([]);
+        );
+
+        let log_stream = LogStream::new(LogStreamOptions {
+            request_timeout: Duration::from_secs(1),
+            poll_interval: Duration::from_secs(1),
+            confirmations: 12,
+            transport: transport.clone(),
+            contract_address: "0000000000000000000000000000000000000001".into(),
+            after: 3.into(),
+            filter: HomeBridge::default().events().deposit().create_filter()
+        });
+
+        let mut event_loop = Core::new().unwrap();
+        event_loop.run(log_stream.take(2).last()).unwrap();
+
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
+    }
+}
