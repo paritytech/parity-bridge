@@ -32,7 +32,7 @@ fn deposit_relay_payload(web3_log: Log) -> Vec<u8> {
     )
 }
 
-/// `Future` that relays a single deposit
+/// `Future` responsible for doing a single relay from `main` to `side`
 pub struct MainToSideRelay<T: Transport> {
     tx_hash: H256,
     future: Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>,
