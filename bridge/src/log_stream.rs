@@ -235,4 +235,62 @@ mod tests {
             ]);
         assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
+
+    #[test]
+    fn test_log_stream_once_one_log() {
+        let deposit_topic = HomeBridge::default()
+            .events()
+            .deposit()
+            .create_filter()
+            .topic0;
+
+        let transport = mock_transport!(
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1011");
+            "eth_getLogs" =>
+                req => json!([{
+                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "fromBlock": "0x4",
+                    "limit": null,
+                    "toBlock": "0x1005",
+                    "topics": [[deposit_topic], null, null, null]
+                }]),
+                res => json!([{
+                    "address": "0x0000000000000000000000000000000000000cc1",
+                    "topics": [deposit_topic],
+                    "data": "0x000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0",
+                    "type": "",
+                    "transactionHash": "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+                }]);
+        );
+
+        let log_stream = LogStream::new(LogStreamOptions {
+            request_timeout: Duration::from_secs(1),
+            poll_interval: Duration::from_secs(1),
+            confirmations: 12,
+            transport: transport.clone(),
+            contract_address: "0000000000000000000000000000000000000001".into(),
+            after: 3.into(),
+            filter: HomeBridge::default().events().deposit().create_filter()
+        });
+
+        let mut event_loop = Core::new().unwrap();
+        let log_ranges = event_loop.run(log_stream.take(1).collect()).unwrap();
+
+        assert_eq!(
+            log_ranges,
+            vec![
+                LogRange { from: 4.into(), to: 4101.into(), logs: vec![
+                    Log {
+                        address: "0x0000000000000000000000000000000000000cc1".into(),
+                        topics: deposit_topic.into(),
+                        data: Bytes("000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap()),
+                        transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
+                        ..Default::default()
+                    }
+                ] },
+            ]);
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
+    }
 }
