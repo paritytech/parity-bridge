@@ -178,7 +178,7 @@ mod tests {
     use tokio_core::reactor::Core;
 
     #[test]
-    fn test_log_stream() {
+    fn test_log_stream_no_logs() {
         let deposit_topic = HomeBridge::default()
             .events()
             .deposit()
