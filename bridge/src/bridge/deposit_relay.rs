@@ -131,6 +131,7 @@ mod tests {
             value: 1000.into(),
         };
 
+        // TODO [snd] would be great if there were a way to automate this
         let log_data = ethabi::encode(&[
             ethabi::Token::Address(log.recipient),
             ethabi::Token::Uint(log.value)
