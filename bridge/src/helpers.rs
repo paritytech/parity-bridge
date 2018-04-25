@@ -38,7 +38,10 @@ where
     where
         Self: Sized,
     {
-        Last { stream: self, last: None }
+        Last {
+            stream: self,
+            last: None,
+        }
     }
 }
 
@@ -49,7 +52,7 @@ pub struct Last<S, I> {
 
 impl<S, I> Future for Last<S, I>
 where
-    S: Stream<Item = I>
+    S: Stream<Item = I>,
 {
     type Item = Option<I>;
     type Error = S::Error;

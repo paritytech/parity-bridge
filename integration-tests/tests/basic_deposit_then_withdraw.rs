@@ -218,13 +218,19 @@ fn test_basic_deposit_then_withdraw() {
 
     // connect to home
     let home = bridge::contracts::home::HomeBridge::default();
-    let home_transport = Http::with_event_loop("http://localhost:8550", &event_loop.handle(), MAX_PARALLEL_REQUESTS)
-        .expect("failed to connect to home at http://localhost:8550");
+    let home_transport = Http::with_event_loop(
+        "http://localhost:8550",
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    ).expect("failed to connect to home at http://localhost:8550");
     let home_eth = web3::api::Eth::new(home_transport.clone());
 
     // connect to foreign
-    let foreign_transport = Http::with_event_loop("http://localhost:8551", &event_loop.handle(), MAX_PARALLEL_REQUESTS)
-        .expect("failed to connect to foreign at http://localhost:8551");
+    let foreign_transport = Http::with_event_loop(
+        "http://localhost:8551",
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    ).expect("failed to connect to foreign at http://localhost:8551");
     let foreign = bridge::contracts::foreign::ForeignBridge::default();
     let foreign_eth = web3::api::Eth::new(foreign_transport.clone());
 

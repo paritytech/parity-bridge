@@ -46,33 +46,37 @@ impl MockTransport {
 impl Transport for MockTransport {
     type Out = web3::Result<jsonrpc_core::Value>;
 
-    fn prepare(&self, method: &str, params: Vec<jsonrpc_core::Value>) -> (usize, jsonrpc_core::Call) {
-        let current_request_index = {
-            self.actual_requests.as_ref().borrow().len()
-        };
+    fn prepare(
+        &self,
+        method: &str,
+        params: Vec<jsonrpc_core::Value>,
+    ) -> (usize, jsonrpc_core::Call) {
+        let current_request_index = { self.actual_requests.as_ref().borrow().len() };
         assert_eq!(
-            self.expected_requests[current_request_index].method.as_str(),
+            self.expected_requests[current_request_index]
+                .method
+                .as_str(),
             method,
             "invalid method called"
         );
         assert_eq!(
-            self.expected_requests[current_request_index].params,
-            params,
+            self.expected_requests[current_request_index].params, params,
             "invalid method params"
         );
-        self.actual_requests.as_ref().borrow_mut().push(RequestData {
-            method: method.to_string(),
-            params: params.clone()
-        });
+        self.actual_requests
+            .as_ref()
+            .borrow_mut()
+            .push(RequestData {
+                method: method.to_string(),
+                params: params.clone(),
+            });
 
         let request = web3::helpers::build_request(1, method, params);
         (current_request_index + 1, request)
     }
 
     fn send(&self, _id: usize, _request: jsonrpc_core::Call) -> web3::Result<jsonrpc_core::Value> {
-        let current_request_index = {
-            self.actual_requests.as_ref().borrow().len()
-        };
+        let current_request_index = { self.actual_requests.as_ref().borrow().len() };
         let response = self.mock_responses
             .iter()
             .nth(current_request_index - 1)

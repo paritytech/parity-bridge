@@ -221,7 +221,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3.into(),
-            filter: HomeBridge::default().events().deposit().create_filter()
+            filter: HomeBridge::default().events().deposit().create_filter(),
         });
 
         let mut event_loop = Core::new().unwrap();
@@ -230,9 +230,18 @@ mod tests {
         assert_eq!(
             log_ranges,
             vec![
-                LogRange { from: 4.into(), to: 4101.into(), logs: vec![] },
-                LogRange { from: 4102.into(), to: 4102.into(), logs: vec![] }
-            ]);
+                LogRange {
+                    from: 4.into(),
+                    to: 4101.into(),
+                    logs: vec![],
+                },
+                LogRange {
+                    from: 4102.into(),
+                    to: 4102.into(),
+                    logs: vec![],
+                },
+            ]
+        );
         assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
 
@@ -272,7 +281,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3.into(),
-            filter: HomeBridge::default().events().deposit().create_filter()
+            filter: HomeBridge::default().events().deposit().create_filter(),
         });
 
         let mut event_loop = Core::new().unwrap();

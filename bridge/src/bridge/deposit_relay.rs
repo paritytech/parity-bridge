@@ -134,10 +134,11 @@ mod tests {
         // TODO [snd] would be great if there were a way to automate this
         let log_data = ethabi::encode(&[
             ethabi::Token::Address(log.recipient),
-            ethabi::Token::Uint(log.value)
+            ethabi::Token::Uint(log.value),
         ]);
 
-        let log_tx_hash = "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+        let log_tx_hash =
+            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
@@ -155,7 +156,7 @@ mod tests {
         let tx_data = ForeignBridge::default().functions().deposit().input(
             log.recipient,
             log.value,
-            log_tx_hash
+            log_tx_hash,
         );
 
         let transport = mock_transport!(
@@ -174,7 +175,7 @@ mod tests {
             authority_address,
             foreign_contract_address,
             transport.clone(),
-            ::std::time::Duration::from_secs(1)
+            ::std::time::Duration::from_secs(1),
         );
 
         let options = Options {
