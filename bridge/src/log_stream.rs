@@ -176,9 +176,11 @@ mod tests {
     use contracts::HomeBridge;
     use helpers::StreamExt;
     use tokio_core::reactor::Core;
+    use web3::types::{Bytes, Log};
+    use rustc_hex::FromHex;
 
     #[test]
-    fn test_log_stream_no_logs() {
+    fn test_log_stream_twice_no_logs() {
         let deposit_topic = HomeBridge::default()
             .events()
             .deposit()
@@ -223,8 +225,14 @@ mod tests {
         });
 
         let mut event_loop = Core::new().unwrap();
-        event_loop.run(log_stream.take(2).last()).unwrap();
+        let log_ranges = event_loop.run(log_stream.take(2).collect()).unwrap();
 
+        assert_eq!(
+            log_ranges,
+            vec![
+                LogRange { from: 4.into(), to: 4101.into(), logs: vec![] },
+                LogRange { from: 4102.into(), to: 4102.into(), logs: vec![] }
+            ]);
         assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
 }
