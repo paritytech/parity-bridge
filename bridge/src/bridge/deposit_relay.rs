@@ -93,7 +93,11 @@ impl<T: Transport> RelayFactory for Options<T> {
 mod tests {
     use rustc_hex::FromHex;
     use web3::types::{Bytes, Log};
-    use super::deposit_relay_payload;
+    use super::*;
+    use tokio_core::reactor::Core;
+    use contracts;
+    use ethabi;
+    use rustc_hex::ToHex;
 
     #[test]
     fn test_deposit_relay_payload() {
@@ -112,5 +116,84 @@ mod tests {
         let payload = deposit_relay_payload(log);
         let expected: Vec<u8> = "26b3293f000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap();
         assert_eq!(expected, payload);
+    }
+
+    #[test]
+    fn test_deposit_relay_future() {
+        let deposit_topic = HomeBridge::default()
+            .events()
+            .deposit()
+            .create_filter()
+            .topic0;
+
+        let log = contracts::home::logs::Deposit {
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            value: 1000.into(),
+        };
+
+        let log_data = ethabi::encode(&[
+            ethabi::Token::Address(log.recipient),
+            ethabi::Token::Uint(log.value)
+        ]);
+
+        let log_tx_hash = "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+
+        let raw_log = Log {
+            address: "0000000000000000000000000000000000000001".into(),
+            topics: deposit_topic.into(),
+            data: Bytes(log_data),
+            transaction_hash: Some(log_tx_hash),
+            ..Default::default()
+            // block_hash: Option<H256>,
+            // block_number: Option<U256>,
+            // transaction_index: Option<U256>,
+            // log_index: Option<U256>,
+            // transaction_log_index: Option<U256>,
+            // log_type: String,
+        };
+
+        let authority_address = "0000000000000000000000000000000000000001".into();
+
+        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+        let foreign_contract_address = "0000000000000000000000000000000000000dd1".into();
+
+        let tx_data = ForeignBridge::default().functions().deposit().input(
+            log.recipient,
+            log.value,
+            log_tx_hash
+        );
+
+        let transport = mock_transport!(
+            "eth_sendTransaction" =>
+                req => json!([{
+                    "data": format!("0x{}", tx_data.to_hex()),
+                    "from": "0x0000000000000000000000000000000000000001",
+                    "gas": "0x0",
+                    "gasPrice": "0x0",
+                    "to": foreign_contract_address,
+                }]),
+            res => json!(tx_hash);
+        );
+
+        let connection = ContractConnection::new(
+            authority_address,
+            foreign_contract_address,
+            transport.clone(),
+            ::std::time::Duration::from_secs(1)
+        );
+
+        let options = Options {
+            foreign: connection,
+            gas: 0.into(),
+            gas_price: 0.into()
+        };
+
+        let future = MainToSideRelay::new(raw_log, options);
+
+        let mut event_loop = Core::new().unwrap();
+        let result = event_loop.run(future).unwrap();
+        assert_eq!(result, tx_hash.into());
+
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
 }
