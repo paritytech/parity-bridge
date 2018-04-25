@@ -144,12 +144,6 @@ mod tests {
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             ..Default::default()
-            // block_hash: Option<H256>,
-            // block_number: Option<U256>,
-            // transaction_index: Option<U256>,
-            // log_index: Option<U256>,
-            // transaction_log_index: Option<U256>,
-            // log_type: String,
         };
 
         let authority_address = "0000000000000000000000000000000000000001".into();
