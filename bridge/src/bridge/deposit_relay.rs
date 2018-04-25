@@ -162,8 +162,8 @@ mod tests {
                 req => json!([{
                     "data": format!("0x{}", tx_data.to_hex()),
                     "from": "0x0000000000000000000000000000000000000001",
-                    "gas": "0x0",
-                    "gasPrice": "0x0",
+                    "gas": "0xfd",
+                    "gasPrice": "0xa0",
                     "to": foreign_contract_address,
                 }]),
             res => json!(tx_hash);
@@ -178,8 +178,8 @@ mod tests {
 
         let options = Options {
             foreign: connection,
-            gas: 0.into(),
-            gas_price: 0.into()
+            gas: 0xfd.into(),
+            gas_price: 0xa0.into(),
         };
 
         let future = MainToSideRelay::new(raw_log, options);
