@@ -11,13 +11,15 @@ fn main() {
     let output = Command::new("git")
         .args(&["rev-parse", "HEAD"])
         .output()
-        .unwrap();
+        .expect("`git rev-parse HEAD` failed to run. run it yourself to verify. file an issue if this persists");
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
     // make solc version used to compile contracts (`solc --version`)
     // available via `env!("SOLC_VERSION")` in sources
-    let output = Command::new("solc").args(&["--version"]).output().unwrap();
+    let output = Command::new("solc").args(&["--version"]).output().expect(
+        "`solc --version` failed to run. run it yourself to verify. file an issue if this persists",
+    );
     let output_string = String::from_utf8(output.stdout).unwrap();
     let solc_version = output_string.lines().last().unwrap();
     println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
