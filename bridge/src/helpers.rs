@@ -3,6 +3,65 @@ use serde::de::Error;
 use ethereum_types::U256;
 use futures::{Async, Future, Poll, Stream};
 
+/// convert web3::Log to ethabi::RawLog since ethabi events can
+/// only be parsed from the latter
+fn web3_to_ethabi_log(web3_log: &web3::types::Log) -> ethabi::RawLog {
+    RawLog {
+        topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
+        data: web3_log.data.0.clone(),
+    }
+}
+
+/// helper so calls require less typing
+pub fn call<T: Transport>(transport: &T, contract_address: Address, payload: Vec<u8>) -> CallResult<Bytes, T::Out> {
+    let request = CallRequest {
+        from: None,
+        to: contract_address,
+        gas: None,
+        gas_price: None,
+        value: None,
+        data: Some(payload),
+    };
+    web3::api::Eth::new(transport).call(request, None)
+}
+
+pub struct Transaction<T: Transport> {
+    future: CallResult<H256, T::Out>
+}
+
+impl<T: Transport> Transaction<T> {
+    pub fn new(
+       transport: &T,
+       contract_address: Address,
+       authority_address: Address,
+       gas: U256,
+       gas_price: U256,
+       payload: Vec<u8>
+    ) -> Self {
+        let request = TransactionRequest {
+            from: authority_address,
+            to: Some(contract_address),
+            gas: Some(gas),
+            gas_price: Some(gas_price),
+            value: None,
+            data: Some(payload),
+            nonce: None,
+            condition: None,
+        };
+        let future = web3::api::Eth::new(transport).send_transaction(request);
+        Self { future }
+    }
+}
+
+impl<T: Transport> Future for Transaction<T> {
+    type Item = H256;
+    type Error = error::Error;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        try_ready!(future.poll)
+    }
+}
+
+
 /// the toml crate parses integer literals as `i64`.
 /// certain config options (example: `max_total_home_contract_balance`)
 /// frequently don't fit into `i64`.
