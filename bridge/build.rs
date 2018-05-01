@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::fs;
 
 fn main() {
     // rerun build script if bridge contract has changed.
@@ -15,21 +16,44 @@ fn main() {
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
+    match Command::new("solcjs").arg("--version").output() {
+            Ok(exit_status) => {
+                    let output_string = String::from_utf8(exit_status.stdout).unwrap();
+                    let solc_version = output_string.lines().last().unwrap();
+                    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+            }
+            Err(err) => {
+                    if let std::io::ErrorKind::NotFound = err.kind() {
+                            panic!("`solcjs` executable not found in `$PATH`. Try running `npm install -g solc`");
+                    } else {
+                            panic!("Unable to run solcjs: {}", err);
+                    }
+            }
+    }
     // make solc version used to compile contracts (`solc --version`)
     // available via `env!("SOLC_VERSION")` in sources
-    let output = Command::new("solc").args(&["--version"]).output().unwrap();
-    let output_string = String::from_utf8(output.stdout).unwrap();
-    let solc_version = output_string.lines().last().unwrap();
-    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+//     let output = Command::new("solcjs").args(&["--version"]).output().unwrap();
+//     let output_string = String::from_utf8(output.stdout).unwrap();
+//     let solc_version = output_string.lines().last().unwrap();
+//     println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
 
+    match fs::remove_dir_all("../compiled_contracts"){
+        Ok(()) => {
+            println!("Removed old files");
+        }
+        Err(err) => {
+            println!("Files not removed: {}", err);
+        }
+
+    };
     // compile contracts for inclusion with ethabis `use_contract!`
-    match Command::new("solc")
+    match Command::new("solcjs")
         .arg("--abi")
         .arg("--bin")
         .arg("--optimize")
         .arg("--output-dir")
         .arg("../compiled_contracts")
-        .arg("--overwrite")
+//        .arg("--overwrite")
         .arg("../contracts/bridge.sol")
         .status()
     {
@@ -41,6 +65,7 @@ fn main() {
                     panic!("`solc` exited because it was terminated by a signal");
                 }
             }
+
         }
         Err(err) => {
             if let std::io::ErrorKind::NotFound = err.kind() {
