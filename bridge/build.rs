@@ -15,12 +15,20 @@ fn main() {
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
-    // make solc version used to compile contracts (`solc --version`)
-    // available via `env!("SOLC_VERSION")` in sources
-    let output = Command::new("solc").args(&["--version"]).output().unwrap();
-    let output_string = String::from_utf8(output.stdout).unwrap();
-    let solc_version = output_string.lines().last().unwrap();
-    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+    match Command::new("solc").arg("--version").output() {
+            Ok(exit_status) => {
+                    let output_string = String::from_utf8(exit_status.stdout).unwrap();
+                    let solc_version = output_string.lines().last().unwrap();
+                    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+            }
+            Err(err) => {
+                    if let std::io::ErrorKind::NotFound = err.kind() {
+                            panic!("`solc` executable not found in `$PATH`. `solc` is required to compile the bridge contracts. please install it: https://solidity.readthedocs.io/en/develop/installing-solidity.html");
+                    } else {
+                            panic!("Unable to run solc: {}", err);
+                    }
+            }
+    }
 
     // compile contracts for inclusion with ethabis `use_contract!`
     match Command::new("solc")
