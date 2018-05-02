@@ -61,7 +61,6 @@ impl<T: Transport> Future for Transaction<T> {
     }
 }
 
-
 /// the toml crate parses integer literals as `i64`.
 /// certain config options (example: `max_total_home_contract_balance`)
 /// frequently don't fit into `i64`.

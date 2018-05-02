@@ -2,13 +2,14 @@ use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, FromErr, JoinAll};
 use tokio_timer::Timeout;
 use web3::Transport;
-use web3::types::{Bytes, H256, Log, U256};
+use web3::types::{Bytes, H256, Log, U256, TransactionReceipt};
 use web3::helpers::CallResult;
 use ethabi::RawLog;
 use error::{self, ResultExt};
 use contracts::{ForeignBridge, HomeBridge};
 use contract_connection::ContractConnection;
 use relay_stream::RelayFactory;
+use side_contract::{HasAuthSignedMainToSide, Transaction, SideContract};
 
 /// takes `deposit_log` which must be a `HomeBridge.Deposit` event
 /// and returns the payload for the call to `ForeignBridge.deposit()`
