@@ -1,5 +1,9 @@
 # bridge
 
+*we recommend not using the bridge in "production" (to bridge significant amounts) just yet.
+it's missing a code audit and should still be considered alpha. we can't rule out that there are bugs that might result in loss of the bridged amounts.
+we'll update this disclaimer once that changes*
+
 [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badges.gitter.im/paritytech/parity-bridge.svg)](https://gitter.im/paritytech/parity-bridge?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 [![Build Status][travis-image]][travis-url]
