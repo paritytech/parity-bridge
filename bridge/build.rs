@@ -34,11 +34,16 @@ fn main() {
                     } else {
                         panic!("`solc` exited because it was terminated by a signal");
                     }
+                } else{
+                    let output = Command::new("solc").args(&["--version"]).output().unwrap();
+                    let output_string = String::from_utf8(output.stdout).unwrap();
+                    let solc_version = output_string.lines().last().unwrap();
+                    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
                 }
             }
             Err(err) => {
                 if let std::io::ErrorKind::NotFound = err.kind() {
-    match Command::new("solcjs").arg("--version").output() {
+                    match Command::new("solcjs").arg("--version").output() {
         Ok(exit_status) => {
             let output_string = String::from_utf8(exit_status.stdout).unwrap();
             let solc_version = output_string.lines().last().unwrap();
@@ -106,8 +111,13 @@ fn main() {
             }
         }
     }
-    // make solc version used to compile contracts (`solc --version`)
-    // available via `env!("SOLC_VERSION")` in sources
+                    // make solc version used to compile contracts (`solc --version`)
+                    // available via `env!("SOLC_VERSION")` in sources
+                    let output = Command::new("solcjs").args(&["--version"]).output().unwrap();
+                    let output_string = String::from_utf8(output.stdout).unwrap();
+                    let solc_version = output_string.lines().last().unwrap();
+                    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+
                 } else {
                     panic!("an error occurred when trying to spawn `solc`: {}", err);
                 }
