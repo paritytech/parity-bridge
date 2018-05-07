@@ -17,6 +17,27 @@ fn main() {
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
+    match Command::new("solc")
+        .arg("--abi")
+        .arg("--bin")
+        .arg("--optimize")
+        .arg("--output-dir")
+        .arg("../compiled_contracts")
+        .arg("--overwrite")
+        .arg("../contracts/bridge.sol")
+        .status()
+        {
+            Ok(exit_status) => {
+                if !exit_status.success() {
+                    if let Some(code) = exit_status.code() {
+                        panic!("`solc` exited with error exit status code `{}`", code);
+                    } else {
+                        panic!("`solc` exited because it was terminated by a signal");
+                    }
+                }
+            }
+            Err(err) => {
+                if let std::io::ErrorKind::NotFound = err.kind() {
     match Command::new("solcjs").arg("--version").output() {
         Ok(exit_status) => {
             let output_string = String::from_utf8(exit_status.stdout).unwrap();
@@ -87,6 +108,11 @@ fn main() {
     }
     // make solc version used to compile contracts (`solc --version`)
     // available via `env!("SOLC_VERSION")` in sources
+                } else {
+                    panic!("an error occurred when trying to spawn `solc`: {}", err);
+                }
+            }
+        }
 }
 fn get_file_name(path: DirEntry) -> String {
     let file_name : String = path
