@@ -21,6 +21,5 @@ truffle/build
 
 node_modules
 
-compiled_contracts
 
 integration-tests/tmp

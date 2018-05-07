@@ -1,5 +1,6 @@
-use std::process::Command;
 use std::fs;
+use std::process::Command;
+use std::fs::DirEntry;
 
 fn main() {
     // rerun build script if bridge contract has changed.
@@ -75,4 +76,31 @@ fn main() {
             }
         }
     }
+
+
+    let prepend = "../compiled_contracts/";
+    let paths = fs::read_dir("../compiled_contracts").unwrap();
+    for path in paths {
+        let _file_name: String = format!("{}{}",prepend, get_file_name(path.unwrap()));
+        let _replaced_name : String = str::replace(&_file_name, "___contracts_bridge_sol_", "");
+        match fs::rename(&_file_name, &_replaced_name){
+            Ok(_status) => {
+                println!("Renamed successfully");
+
+            }
+            Err(err) => {
+                println!("Tried looking for {}", &_file_name);
+                panic!("Error renaming: {}", err);
+            }
+        }
+        println!("Old name: {}, New name: {}", _file_name, _replaced_name);
+    }
+}
+fn get_file_name(path: DirEntry) -> String {
+    let file_name : String = path
+        .file_name()
+        .into_string()
+        .expect("error: the first argument is not a file \
+                    system path representable in UTF-8.");
+    file_name
 }
