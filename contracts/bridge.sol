@@ -396,7 +396,7 @@ contract ForeignBridge {
         /// Signed message.
         bytes message;
         /// Authorities who signed the message.
-        address[] signed;
+        address[] authorities;
         /// Signatures
         bytes[] signatures;
     }
@@ -523,13 +523,13 @@ contract ForeignBridge {
         var hash = keccak256(message);
 
         // each authority can only provide one signature per message
-        require(!Helpers.addressArrayContains(signatures[hash].signed, msg.sender));
+        require(!Helpers.addressArrayContains(signatures[hash].authorities, msg.sender));
         signatures[hash].message = message;
-        signatures[hash].signed.push(msg.sender);
+        signatures[hash].authorities.push(msg.sender);
         signatures[hash].signatures.push(signature);
 
         // TODO: this may cause troubles if requiredSignatures len is changed
-        if (signatures[hash].signed.length == requiredSignatures) {
+        if (signatures[hash].authorities.length == requiredSignatures) {
             CollectedSignatures(msg.sender, hash);
         } else {
             WithdrawSignatureSubmitted(hash);
