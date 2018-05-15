@@ -1,11 +1,15 @@
 use serde::{Deserialize, Deserializer, Serializer};
 use serde::de::Error;
-use ethereum_types::U256;
+use web3::types::{U256, H256, TransactionRequest, CallRequest, Address, Bytes};
 use futures::{Async, Future, Poll, Stream};
+use web3::{self, Transport};
+use web3::helpers::CallResult;
+use ethabi::{self, RawLog};
+use error;
 
 /// convert web3::Log to ethabi::RawLog since ethabi events can
 /// only be parsed from the latter
-fn web3_to_ethabi_log(web3_log: &web3::types::Log) -> ethabi::RawLog {
+pub fn web3_to_ethabi_log(web3_log: &web3::types::Log) -> ethabi::RawLog {
     RawLog {
         topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
         data: web3_log.data.0.clone(),
@@ -57,7 +61,7 @@ impl<T: Transport> Future for Transaction<T> {
     type Item = H256;
     type Error = error::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        try_ready!(future.poll)
+        self.future.poll()
     }
 }
 
