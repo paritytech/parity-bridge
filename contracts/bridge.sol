@@ -415,7 +415,7 @@ contract ForeignBridge {
     mapping (bytes32 => address[]) public deposits;
 
     /// Pending signatures and authorities who confirmed them
-    mapping (bytes32 => SignaturesCollection) public signatures;
+    mapping (bytes32 => SignaturesCollection) signatures;
 
     /// triggered when an authority confirms a deposit
     event DepositConfirmation(address recipient, uint256 value, bytes32 transactionHash);
