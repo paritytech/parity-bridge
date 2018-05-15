@@ -53,12 +53,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "bridge"
 version = "0.4.0"
 dependencies = [
+ "bridge-contracts 0.4.0",
  "error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethabi 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethabi-contract 5.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethabi-derive 5.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core 8.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quickcheck 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -71,6 +71,15 @@ dependencies = [
  "tokio-timer 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "web3 0.2.0 (git+https://github.com/tomusdrw/rust-web3?branch=bridge)",
+]
+
+[[package]]
+name = "bridge-contracts"
+version = "0.4.0"
+dependencies = [
+ "ethabi 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethabi-contract 5.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethabi-derive 5.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

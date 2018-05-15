@@ -4,6 +4,7 @@ version = "0.4.0"
 authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
 [dependencies]
+bridge-contracts = { path = "../contracts" }
 futures = "0.1"
 serde = "1.0"
 serde_derive = "1.0"
@@ -14,8 +15,6 @@ toml = "0.4.2"
 web3 = { git = "https://github.com/tomusdrw/rust-web3", branch = "bridge" }
 error-chain = "0.11.0-rc.2"
 ethabi = "5.1"
-ethabi-derive = "5.0"
-ethabi-contract = "5.0"
 rustc-hex = "1.0"
 log = "0.3"
 ethereum-types = "0.2"

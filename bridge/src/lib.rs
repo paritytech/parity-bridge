@@ -1,10 +1,6 @@
 #[macro_use]
 extern crate error_chain;
 extern crate ethabi;
-#[macro_use]
-extern crate ethabi_contract;
-#[macro_use]
-extern crate ethabi_derive;
 extern crate ethereum_types;
 #[macro_use]
 extern crate futures;
@@ -25,6 +21,7 @@ extern crate tokio_core;
 extern crate tokio_timer;
 extern crate toml;
 extern crate web3;
+extern crate bridge_contracts as contracts;
 
 #[macro_use]
 mod macros;
@@ -36,7 +33,6 @@ mod test;
 pub mod contract_connection;
 pub mod config;
 pub mod bridge;
-pub mod contracts;
 pub mod database;
 pub mod error;
 pub mod relay_stream;
