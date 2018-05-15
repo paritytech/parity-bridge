@@ -221,7 +221,7 @@ contract HomeBridge {
     address[] public authorities;
 
     /// Used foreign transaction hashes.
-    mapping (bytes32 => bool) withdraws;
+    mapping (bytes32 => bool) public withdraws;
 
     /// Event created on money deposit.
     event Deposit (address recipient, uint256 value);
