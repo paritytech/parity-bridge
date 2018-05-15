@@ -1,15 +1,17 @@
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, FromErr, JoinAll};
 use tokio_timer::Timeout;
-use web3::Transport;
+use web3::{self, Transport};
 use web3::types::{Bytes, H256, Log, U256, TransactionReceipt};
 use web3::helpers::CallResult;
 use ethabi::RawLog;
 use error::{self, ResultExt};
-use contracts::{ForeignBridge, HomeBridge};
+use contracts::home::HomeBridge;
+use contracts::foreign::ForeignBridge;
 use contract_connection::ContractConnection;
-use relay_stream::RelayFactory;
-use side_contract::{HasAuthSignedMainToSide, Transaction, SideContract};
+use relay_stream::LogToFuture;
+use side_contract::{IsMainToSideSignedOnSide, SideContract};
+use helpers::Transaction;
 
 /// takes `deposit_log` which must be a `HomeBridge.Deposit` event
 /// and returns the payload for the call to `ForeignBridge.deposit()`
@@ -26,67 +28,93 @@ fn deposit_relay_payload(web3_log: Log) -> Vec<u8> {
         .deposit()
         .parse_log(raw_ethabi_log)
         .expect("log must be a from a Deposit event. q.e.d.");
-    ForeignBridge::default().functions().deposit().input(
-        ethabi_log.recipient,
-        ethabi_log.value,
-        tx_hash.0,
-    )
+}
+
+enum State<T: Transport> {
+    AwaitHasSigned(Timeout<IsMainToSideSignedOnSide<T>>),
+    AwaitTxSent(Timeout<Transaction<T>>),
+    AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
+    HasAlreadySigned,
 }
 
 /// `Future` responsible for doing a single relay from `main` to `side`
-pub struct MainToSideRelay<T: Transport> {
-    tx_hash: H256,
-    future: Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>,
+pub struct MainToSideSign<T: Transport> {
+    main_tx_hash: H256,
+    state: State<T>,
+    side: SideContract<T>,
 }
 
-impl<T: Transport> MainToSideRelay<T> {
-    pub fn new(log: Log, options: Options<T>) -> Self {
-        let tx_hash = log.transaction_hash
+impl<T: Transport> MainToSideSign<T> {
+    pub fn new(log: Log, side: SideContract<T>) -> Self {
+        let main_tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
-        let payload = deposit_relay_payload(log);
-        info!("{:?} - step 1/2 - about to send transaction", tx_hash);
-        let future =
-            options
-                .foreign
-                .send_transaction(Bytes(payload), options.gas, options.gas_price);
+        info!("{:?} - step 1/3 - about to check whether it is already relayed", main_tx_hash);
 
-        Self { tx_hash, future }
+        let future = side.is_main_to_side_signed_on_side(main_tx_hash, side.authority_address);
+        let state = State::AwaitCheckIsAlreadyRelayed(future);
+
+        Self { main_tx_hash, side, state }
     }
 }
 
-impl<T: Transport> Future for MainToSideRelay<T> {
-    /// transaction hash
-    type Item = H256;
+impl<T: Transport> Future for MainToSideSign<T> {
+    type Item = TransactionReceipt;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let tx_hash = try_ready!(
-            self.future
-                .poll()
-                .chain_err(|| "DepositRelay: sending transaction failed")
-        );
-        info!(
-            "{:?} - step 2/2 - DONE - transaction sent {:?}",
-            self.tx_hash, tx_hash
-        );
-        Ok(Async::Ready(tx_hash))
+        loop {
+            let next_state = match self.state {
+                State::AwaitHasAlreadySigned(ref mut future) => {
+                    if try_ready!(future) {
+                        State::HasAlreadySigned()
+                    } else {
+                        State::AwaitTxSent(
+                            self.options.side_contract.sign_main_to_side(
+                                self.recipient,
+                                self.value,
+                                self.main_tx_hash))
+                    }
+                }
+                State::AwaitTxSent(ref mut future) => {
+                    let side_tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "MainToSideSign: checking whether {} already was relayed failed", self.main_tx_hash)
+                    );
+                    State::AwaitTxReceipt(web3::api::Eth::new(self.options.side_contract.transport)
+                        .transaction_receipt(side_tx_hash))
+                }
+                State::AwaitTxReceipt(ref mut future) => {
+                    let receipt = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "MainToSideSign: checking whether {} already was relayed failed", self.main_tx_hash)
+                    );
+                    info!(
+                        "{:?} - step 2/2 - DONE - transaction sent {:?}",
+                        self.main_tx_hash, receipt.transaction_hash
+                    );
+
+                    return Ok(Async::Ready(receipt));
+                }
+            };
+            self.state = next_state;
+        }
     }
 }
 
 /// options for relays from side to main
 #[derive(Clone)]
-pub struct Options<T> {
-    pub gas: U256,
-    pub gas_price: U256,
-    pub foreign: ContractConnection<T>,
+pub struct LogToMainToSideSign<T> {
+    pub side: SideContract<T>,
 }
 
 /// from the options and a log a relay future can be made
-impl<T: Transport> RelayFactory for Options<T> {
-    type Relay = MainToSideRelay<T>;
+impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
+    type Future = MainToSideSign<T>;
 
-    fn log_to_relay(&self, log: Log) -> Self::Relay {
-        MainToSideRelay::new(log, self.clone())
+    fn log_to_future(&self, log: Log) -> Self::Future {
+        MainToSideSign::new(log, self.side.clone())
     }
 }
 
@@ -185,7 +213,7 @@ mod tests {
             gas_price: 0xa0.into(),
         };
 
-        let future = MainToSideRelay::new(raw_log, options);
+        let future = MainToSideSign::new(raw_log, options);
 
         let mut event_loop = Core::new().unwrap();
         let result = event_loop.run(future).unwrap();
