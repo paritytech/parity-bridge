@@ -536,6 +536,10 @@ contract ForeignBridge {
         }
     }
 
+    function hasAuthoritySignedMessage(bytes32 message_hash, address authority) public view returns (bool) {
+      return Helpers.addressArrayContains(signatures[message_hash].authorities, authority);
+    }
+
     /// Get signature
     function signature(bytes32 message_hash, uint256 index) public view returns (bytes) {
         return signatures[message_hash].signatures[index];
