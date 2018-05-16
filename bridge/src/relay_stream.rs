@@ -7,93 +7,90 @@ use web3::types::Log;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, JoinAll};
 use web3::Transport;
-use log_stream::LogRange;
+use log_stream::LogsInBlockRange;
 use error::{self, ResultExt};
-use ethereum_types::U256;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 /// something that can create relay futures from logs.
-/// called by `RelayStream` for every log.
-pub trait RelayFactory {
-    type Relay: Future<Error = error::Error>;
+/// to be called by `RelayStream` for every log.
+pub trait LogToFuture {
+    type Future: Future<Error = error::Error>;
 
-    fn log_to_relay(&self, log: Log) -> Self::Relay;
-}
-
-/// state of the state machine that is the relay stream
-enum State<R: Future> {
-    AwaitLogs,
-    AwaitRelays {
-        future: JoinAll<Vec<R>>,
-        block: U256,
-    },
+    fn log_to_future(&self, log: Log) -> Self::Future;
 }
 
 /// a tokio `Stream` that when polled fetches all new logs from `logs`
 /// executes a `ForeignBridge.deposit`
 /// stream yields last block number on `home` for which all `HomeBrige.Deposit`
 /// events have been handled this way.
-pub struct RelayStream<S: Stream<Item = LogRange, Error = error::Error>, F: RelayFactory> {
+pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> {
     log_stream: S,
-    relay_factory: F,
-    state: State<F::Relay>,
+    log_to_future: F,
+    /// maps the last block
+    /// if all relays for this a block have finished yield that block
+    future_heap: FutureHeap<u64, JoinAll<F::Future>>
 }
 
-impl<S: Stream<Item = LogRange, Error = error::Error>, F: RelayFactory> RelayStream<S, F> {
-    pub fn new(log_stream: S, relay_factory: F) -> Self {
+impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> RelayStream<S, F> {
+    pub fn new(log_stream: S, log_to_future: F) -> Self {
         Self {
             log_stream,
-            relay_factory,
-            state: State::AwaitLogs,
+            log_to_future,
+            future_heap: FutureHeap::new(),
         }
     }
 }
 
-impl<S: Stream<Item = LogRange, Error = error::Error>, F: RelayFactory> Stream
+impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> Stream
     for RelayStream<S, F>
 {
-    type Item = U256;
+    type Item = u64;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        // on each poll we loop until neither any logs or relays are ready
         loop {
-            let (next_state, value_to_yield) = match self.state {
-                State::AwaitLogs => {
-                    let log_range = try_stream!(
-                        self.log_stream
-                            .poll()
-                            .chain_err(|| "RelayStream: fetching logs failed")
-                    );
+            // if there are logs
+            // fetch them and add them all to the
+            // map
+            let maybe_logs_in_block_range = try_maybe_stream!(
+                self.log_stream
+                    .poll()
+                    .chain_err(|| "RelayStream: fetching logs failed")
+            );
 
-                    // borrow checker...
-                    let relay_factory = &self.relay_factory;
+            if let Some(logs_in_block_range) = maybe_logs_in_block_range {
+                // keep track of the min number of block
+                // where all logs have been relayed
+                // and yield that number if it has changed
 
-                    let relays = log_range
-                        .logs
-                        .into_iter()
-                        .map(|log| relay_factory.log_to_relay(log))
-                        .collect::<Vec<_>>();
+                // borrow checker
+                let log_to_future = &self.log_to_future;
 
-                    (
-                        State::AwaitRelays {
-                            future: join_all(relays),
-                            block: log_range.to,
-                        },
-                        None,
-                    )
-                }
-                State::AwaitRelays {
-                    ref mut future,
-                    block,
-                } => {
-                    try_ready!(future.poll().chain_err(|| "RelayStream: relay failed"));
-                    (State::AwaitLogs, Some(block))
-                }
-            };
+                // only after all Logs in the LogsInBlockRange have
+                // been relayed can we safely mark the number
+                // as done
+                let futures = logs_in_block_range.logs
+                    .iter()
+                    .map(|log| log_to_future.log_to_future(log));
+                let joined_futures = join_all(futures);
+                self.future_heap.insert(logs_in_block_range.to, joined);
+            }
 
-            self.state = next_state;
+            let maybe_block_range_fully_relayed = try_maybe_stream!(
+                self.future_heap
+                    .poll()
+                    .chain_err(|| "RelayStream: fetching logs failed")
+            );
 
-            if value_to_yield.is_some() {
-                return Ok(Async::Ready(value_to_yield));
+            if let Some((last_block, _)) = maybe_block_range_fully_relayed {
+                return Ok(Async::Ready(Some(last_block)));
+            }
+
+            if maybe_logs_in_block_range.is_none() && maybe_block_range_fully_relayed.is_none() {
+                // there are neither new logs nor any block range has been fully relayed
+                return Async::NotReady;
             }
         }
     }
