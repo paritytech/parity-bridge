@@ -42,7 +42,7 @@ impl<O: Ord, F: Future> FutureHeap<O, F> {
     }
 
     pub fn insert(&mut self, order: O, future: F) {
-        entries.append(Entry { order, future, None });
+        entries.append(Entry { order, future, result: None });
     }
 }
 
@@ -98,7 +98,7 @@ impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
         // this is O(1)
         let entry = self.entries.swap_remove(index_of_min_ready);
 
-        Ok(Async::Ready(entry.result.expect("`index_of_min_ready` points to index of entry with result. q.e.d.")))
+        Ok(Async::Ready(Some((entry.order, entry.result.expect("`index_of_min_ready` points to index of entry with result. q.e.d.")))))
     }
 }
 
