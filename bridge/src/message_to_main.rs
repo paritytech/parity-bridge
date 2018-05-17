@@ -32,10 +32,10 @@ impl MessageToMain {
     }
 
     /// construct a message from a `Withdraw` event that was logged on `foreign`
-    pub fn from_log(web3_log: Log) -> Result<Self, Error> {
+    pub fn from_log(web3_log: &Log) -> Result<Self, Error> {
         let ethabi_raw_log = ethabi::RawLog {
-            topics: web3_log.topics,
-            data: web3_log.data.0,
+            topics: web3_log.topics.clone(),
+            data: web3_log.data.0.clone(),
         };
         let withdraw_log = Withdraw::default().parse_log(ethabi_raw_log)?;
         let hash = web3_log
