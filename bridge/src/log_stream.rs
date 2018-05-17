@@ -2,7 +2,7 @@ use std::time::Duration;
 use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::types::{Address, FilterBuilder, H256, Log, U256};
+use web3::types::{Address, FilterBuilder, H256, Log};
 use web3::helpers::CallResult;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::FromErr;
@@ -35,17 +35,17 @@ pub struct LogStreamOptions<T> {
     pub filter: ethabi::TopicFilter,
     pub request_timeout: Duration,
     pub poll_interval: Duration,
-    pub confirmations: usize,
+    pub confirmations: u64,
     pub transport: T,
     pub contract_address: Address,
-    pub after: U256,
+    pub after: u64,
 }
 
 /// Contains all logs matching `LogStream` filter in inclusive block range `[from, to]`.
 #[derive(Debug, PartialEq)]
-pub struct LogRange {
-    pub from: U256,
-    pub to: U256,
+pub struct LogsInBlockRange {
+    pub from: u64,
+    pub to: u64,
     pub logs: Vec<Log>,
 }
 
@@ -57,8 +57,8 @@ enum State<T: Transport> {
     AwaitBlockNumber(Timeout<FromErr<CallResult<U256, T::Out>, error::Error>>),
     /// Fetching logs for new best block.
     AwaitLogs {
-        from: U256,
-        to: U256,
+        from: u64,
+        to: u64,
         future: Timeout<FromErr<CallResult<Vec<Log>, T::Out>, error::Error>>,
     },
 }
@@ -68,9 +68,9 @@ enum State<T: Transport> {
 /// yields new logs that are `confirmations` blocks deep
 pub struct LogStream<T: Transport> {
     request_timeout: Duration,
-    confirmations: usize,
+    confirmations: u64,
     transport: T,
-    last_checked_block: U256,
+    last_checked_block: u64,
     timer: Timer,
     poll_interval: Interval,
     state: State<T>,
@@ -95,7 +95,7 @@ impl<T: Transport> LogStream<T> {
 }
 
 impl<T: Transport> Stream for LogStream<T> {
-    type Item = LogRange;
+    type Item = LogsInBlockRange;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -119,16 +119,16 @@ impl<T: Transport> Stream for LogStream<T> {
                         future
                             .poll()
                             .chain_err(|| "LogStream: fetching of block number failed")
-                    );
+                    ).as_u64();
                     // subtraction that saturates at zero
-                    let last_confirmed_block = last_block.saturating_sub(self.confirmations.into());
+                    let last_confirmed_block = last_block.saturating_sub(self.confirmations);
 
                     let next_state = if self.last_checked_block < last_confirmed_block {
-                        let from = self.last_checked_block + 1.into();
+                        let from = self.last_checked_block + 1;
                         let filter = self.filter
                             .clone()
-                            .from_block(from.as_u64().into())
-                            .to_block(last_confirmed_block.as_u64().into())
+                            .from_block(from.into())
+                            .to_block(last_confirmed_block.into())
                             .build();
                         let future = web3::api::Eth::new(&self.transport).logs(&filter);
 
@@ -154,7 +154,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .poll()
                             .chain_err(|| "LogStream: polling web3 logs failed")
                     );
-                    let log_range_to_yield = LogRange { from, to, logs };
+                    let log_range_to_yield = LogsInBlockRange { from, to, logs };
 
                     self.last_checked_block = to;
                     (State::AwaitInterval, Some(log_range_to_yield))
@@ -173,7 +173,7 @@ impl<T: Transport> Stream for LogStream<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use contracts::HomeBridge;
+    use contracts::home::HomeBridge;
     use helpers::StreamExt;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};
@@ -220,7 +220,7 @@ mod tests {
             confirmations: 12,
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
-            after: 3.into(),
+            after: 3,
             filter: HomeBridge::default().events().deposit().create_filter(),
         });
 
@@ -230,14 +230,14 @@ mod tests {
         assert_eq!(
             log_ranges,
             vec![
-                LogRange {
-                    from: 4.into(),
-                    to: 4101.into(),
+                LogsInBlockRange {
+                    from: 4,
+                    to: 4101,
                     logs: vec![],
                 },
-                LogRange {
-                    from: 4102.into(),
-                    to: 4102.into(),
+                LogsInBlockRange {
+                    from: 4102,
+                    to: 4102,
                     logs: vec![],
                 },
             ]
@@ -280,7 +280,7 @@ mod tests {
             confirmations: 12,
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
-            after: 3.into(),
+            after: 3,
             filter: HomeBridge::default().events().deposit().create_filter(),
         });
 
@@ -290,7 +290,7 @@ mod tests {
         assert_eq!(
             log_ranges,
             vec![
-                LogRange { from: 4.into(), to: 4101.into(), logs: vec![
+                LogsInBlockRange { from: 4, to: 4101, logs: vec![
                     Log {
                         address: "0x0000000000000000000000000000000000000cc1".into(),
                         topics: deposit_topic.into(),
