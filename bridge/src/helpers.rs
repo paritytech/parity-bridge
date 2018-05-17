@@ -4,6 +4,7 @@ use web3::types::{U256, H256, TransactionRequest, CallRequest, Address, Bytes};
 use futures::{Async, Future, Poll, Stream};
 use web3::{self, Transport};
 use web3::helpers::CallResult;
+use web3::api::Namespace;
 use ethabi::{self, RawLog};
 use error;
 
@@ -24,7 +25,7 @@ pub fn call<T: Transport>(transport: &T, contract_address: Address, payload: Vec
         gas: None,
         gas_price: None,
         value: None,
-        data: Some(payload),
+        data: Some(Bytes(payload)),
     };
     web3::api::Eth::new(transport).call(request, None)
 }
@@ -48,7 +49,7 @@ impl<T: Transport> Transaction<T> {
             gas: Some(gas),
             gas_price: Some(gas_price),
             value: None,
-            data: Some(payload),
+            data: Some(Bytes(payload)),
             nonce: None,
             condition: None,
         };
@@ -61,7 +62,7 @@ impl<T: Transport> Future for Transaction<T> {
     type Item = H256;
     type Error = error::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.future.poll()
+        self.future.poll().map_err(|x| x.into())
     }
 }
 
