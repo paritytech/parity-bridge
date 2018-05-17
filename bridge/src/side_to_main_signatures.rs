@@ -52,11 +52,11 @@ pub struct SideToMainSignatures<T: Transport> {
 }
 
 impl<T: Transport> SideToMainSignatures<T> {
-    pub fn new(log: Log, main: MainContract<T>, side: SideContract<T>) -> Self {
+    pub fn new(log: &Log, main: MainContract<T>, side: SideContract<T>) -> Self {
         let side_tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let parsed_log = log_to_collected_signatures(&log);
+        let parsed_log = log_to_collected_signatures(log);
 
         let state = if parsed_log.authority_responsible_for_relay != main.authority_address {
             info!(
@@ -131,7 +131,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         .transaction_receipt(main_tx_hash))
                 }
                 State::AwaitTxReceipt(ref mut future) => {
-                    let receipt = try_ready!(future.poll().chain_err(|| "WithdrawRelay: sending transaction failed"));
+                    let receipt = try_ready!(future.poll().chain_err(|| "WithdrawRelay: sending transaction failed")).unwrap();
                     return Ok(Async::Ready(Some(receipt)));
                 }
             };
@@ -150,7 +150,7 @@ pub struct LogToSideToMainSignatures<T> {
 impl<T: Transport> LogToFuture for LogToSideToMainSignatures<T> {
     type Future = SideToMainSignatures<T>;
 
-    fn log_to_future(&self, log: Log) -> Self::Future {
+    fn log_to_future(&self, log: &Log) -> Self::Future {
         SideToMainSignatures::new(log, self.main.clone(), self.side.clone())
     }
 }

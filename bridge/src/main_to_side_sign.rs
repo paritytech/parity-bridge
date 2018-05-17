@@ -45,7 +45,7 @@ pub struct MainToSideSign<T: Transport> {
 }
 
 impl<T: Transport> MainToSideSign<T> {
-    pub fn new(log: Log, side: SideContract<T>) -> Self {
+    pub fn new(log: &Log, side: SideContract<T>) -> Self {
         let main_tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         info!("{:?} - step 1/3 - about to check whether it is already relayed", main_tx_hash);
@@ -113,7 +113,7 @@ pub struct LogToMainToSideSign<T> {
 impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
     type Future = MainToSideSign<T>;
 
-    fn log_to_future(&self, log: Log) -> Self::Future {
+    fn log_to_future(&self, log: &Log) -> Self::Future {
         MainToSideSign::new(log, self.side.clone())
     }
 }

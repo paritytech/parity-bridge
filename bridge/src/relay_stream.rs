@@ -17,7 +17,7 @@ use std::collections::HashSet;
 pub trait LogToFuture {
     type Future: Future<Error = error::Error>;
 
-    fn log_to_future(&self, log: Log) -> Self::Future;
+    fn log_to_future(&self, log: &Log) -> Self::Future;
 }
 
 /// a tokio `Stream` that when polled fetches all new logs from `logs`

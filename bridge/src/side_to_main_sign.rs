@@ -29,7 +29,7 @@ pub struct SideToMainSign<T: Transport> {
 
 
 impl<T: Transport> SideToMainSign<T> {
-    pub fn new(log: Log, side: SideContract<T>) -> Self {
+    pub fn new(log: &Log, side: SideContract<T>) -> Self {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
@@ -104,7 +104,7 @@ pub struct LogToSideToMainSign<T: Transport> {
 impl<T: Transport> LogToFuture for LogToSideToMainSign<T> {
     type Future = SideToMainSign<T>;
 
-    fn log_to_future(&self, log: Log) -> Self::Future {
+    fn log_to_future(&self, log: &Log) -> Self::Future {
         SideToMainSign::new(log, self.side.clone())
     }
 }
