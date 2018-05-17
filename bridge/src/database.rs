@@ -13,50 +13,40 @@ use ethereum_types::U256;
 #[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone)]
 pub struct State {
     /// Address of home contract.
-    pub home_contract_address: Address,
+    pub main_contract_address: Address,
     /// Address of foreign contract.
-    pub foreign_contract_address: Address,
+    pub side_contract_address: Address,
     /// Number of block at which home contract has been deployed.
-    #[serde(deserialize_with = "deserialize_u256")]
-    #[serde(serialize_with = "serialize_u256")]
-    pub home_deploy: U256,
+    pub main_deployed_at_block: u64,
     /// Number of block at which foreign contract has been deployed.
-    #[serde(deserialize_with = "deserialize_u256")]
-    #[serde(serialize_with = "serialize_u256")]
-    pub foreign_deploy: U256,
+    pub side_deployed_at_block: u64,
     /// Number of last block which has been checked for deposit relays.
-    #[serde(deserialize_with = "deserialize_u256")]
-    #[serde(serialize_with = "serialize_u256")]
-    pub checked_deposit_relay: U256,
+    pub last_main_to_side_sign_at_block: u64,
     /// Number of last block which has been checked for withdraw relays.
-    #[serde(deserialize_with = "deserialize_u256")]
-    #[serde(serialize_with = "serialize_u256")]
-    pub checked_withdraw_relay: U256,
+    pub last_side_to_main_signatures_at_block: u64,
     /// Number of last block which has been checked for withdraw confirms.
-    #[serde(deserialize_with = "deserialize_u256")]
-    #[serde(serialize_with = "serialize_u256")]
-    pub checked_withdraw_confirm: U256,
+    pub last_side_to_main_sign_at_block: u64,
 }
 
 impl State {
     /// creates initial state for the bridge processes
     /// from transaction receipts of contract deployments
     pub fn from_transaction_receipts(
-        home_contract_deployment_receipt: &TransactionReceipt,
-        foreign_contract_deployment_receipt: &TransactionReceipt,
+        main_contract_deployment_receipt: &TransactionReceipt,
+        side_contract_deployment_receipt: &TransactionReceipt,
     ) -> Self {
         Self {
-            home_contract_address: home_contract_deployment_receipt
+            main_contract_address: main_contract_deployment_receipt
                 .contract_address
-                .expect("contract creation receipt must have an address; qed"),
-            foreign_contract_address: foreign_contract_deployment_receipt
+                .expect("main contract creation receipt must have an address; qed"),
+            side_contract_address: side_contract_deployment_receipt
                 .contract_address
-                .expect("contract creation receipt must have an address; qed"),
-            home_deploy: home_contract_deployment_receipt.block_number,
-            foreign_deploy: foreign_contract_deployment_receipt.block_number,
-            checked_deposit_relay: home_contract_deployment_receipt.block_number,
-            checked_withdraw_relay: foreign_contract_deployment_receipt.block_number,
-            checked_withdraw_confirm: foreign_contract_deployment_receipt.block_number,
+                .expect("side contract creation receipt must have an address; qed"),
+            main_deployed_at_block: main_contract_deployment_receipt.block_number.as_u64(),
+            side_deployed_at_block: side_contract_deployment_receipt.block_number.as_u64(),
+            last_main_to_side_sign_at_block: main_contract_deployment_receipt.block_number.as_u64(),
+            last_side_to_main_sign_at_block: side_contract_deployment_receipt.block_number.as_u64(),
+            last_side_to_main_signatures_at_block: side_contract_deployment_receipt.block_number.as_u64(),
         }
     }
 }
