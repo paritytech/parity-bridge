@@ -26,7 +26,7 @@ impl MessageToMain {
         Self {
             recipient: bytes[0..20].into(),
             value: U256::from_big_endian(&bytes[20..52]),
-            side_transaction_hash: bytes[52..84].into(),
+            side_tx_hash: bytes[52..84].into(),
             main_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
         }
     }
@@ -44,7 +44,7 @@ impl MessageToMain {
         Ok(Self {
             recipient: withdraw_log.recipient,
             value: withdraw_log.value,
-            side_transaction_hash: hash,
+            side_tx_hash: hash,
             main_gas_price: withdraw_log.home_gas_price,
         })
     }
@@ -56,7 +56,7 @@ impl MessageToMain {
         let mut result = vec![0u8; MESSAGE_LENGTH];
         result[0..20].copy_from_slice(&self.recipient.0[..]);
         self.value.to_big_endian(&mut result[20..52]);
-        result[52..84].copy_from_slice(&self.side_transaction_hash.0[..]);
+        result[52..84].copy_from_slice(&self.side_tx_hash.0[..]);
         self.main_gas_price
             .to_big_endian(&mut result[84..MESSAGE_LENGTH]);
         return result;
@@ -78,14 +78,14 @@ mod test {
     fn test_message_to_main_to_bytes() {
         let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0ce".into();
         let value = U256::from_dec_str("3800000000000000").unwrap();
-        let side_transaction_hash: H256 =
+        let side_tx_hash: H256 =
             "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
         let main_gas_price = U256::from_dec_str("8000000000").unwrap();
 
         let message = MessageToMain {
             recipient,
             value,
-            side_transaction_hash,
+            side_tx_hash,
             main_gas_price,
         };
 
@@ -96,22 +96,22 @@ mod test {
         fn quickcheck_message_to_main_roundtrips_to_bytes(
             recipient_raw: Vec<u8>,
             value_raw: u64,
-            side_transaction_hash_raw: Vec<u8>,
+            side_tx_hash_raw: Vec<u8>,
             main_gas_price_raw: u64
         ) -> TestResult {
-            if recipient_raw.len() != 20 || side_transaction_hash_raw.len() != 32 {
+            if recipient_raw.len() != 20 || side_tx_hash_raw.len() != 32 {
                 return TestResult::discard();
             }
 
             let recipient: Address = recipient_raw.as_slice().into();
             let value: U256 = value_raw.into();
-            let side_transaction_hash: H256 = side_transaction_hash_raw.as_slice().into();
+            let side_tx_hash: H256 = side_tx_hash_raw.as_slice().into();
             let main_gas_price: U256 = main_gas_price_raw.into();
 
             let message = MessageToMain {
                 recipient,
                 value,
-                side_transaction_hash,
+                side_tx_hash,
                 main_gas_price
             };
 
