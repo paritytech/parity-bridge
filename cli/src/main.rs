@@ -22,6 +22,8 @@ use bridge::config::Config;
 use bridge::error::{self, ResultExt};
 use bridge::database::{Database, TomlFileDatabase};
 use bridge::helpers::StreamExt;
+use bridge::MainContract;
+use bridge::SideContract;
 
 const MAX_PARALLEL_REQUESTS: usize = 10;
 
@@ -84,26 +86,26 @@ Options:
     let mut event_loop = Core::new().unwrap();
 
     info!(
-        "Establishing HTTP connection to home {:?}",
+        "Establishing HTTP connection to main {:?}",
         config.home.http
     );
-    let home_connection =
+    let main_transport =
         Http::with_event_loop(
             &config.home.http,
             &event_loop.handle(),
             MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to home at {}", config.home.http))?;
+        ).chain_err(|| format!("Cannot connect to main at {}", config.home.http))?;
 
     info!(
-        "Establishing HTTP connection to foreign {:?}",
+        "Establishing HTTP connection to side {:?}",
         config.foreign.http
     );
-    let foreign_connection =
+    let side_transport =
         Http::with_event_loop(
             &config.foreign.http,
             &event_loop.handle(),
             MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to foreign at {}", config.foreign.http))?;
+        ).chain_err(|| format!("Cannot connect to side at {}", config.foreign.http))?;
 
     info!("Loading database from {:?}", args.arg_database);
     let mut database = TomlFileDatabase::from_path(&args.arg_database)?;
@@ -111,7 +113,17 @@ Options:
     info!("Reading initial state from database");
     let initial_state = database.read();
 
-    let bridge_stream = Bridge::new(config, initial_state, home_connection, foreign_connection);
+    let main_contract = MainContract::new(
+        main_transport.clone(),
+        &config,
+        &initial_state);
+
+    let side_contract = SideContract::new(
+        main_transport.clone(),
+        &config,
+        &initial_state);
+
+    let bridge_stream = Bridge::new(config, initial_state, home_contract, foreign_contract);
     info!("Listening to events");
     let persisted_bridge_stream = bridge_stream.and_then(|state| {
         database.write(&state)?;
