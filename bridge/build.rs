@@ -41,13 +41,16 @@ fn main() {
             }
         }
         Err(err) => {
+            // we could have panicked here
             if let std::io::ErrorKind::NotFound = err.kind() {
+                // but let's see if solcjs is available or not
                 match Command::new("solcjs").arg("--version").output() {
                     Ok(exit_status) => {
                         let output_string = String::from_utf8(exit_status.stdout).unwrap();
                         let solc_version = output_string.lines().last().unwrap();
                         println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
-
+                        // overwrite option is not available in solcjs
+                        // so we better remove old compiled contracts
                         match fs::remove_dir_all("../compiled_contracts") {
                             Ok(()) => {
                                 println!("Removed old files");
@@ -56,7 +59,7 @@ fn main() {
                                 println!("Files not removed: {}", err);
                             }
                         };
-                        // compile contracts for inclusion with ethabis `use_contract!`
+                        // compile contracts using `solcjs`
                         match Command::new("solcjs")
                             .arg("--abi")
                             .arg("--bin")
@@ -70,16 +73,16 @@ fn main() {
                                 if !exit_status.success() {
                                     if let Some(code) = exit_status.code() {
                                         panic!(
-                                            "`solc` exited with error exit status code `{}`",
+                                            "`solcjs` exited with error exit status code `{}`",
                                             code
                                         );
                                     } else {
                                         panic!(
-                                            "`solc` exited because it was terminated by a signal"
+                                            "`solcjs` exited because it was terminated by a signal"
                                         );
                                     }
                                 } else {
-                                    // make solc version used to compile contracts (`solc --version`)
+                                    // make solcjs version used to compile contracts (`solcjs --version`)
                                     // available via `env!("SOLC_VERSION")` in sources
                                     let output = Command::new("solcjs")
                                         .args(&["--version"])
@@ -91,16 +94,14 @@ fn main() {
                                 }
                             }
                             Err(err) => {
-                                if let std::io::ErrorKind::NotFound = err.kind() {
-                                    panic!("`solc` executable not found in `$PATH`. `solc` is required to compile the bridge contracts. please install it: https://solidity.readthedocs.io/en/develop/installing-solidity.html");
-                                } else {
-                                    panic!(
-                                        "an error occurred when trying to spawn `solc`: {}",
-                                        err
-                                    );
-                                }
+                                panic!(
+                                    "an error occurred when trying to spawn `solcjs`: {}",
+                                    err
+                                );
                             }
                         }
+                        // contracts compiled using solcjs are named differently
+                        // we need to rename them
                         let prepend = "../compiled_contracts/";
                         let paths = fs::read_dir("../compiled_contracts").unwrap();
                         for path in paths {
@@ -127,6 +128,7 @@ fn main() {
                         }
                     }
                     Err(err) => {
+                        // this shows that neither solc is available, nor solcjs
                         if let std::io::ErrorKind::NotFound = err.kind() {
                             panic!("`solcjs` executable not found in `$PATH`. Try running `npm install -g solc`");
                         } else {
