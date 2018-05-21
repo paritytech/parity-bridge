@@ -94,10 +94,7 @@ fn main() {
                                 }
                             }
                             Err(err) => {
-                                panic!(
-                                    "an error occurred when trying to spawn `solcjs`: {}",
-                                    err
-                                );
+                                panic!("an error occurred when trying to spawn `solcjs`: {}", err);
                             }
                         }
                         // contracts compiled using solcjs are named differently
