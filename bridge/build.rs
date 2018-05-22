@@ -57,6 +57,7 @@ fn main() {
                             }
                             Err(err) => {
                                 println!("Files not removed: {}", err);
+                                panic!("Error removing old files: {}", err);
                             }
                         };
                         // compile contracts using `solcjs`
