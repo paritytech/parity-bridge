@@ -25,34 +25,34 @@ fn main() {
         .arg("--overwrite")
         .arg("../contracts/bridge.sol")
         .status()
-        {
-            Ok(exit_status) => {
-                if !exit_status.success() {
-                    if let Some(code) = exit_status.code() {
-                        panic!("`solc` exited with error exit status code `{}`", code);
-                    } else {
-                        panic!("`solc` exited because it was terminated by a signal");
-                    }
+    {
+        Ok(exit_status) => {
+            if !exit_status.success() {
+                if let Some(code) = exit_status.code() {
+                    panic!("`solc` exited with error exit status code `{}`", code);
                 } else {
-                    let output = Command::new("solc").args(&["--version"]).output().unwrap();
-                    let output_string = String::from_utf8(output.stdout).unwrap();
-                    let solc_version = output_string.lines().last().unwrap();
-                    println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+                    panic!("`solc` exited because it was terminated by a signal");
                 }
-            }
-            Err(err) => {
-                // we could have panicked here
-                if let std::io::ErrorKind::NotFound = err.kind() {
-                    // but let's see if solcjs is available or not
-                    compile_using_solcjs();
-                } else {
-                    panic!("an error occurred when trying to spawn `solc`: {}", err);
-                }
+            } else {
+                let output = Command::new("solc").args(&["--version"]).output().unwrap();
+                let output_string = String::from_utf8(output.stdout).unwrap();
+                let solc_version = output_string.lines().last().unwrap();
+                println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
             }
         }
+        Err(err) => {
+            // we could have panicked here
+            if let std::io::ErrorKind::NotFound = err.kind() {
+                // but let's see if solcjs is available or not
+                compile_using_solcjs();
+            } else {
+                panic!("an error occurred when trying to spawn `solc`: {}", err);
+            }
+        }
+    }
 }
 
-fn compile_using_solcjs(){
+fn compile_using_solcjs() {
     match Command::new("solcjs").arg("--version").output() {
         Ok(exit_status) => {
             let output_string = String::from_utf8(exit_status.stdout).unwrap();
@@ -78,35 +78,30 @@ fn compile_using_solcjs(){
                 .arg("../compiled_contracts")
                 .arg("../contracts/bridge.sol")
                 .status()
-                {
-                    Ok(exit_status) => {
-                        if !exit_status.success() {
-                            if let Some(code) = exit_status.code() {
-                                panic!(
-                                    "`solcjs` exited with error exit status code `{}`",
-                                    code
-                                );
-                            } else {
-                                panic!(
-                                    "`solcjs` exited because it was terminated by a signal"
-                                );
-                            }
+            {
+                Ok(exit_status) => {
+                    if !exit_status.success() {
+                        if let Some(code) = exit_status.code() {
+                            panic!("`solcjs` exited with error exit status code `{}`", code);
                         } else {
-                            // make solcjs version used to compile contracts (`solcjs --version`)
-                            // available via `env!("SOLC_VERSION")` in sources
-                            let output = Command::new("solcjs")
-                                .args(&["--version"])
-                                .output()
-                                .unwrap();
-                            let output_string = String::from_utf8(output.stdout).unwrap();
-                            let solc_version = output_string.lines().last().unwrap();
-                            println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
+                            panic!("`solcjs` exited because it was terminated by a signal");
                         }
-                    }
-                    Err(err) => {
-                        panic!("an error occurred when trying to spawn `solcjs`: {}", err);
+                    } else {
+                        // make solcjs version used to compile contracts (`solcjs --version`)
+                        // available via `env!("SOLC_VERSION")` in sources
+                        let output = Command::new("solcjs")
+                            .args(&["--version"])
+                            .output()
+                            .unwrap();
+                        let output_string = String::from_utf8(output.stdout).unwrap();
+                        let solc_version = output_string.lines().last().unwrap();
+                        println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
                     }
                 }
+                Err(err) => {
+                    panic!("an error occurred when trying to spawn `solcjs`: {}", err);
+                }
+            }
             // contracts compiled using solcjs are named differently
             // we need to rename them
             let prepend = "../compiled_contracts/";
@@ -117,7 +112,7 @@ fn compile_using_solcjs(){
                     prepend,
                     path.unwrap().file_name().into_string().expect(
                         "error: the first argument is not a file\
-                                 system path representable in UTF-8.",
+                         system path representable in UTF-8.",
                     )
                 );
                 let _replaced_name: String =
