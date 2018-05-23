@@ -65,8 +65,9 @@ fn compile_using_solcjs() {
                     println!("Removed old files");
                 }
                 Err(err) => {
+                    // do not panic if we are unable to delete files
+                    // this may occur if files do not exist, due to this being the first run
                     println!("Files not removed: {}", err);
-                    panic!("Error removing old files: {}", err);
                 }
             };
             // compile contracts using `solcjs`
