@@ -5,28 +5,36 @@ use ethereum_types::{Address, U256, H256};
 use web3::types::Bytes;
 use web3::Transport;
 use web3::helpers::CallResult;
-use futures::{Future, Poll};
+use futures::{Future, Poll, Async};
 use config::Config;
 use database::State;
 use message_to_main::MessageToMain;
 use signature::Signature;
 use log_stream::{LogStream, LogStreamOptions};
+use std::time::Duration;
 
 /// a more highlevel wrapper around the auto generated ethabi contract
 #[derive(Clone)]
 pub struct MainContract<T> {
-    pub contract_address: Address,
     pub transport: T,
+    pub contract_address: Address,
     pub authority_address: Address,
     pub submit_collected_signatures_gas: U256,
+    pub request_timeout: Duration,
+    pub logs_poll_interval: Duration,
+    pub required_log_confirmations: u32,
 }
 
 impl<T: Transport> MainContract<T> {
     pub fn new(transport: T, config: &Config, state: &State) -> Self {
         Self {
-            contract_address: state.home_contract_address,
-            authority_address: config.address,
             transport,
+            contract_address: state.main_contract_address,
+            authority_address: config.address,
+            submit_collected_signatures_gas: config.estimated_gas_cost_of_withdraw,
+            request_timeout: config.home.request_timeout,
+            logs_poll_interval: config.home.poll_interval,
+            required_log_confirmations: config.home.required_confirmations,
         }
     }
 
@@ -50,8 +58,8 @@ impl<T: Transport> MainContract<T> {
         LogStream::new(LogStreamOptions {
             filter: HomeBridge::default().events().deposit().create_filter(),
             request_timeout: self.request_timeout,
-            poll_interval: self.poll_interval,
-            confirmations: self.required_confirmations,
+            poll_interval: self.logs_poll_interval,
+            confirmations: self.required_log_confirmations,
             transport: self.transport,
             contract_address: self.contract_address,
             after,
@@ -64,22 +72,21 @@ impl<T: Transport> MainContract<T> {
         message: &MessageToMain,
         signatures: &Vec<Signature>
     ) -> Transaction<T> {
-        let payload: Bytes = HomeBridge::default()
+        let payload = HomeBridge::default()
             .functions()
             .withdraw()
             .input(
                 signatures.iter().map(|x| x.v),
                 signatures.iter().map(|x| x.r),
                 signatures.iter().map(|x| x.s),
-                message.clone(),
-            )
-            .into();
+                message.to_bytes()
+            );
         Transaction::new(
-            self.transport,
+            &self.transport,
             self.contract_address,
             self.authority_address,
             self.submit_collected_signatures_gas,
-            message.gas_price,
+            message.main_gas_price,
             payload)
     }
 }
@@ -95,7 +102,7 @@ impl<T: Transport> IsSideToMainSignaturesRelayed<T> {
         side_tx_hash: H256
     ) -> Self {
         let payload = HomeBridge::default().functions().withdraws().input(side_tx_hash);
-        let future = call(contract_address, transport, payload);
+        let future = call(&transport, contract_address, payload);
         Self { future }
     }
 }
@@ -105,8 +112,8 @@ impl<T: Transport> Future for IsSideToMainSignaturesRelayed<T> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.future.poll);
-        HomeBridge::default().functions().withdraws().output(response)
+        let response = try_ready!(self.future.poll());
+        Ok(Async::Ready(HomeBridge::default().functions().withdraws().output(&response.0)?))
     }
 }
 
