@@ -2,7 +2,7 @@ use std::time::Duration;
 use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::types::{Address, FilterBuilder, H256, Log};
+use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::helpers::CallResult;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::FromErr;
@@ -35,7 +35,7 @@ pub struct LogStreamOptions<T> {
     pub filter: ethabi::TopicFilter,
     pub request_timeout: Duration,
     pub poll_interval: Duration,
-    pub confirmations: u64,
+    pub confirmations: u32,
     pub transport: T,
     pub contract_address: Address,
     pub after: u64,
