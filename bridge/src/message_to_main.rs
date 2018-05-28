@@ -32,8 +32,8 @@ impl MessageToMain {
         }
     }
 
-    pub fn keccak256(&self) -> [u8; 32] {
-        tiny_keccak::keccak256(&self.to_bytes())
+    pub fn keccak256(&self) -> H256 {
+        tiny_keccak::keccak256(&self.to_bytes()).into()
     }
 
     /// construct a message from a `Withdraw` event that was logged on `foreign`
