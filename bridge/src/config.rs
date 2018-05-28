@@ -129,15 +129,15 @@ impl Transactions {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct TransactionConfig {
-    pub gas: u64,
-    pub gas_price: u64,
+    pub gas: U256,
+    pub gas_price: U256,
 }
 
 impl TransactionConfig {
     fn from_load_struct(cfg: load::TransactionConfig) -> Self {
         TransactionConfig {
-            gas: cfg.gas.unwrap_or_default(),
-            gas_price: cfg.gas_price.unwrap_or_default(),
+            gas: cfg.gas,
+            gas_price: cfg.gas_price,
         }
     }
 }
@@ -201,8 +201,10 @@ mod load {
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct TransactionConfig {
-        pub gas: Option<u64>,
-        pub gas_price: Option<u64>,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub gas: U256,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub gas_price: U256,
     }
 
     #[derive(Deserialize)]
