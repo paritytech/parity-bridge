@@ -412,7 +412,7 @@ contract ForeignBridge {
     address[] public authorities;
 
     /// Pending deposits and authorities who confirmed them
-    mapping (bytes32 => address[]) public deposits;
+    mapping (bytes32 => address[]) deposits;
 
     /// Pending signatures and authorities who confirmed them
     mapping (bytes32 => SignaturesCollection) signatures;
