@@ -22,6 +22,7 @@ extern crate tokio_timer;
 extern crate toml;
 extern crate web3;
 extern crate bridge_contracts as contracts;
+extern crate tiny_keccak;
 
 #[macro_use]
 mod macros;
