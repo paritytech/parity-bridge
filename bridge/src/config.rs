@@ -9,8 +9,9 @@ use error::{Error, ResultExt};
 use toml;
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
-const DEFAULT_CONFIRMATIONS: usize = 12;
 const DEFAULT_TIMEOUT: u64 = 5;
+
+const DEFAULT_CONFIRMATIONS: u32 = 12;
 
 /// Application config.
 #[derive(Debug, PartialEq, Clone)]
@@ -66,7 +67,7 @@ pub struct NodeConfig {
     pub http: String,
     pub request_timeout: Duration,
     pub poll_interval: Duration,
-    pub required_confirmations: usize,
+    pub required_confirmations: u32,
 }
 
 impl NodeConfig {
@@ -184,7 +185,7 @@ mod load {
         pub http: String,
         pub request_timeout: Option<u64>,
         pub poll_interval: Option<u64>,
-        pub required_confirmations: Option<usize>,
+        pub required_confirmations: Option<u32>,
     }
 
     #[derive(Deserialize)]
