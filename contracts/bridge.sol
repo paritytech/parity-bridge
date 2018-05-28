@@ -547,8 +547,8 @@ contract ForeignBridge {
     }
 
     /// Get signature
-    function signature(bytes32 message_hash, uint256 index) public view returns (bytes) {
-        return signatures[message_hash].signatures[index];
+    function signature(bytes32 messageHash, uint256 index) public view returns (bytes) {
+        return signatures[messageHash].signatures[index];
     }
 
     /// Get message
