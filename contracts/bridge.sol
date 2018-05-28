@@ -536,8 +536,14 @@ contract ForeignBridge {
         }
     }
 
-    function hasAuthoritySignedMessage(bytes32 message_hash, address authority) public view returns (bool) {
-      return Helpers.addressArrayContains(signatures[message_hash].authorities, authority);
+    function hasAuthoritySignedMainToSide(address authority, address recipient, uint256 value, bytes32 mainTxHash) public view returns (bool) {
+        var hash = keccak256(recipient, value, mainTxHash);
+
+        return Helpers.addressArrayContains(deposits[hash], authority);
+    }
+
+    function hasAuthoritySignedSideToMain(address authority, bytes32 messageHash) public view returns (bool) {
+        return Helpers.addressArrayContains(signatures[messageHash].authorities, authority);
     }
 
     /// Get signature
