@@ -72,7 +72,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                         self.home_connection.clone(),
                         tx_request,
                         self.config.home.poll_interval,
-                        self.config.home.required_confirmations,
+                        self.config.home.required_confirmations as usize
                     );
 
                     info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.config.home.required_confirmations);
@@ -99,9 +99,9 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     DeployState::Deployed {
                         contract: DeployedContract::new(
                             "HomeBridge".into(),
-                            include_str!("../../../contracts/bridge.sol").into(),
-                            include_str!("../../../compiled_contracts/HomeBridge.abi").into(),
-                            include_str!("../../../compiled_contracts/HomeBridge.bin").into(),
+                            include_str!("../../contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/HomeBridge.abi").into(),
+                            include_str!("../../compiled_contracts/HomeBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -161,7 +161,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                         self.foreign_connection.clone(),
                         tx_request,
                         self.config.foreign.poll_interval,
-                        self.config.foreign.required_confirmations,
+                        self.config.foreign.required_confirmations as usize
                     );
 
                     info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.config.foreign.required_confirmations);
@@ -188,9 +188,9 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     DeployState::Deployed {
                         contract: DeployedContract::new(
                             "ForeignBridge".into(),
-                            include_str!("../../../contracts/bridge.sol").into(),
-                            include_str!("../../../compiled_contracts/ForeignBridge.abi").into(),
-                            include_str!("../../../compiled_contracts/ForeignBridge.bin").into(),
+                            include_str!("../../contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/ForeignBridge.abi").into(),
+                            include_str!("../../compiled_contracts/ForeignBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
