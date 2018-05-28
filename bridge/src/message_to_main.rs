@@ -3,6 +3,7 @@ use contracts::foreign::events::Withdraw;
 use web3::types::Log;
 use ethabi;
 use error::Error;
+use tiny_keccak;
 
 /// the message that is relayed from side to main.
 /// contains all the information required for the relay.
@@ -29,6 +30,10 @@ impl MessageToMain {
             side_tx_hash: bytes[52..84].into(),
             main_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
         }
+    }
+
+    pub fn keccak256(&self) -> [u8; 32] {
+        tiny_keccak::keccak256(&self.to_bytes())
     }
 
     /// construct a message from a `Withdraw` event that was logged on `foreign`
