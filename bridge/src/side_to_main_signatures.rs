@@ -11,12 +11,12 @@ use contracts::home::HomeBridge;
 use error::{self, ResultExt};
 use message_to_main::MessageToMain;
 use signature::Signature;
-use contract_connection::ContractConnection;
 use web3::helpers::CallResult;
 use helpers::web3_to_ethabi_log;
 use relay_stream::LogToFuture;
 use side_contract::{SideContract, GetMessage, GetSignature};
 use main_contract::{MainContract, IsSideToMainSignaturesRelayed};
+use web3::api::Namespace;
 
 fn log_to_collected_signatures(web3_log: &web3::types::Log) -> foreign::logs::CollectedSignatures {
     foreign::ForeignBridge::default()
@@ -96,7 +96,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                 State::AwaitMessage(ref mut future) => {
                     let message = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
                     State::AwaitIsRelayed {
-                        future: self.main.is_side_tx_relayed(message.side_tx_hash),
+                        future: self.main.is_side_to_main_relayed(message.side_tx_hash),
                         message
                     }
                 }
@@ -104,18 +104,18 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     let is_relayed = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
 
                     if is_relayed {
-                        return None;
+                        return Ok(Async::Ready(None));
                     }
 
                     State::AwaitSignatures {
-                        future: self.side_contract.get_signatures(message.hash()),
+                        future: self.side.get_signatures(message.keccak256()),
                         message
                     }
                 }
                 State::AwaitSignatures { ref mut future, message }  => {
                     let signatures = try_ready!(future.poll().chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
-                    info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.tx_hash, signatures.len());
-                    State::AwaitTxSent(self.main.relay_side_tx(message, signatures))
+                    info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.side_tx_hash, signatures.len());
+                    State::AwaitTxSent(self.main.relay_side_to_main(&message, &signatures))
                 }
                 State::AwaitTxSent(ref mut future) => {
                     let main_tx_hash = try_ready!(
@@ -125,7 +125,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     );
                     info!(
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
-                        self.tx_hash, main_tx_hash
+                        self.side_tx_hash, main_tx_hash
                     );
                     State::AwaitTxReceipt(web3::api::Eth::new(self.side.transport)
                         .transaction_receipt(main_tx_hash))
