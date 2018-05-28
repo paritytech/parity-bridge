@@ -42,7 +42,7 @@ impl<O: Ord, F: Future> FutureHeap<O, F> {
     }
 
     pub fn insert(&mut self, order: O, future: F) {
-        entries.append(Entry { order, future, result: None });
+        self.entries.push(Entry { order, future, result: None });
     }
 }
 
@@ -60,15 +60,15 @@ impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
             // poll futures which aren't resolved yet
             if !entry.result.is_some() {
                 match entry.future.poll()? {
-                    Async::Ready(result) => entry.result = Some(result);
+                    Async::Ready(result) => { entry.result = Some(result); },
                     Async::NotReady => {},
                 }
             }
 
             if entry.result.is_some() {
-                if let Some(order) = min_ready_order {
+                if let Some(order) = maybe_min_ready_order {
                     if entry.order < order {
-                        maybe_min_ready_order = Some(entry.order)
+                        maybe_min_ready_order = Some(entry.order);
                         maybe_index_of_min_ready = Some(index);
                     }
                 } else {
