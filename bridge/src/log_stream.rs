@@ -68,7 +68,7 @@ enum State<T: Transport> {
 /// yields new logs that are `confirmations` blocks deep
 pub struct LogStream<T: Transport> {
     request_timeout: Duration,
-    confirmations: u64,
+    confirmations: u32,
     transport: T,
     last_checked_block: u64,
     timer: Timer,
@@ -121,7 +121,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .chain_err(|| "LogStream: fetching of block number failed")
                     ).as_u64();
                     // subtraction that saturates at zero
-                    let last_confirmed_block = last_block.saturating_sub(self.confirmations);
+                    let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 
                     let next_state = if self.last_checked_block < last_confirmed_block {
                         let from = self.last_checked_block + 1;
