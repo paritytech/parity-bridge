@@ -14,7 +14,7 @@ tokio-timer = "0.1.2"
 toml = "0.4.2"
 web3 = { git = "https://github.com/tomusdrw/rust-web3", branch = "bridge" }
 error-chain = "0.11.0-rc.2"
-ethabi = "5.1"
+ethabi = { git = "https://github.com/paritytech/ethabi", branch = "tomusdrw-master" }
 rustc-hex = "1.0"
 log = "0.3"
 ethereum-types = "0.2"
