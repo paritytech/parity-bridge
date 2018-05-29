@@ -47,36 +47,28 @@ impl<T: Transport> SideContract<T> {
         }
     }
 
-    pub fn call<F: ContractFunction>(f: F) -> AsyncCall<T, F> {
-
-    }
-
-    pub fn transact<F: ContractFunction>(f: F) -> AsyncTransaction<T> {
-
+    pub fn call<F: ContractFunction>(&self, f: F) -> AsyncCall<T, F> {
+        AsyncCall::new(&self.transport, self.contract_address, self.request_timeout, f)
     }
 
     /// returns `Future` that resolves with `bool` whether `authority`
     /// has signed side to main relay for `tx_hash`
     pub fn is_side_to_main_signed_on_side(&self, message: &MessageToMain) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput> {
-        let f = ForeignBridge::default()
+        self.call(ForeignBridge::default()
             .functions()
-            .has_authority_signed_side_to_main()
-            .input(self.authority_address, message.keccak256());
-        self.call(f)
+            .has_authority_signed_side_to_main(self.authority_address, message.keccak256()))
     }
 
     pub fn sign_main_to_side(&self, recipient: Address, value: U256, breakout_tx_hash: H256) -> AsyncTransaction<T> {
-        let payload = ForeignBridge::default()
-            .functions()
-            .deposit()
-            .input(recipient, value, breakout_tx_hash);
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
             self.sign_main_to_side_gas,
             self.sign_main_to_side_gas_price,
-            payload)
+            ForeignBridge::default()
+                .functions()
+                .deposit(recipient, value, breakout_tx_hash))
     }
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
@@ -107,17 +99,15 @@ impl<T: Transport> SideContract<T> {
     }
 
     pub fn submit_side_to_main_signature(&self, message: &MessageToMain, signature: &Signature) -> AsyncTransaction<T> {
-        let payload = ForeignBridge::default()
-            .functions()
-            .submit_signature()
-            .input(signature.to_bytes(), message.to_bytes());
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
             self.submit_side_to_main_gas,
             message.main_gas_price,
-            payload)
+            ForeignBridge::default()
+                .functions()
+                .submit_signature(signature.to_bytes(), message.to_bytes()))
     }
 
     pub fn get_signatures(&self, message_hash: H256) -> JoinAll<Vec<AsyncCall<T, foreign::SignatureWithInput>>> {
@@ -125,7 +115,7 @@ impl<T: Transport> SideContract<T> {
             .into_iter()
             .map(|index| {
                 self.call(
-                    ForeignBridge::default().functions().signature().input(message_hash)
+                    ForeignBridge::default().functions().signature(message_hash, index)
                 )
             })
             .collect::<Vec<_>>();

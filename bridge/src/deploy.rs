@@ -11,6 +11,7 @@ use rustc_hex::ToHex;
 use config::Config;
 use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
+use ethabi::ContractFunction;
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
@@ -63,7 +64,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                         gas: Some(self.config.txs.home_deploy.gas.into()),
                         gas_price: Some(self.config.txs.home_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.clone().into()),
+                        data: Some(data.encoded().into()),
                         nonce: None,
                         condition: None,
                     };
@@ -78,7 +79,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.config.home.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data,
+                        data: data.encoded(),
                         future: future,
                     }
                 }
@@ -152,7 +153,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                         gas: Some(self.config.txs.foreign_deploy.gas.into()),
                         gas_price: Some(self.config.txs.foreign_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.clone().into()),
+                        data: Some(data.encoded().into()),
                         nonce: None,
                         condition: None,
                     };
@@ -167,7 +168,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.config.foreign.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data,
+                        data: data.encoded(),
                         future: future,
                     }
                 }

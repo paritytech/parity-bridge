@@ -69,7 +69,7 @@ impl<T: Transport> SideToMainSignatures<T> {
                 side_tx_hash,
             );
             State::AwaitMessage(side.call(
-                ForeignBridge::default().functions().message().input(log.message_hash)
+                ForeignBridge::default().functions().message(log.message_hash)
             ))
         };
 
@@ -96,7 +96,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     let message = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
                     State::AwaitIsRelayed {
                         future: self.main.call(
-                            HomeBridge::default().functions().withdraws().input(message.side_tx_hash)
+                            HomeBridge::default().functions().withdraws(message.side_tx_hash)
                         ),
                         message
                     }

@@ -16,6 +16,8 @@ use web3::helpers::CallResult;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
 use helpers::{AsyncCall, AsyncTransaction};
+use web3::api::Namespace;
+use signature::Signature;
 
 enum State<T: Transport> {
     AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>),
@@ -79,11 +81,11 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     }
 
                     let future = web3::api::Eth::new(self.side.transport)
-                        .sign(self.side.authority_address, self.message.to_bytes());
+                        .sign(self.side.authority_address, Bytes(self.message.to_bytes()));
                     State::AwaitSignature(future)
                 },
                 State::AwaitSignature(ref mut future) => {
-                    let signature = try_ready!(
+                    let signature_bytes = try_ready!(
                         future
                             .poll()
                             .chain_err(|| "WithdrawConfirm: message signing failed")
@@ -93,6 +95,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
                         self.tx_hash
                     );
 
+                    let signature = Signature::from_bytes(&signature_bytes)?;
+
+                    let future = self.side.submit_side_to_main_signature(&self.message, &self.signature);
                     State::AwaitTransaction(future)
                 }
                 State::AwaitTransaction(ref mut future) => {

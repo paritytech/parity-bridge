@@ -43,8 +43,7 @@ impl<T: Transport> MainToSideSign<T> {
 
         let future = side.call(ForeignBridge::default()
                 .functions()
-                .deposit()
-                .input(recipient, value, main_tx_hash));
+                .deposit(recipient, value, main_tx_hash));
         let state = State::AwaitAlreadySigned(future);
 
         Self { main_tx_hash, side, state, recipient, value }

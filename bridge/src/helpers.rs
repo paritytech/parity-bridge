@@ -24,7 +24,7 @@ pub struct AsyncCall<T: Transport, F: ContractFunction> {
 }
 
 impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
-    pub fn new(transport: T, address: Address, timeout: Duration, function: F) -> Self {
+    pub fn new(transport: &T, address: Address, timeout: Duration, function: F) -> Self {
         let payload = function.encoded();
         let request = CallRequest {
             from: None,
@@ -34,7 +34,7 @@ impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
             value: None,
             data: Some(Bytes(payload)),
         };
-        let future = web3::api::Eth::new(transport).call(request, None);
+        let future = Timer::default().timeout(web3::api::Eth::new(transport).call(request, None));
         Self { future, function }
     }
 }
@@ -44,7 +44,7 @@ impl<T: Transport, F: ContractFunction> Future for AsyncCall<T, F> {
     type Error = web3::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.future.poll);
+        let response = try_ready!(self.future.poll());
         Ok(Async::Ready(self.function.output(response)?))
     }
 }
@@ -54,13 +54,13 @@ pub struct AsyncTransaction<T: Transport> {
 }
 
 impl<T: Transport> AsyncTransaction<T> {
-    pub fn new(
+    pub fn new<F: ContractFunction>(
        transport: &T,
        contract_address: Address,
        authority_address: Address,
        gas: U256,
        gas_price: U256,
-       payload: Vec<u8>
+       f: F
     ) -> Self {
         let request = TransactionRequest {
             from: authority_address,
@@ -68,11 +68,11 @@ impl<T: Transport> AsyncTransaction<T> {
             gas: Some(gas),
             gas_price: Some(gas_price),
             value: None,
-            data: Some(Bytes(payload)),
+            data: Some(Bytes(f.encoded())),
             nonce: None,
             condition: None,
         };
-        let future = web3::api::Eth::new(transport).send_transaction(request);
+        let future = Timer::default().timeout(web3::api::Eth::new(transport).send_transaction(request));
         Self { future }
     }
 }

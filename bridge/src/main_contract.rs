@@ -12,6 +12,7 @@ use message_to_main::MessageToMain;
 use signature::Signature;
 use log_stream::{LogStream, LogStreamOptions};
 use std::time::Duration;
+use ethabi::ContractFunction;
 
 /// a more highlevel wrapper around the auto generated ethabi contract
 #[derive(Clone)]
@@ -36,6 +37,10 @@ impl<T: Transport> MainContract<T> {
             logs_poll_interval: config.home.poll_interval,
             required_log_confirmations: config.home.required_confirmations,
         }
+    }
+
+    pub fn call<F: ContractFunction>(&self, f: F) -> AsyncCall<T, F> {
+        AsyncCall::new(&self.transport, self.contract_address, self.request_timeout, f)
     }
 
     // pub fn deploy
@@ -68,21 +73,19 @@ impl<T: Transport> MainContract<T> {
         message: &MessageToMain,
         signatures: &Vec<Signature>
     ) -> AsyncTransaction<T> {
-        let payload = HomeBridge::default()
-            .functions()
-            .withdraw()
-            .input(
-                signatures.iter().map(|x| x.v),
-                signatures.iter().map(|x| x.r),
-                signatures.iter().map(|x| x.s),
-                message.to_bytes()
-            );
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
             self.submit_collected_signatures_gas,
             message.main_gas_price,
-            payload)
+            HomeBridge::default()
+                .functions()
+                .withdraw(
+                    signatures.iter().map(|x| x.v),
+                    signatures.iter().map(|x| x.r),
+                    signatures.iter().map(|x| x.s),
+                    message.to_bytes()
+                ))
     }
 }
