@@ -18,19 +18,20 @@ use side_contract::SideContract;
 use main_contract::MainContract;
 use web3::api::Namespace;
 use helpers::{AsyncCall, AsyncTransaction};
+use helpers;
 
 /// state of the state machine that is the future responsible for
 /// the SideToMain relay
 enum State<T: Transport> {
-    AwaitMessage(AsyncCall<T, contracts::foreign::functions::Message>),
+    AwaitMessage(AsyncCall<T, contracts::foreign::MessageWithInput>),
     /// authority is not responsible for relaying this. noop
     NotResponsible,
     AwaitIsRelayed {
-        future: AsyncCall<T, contracts::home::functions::Withdraws>,
+        future: AsyncCall<T, contracts::home::WithdrawsWithInput>,
         message: MessageToMain,
     },
     AwaitSignatures {
-        future: JoinAll<Vec<AsyncCall<T, contracts::foreign::functions::Signature>>>,
+        future: JoinAll<Vec<AsyncCall<T, contracts::foreign::SignatureWithInput>>>,
         message: MessageToMain,
     },
     AwaitTxSent(AsyncTransaction<T>),

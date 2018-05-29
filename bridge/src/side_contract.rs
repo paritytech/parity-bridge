@@ -57,7 +57,7 @@ impl<T: Transport> SideContract<T> {
 
     /// returns `Future` that resolves with `bool` whether `authority`
     /// has signed side to main relay for `tx_hash`
-    pub fn is_side_to_main_signed_on_side(&self, message: &MessageToMain) -> AsyncCall<T, contracts::foreign::functions::HasAuthoritySignedSideToMain> {
+    pub fn is_side_to_main_signed_on_side(&self, message: &MessageToMain) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput> {
         let f = ForeignBridge::default()
             .functions()
             .has_authority_signed_side_to_main()
@@ -120,7 +120,7 @@ impl<T: Transport> SideContract<T> {
             payload)
     }
 
-    pub fn get_signatures(&self, message_hash: H256) -> JoinAll<Vec<AsyncCall<T, foreign::functions::Signature>>> {
+    pub fn get_signatures(&self, message_hash: H256) -> JoinAll<Vec<AsyncCall<T, foreign::SignatureWithInput>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
             .map(|index| {

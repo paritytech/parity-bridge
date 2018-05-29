@@ -15,7 +15,7 @@ use side_contract::SideContract;
 use helpers::{self, AsyncCall, AsyncTransaction};
 
 enum State<T: Transport> {
-    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::functions::HasAuthoritySignedMainToSide>),
+    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput>),
     AwaitTxSent(AsyncTransaction<T>),
     AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
 }
