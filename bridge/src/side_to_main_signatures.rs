@@ -12,19 +12,11 @@ use error::{self, ResultExt};
 use message_to_main::MessageToMain;
 use signature::Signature;
 use web3::helpers::CallResult;
-use helpers::web3_to_ethabi_log;
 use relay_stream::LogToFuture;
 use side_contract::{SideContract, GetMessage, GetSignature};
 use main_contract::{MainContract, IsSideToMainSignaturesRelayed};
 use web3::api::Namespace;
-
-fn log_to_collected_signatures(web3_log: &web3::types::Log) -> foreign::logs::CollectedSignatures {
-    foreign::ForeignBridge::default()
-        .events()
-        .collected_signatures()
-        .parse_log(web3_to_ethabi_log(web3_log))
-        .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.")
-}
+use helpers;
 
 /// state of the state machine that is the future responsible for
 /// the SideToMain relay
@@ -52,13 +44,16 @@ pub struct SideToMainSignatures<T: Transport> {
 }
 
 impl<T: Transport> SideToMainSignatures<T> {
-    pub fn new(log: &Log, main: MainContract<T>, side: SideContract<T>) -> Self {
-        let side_tx_hash = log.transaction_hash
+    pub fn new(raw_log: &Log, main: MainContract<T>, side: SideContract<T>) -> Self {
+        let side_tx_hash = raw_log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let parsed_log = log_to_collected_signatures(log);
+        let log = helpers::parse_log(
+            &foreign::ForeignBridge::default().events().collected_signatures(),
+            raw_log
+        ).expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
-        let state = if parsed_log.authority_responsible_for_relay != main.authority_address {
+        let state = if log.authority_responsible_for_relay != main.authority_address {
             info!(
                 "{:?} - this bridge node is not responsible for relaying transaction to main",
                 side_tx_hash
@@ -71,7 +66,7 @@ impl<T: Transport> SideToMainSignatures<T> {
                 "{:?} - step 1/3 - about to fetch message",
                 side_tx_hash,
             );
-            State::AwaitMessage(side.get_message(parsed_log.message_hash))
+            State::AwaitMessage(side.get_message(log.message_hash))
         };
 
         Self {

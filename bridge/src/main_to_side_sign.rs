@@ -30,18 +30,16 @@ pub struct MainToSideSign<T: Transport> {
 }
 
 impl<T: Transport> MainToSideSign<T> {
-    pub fn new(log: &Log, side: SideContract<T>) -> Self {
-        let main_tx_hash = log.transaction_hash
+    pub fn new(raw_log: &Log, side: SideContract<T>) -> Self {
+        let main_tx_hash = raw_log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
         info!("{:?} - step 1/3 - about to check whether it is already relayed", main_tx_hash);
 
-        let parsed_log = HomeBridge::default()
-            .events()
-            .deposit()
-            .parse_log(helpers::web3_to_ethabi_log(log))
+        let log = helpers::parse_log(&HomeBridge::default().events().deposit(), raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
-        let recipient = parsed_log.recipient;
-        let value = parsed_log.value;
+
+        let recipient = log.recipient;
+        let value = log.value;
 
         let future = side.is_main_to_side_signed_on_side(recipient, value, main_tx_hash);
         let state = State::AwaitAlreadySigned(future);

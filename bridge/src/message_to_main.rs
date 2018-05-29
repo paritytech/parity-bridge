@@ -37,20 +37,16 @@ impl MessageToMain {
     }
 
     /// construct a message from a `Withdraw` event that was logged on `foreign`
-    pub fn from_log(web3_log: &Log) -> Result<Self, Error> {
-        let ethabi_raw_log = ethabi::RawLog {
-            topics: web3_log.topics.clone(),
-            data: web3_log.data.0.clone(),
-        };
-        let withdraw_log = Withdraw::default().parse_log(ethabi_raw_log)?;
-        let hash = web3_log
+    pub fn from_log(raw_log: &Log) -> Result<Self, Error> {
+        let hash = raw_log
             .transaction_hash
             .ok_or_else(|| "`log` must be mined and contain `transaction_hash`")?;
+        let log = helpers::parse_log(&Withdraw::default(), raw_log)?;
         Ok(Self {
-            recipient: withdraw_log.recipient,
-            value: withdraw_log.value,
+            recipient: log.recipient,
+            value: log.value,
             side_tx_hash: hash,
-            main_gas_price: withdraw_log.home_gas_price,
+            main_gas_price: log.home_gas_price,
         })
     }
 
