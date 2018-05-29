@@ -7,17 +7,17 @@ use web3::helpers::CallResult;
 use web3::api::Namespace;
 use ethabi::RawLog;
 use error::{self, ResultExt};
+use contracts;
 use contracts::home::HomeBridge;
 use contracts::foreign::ForeignBridge;
 use relay_stream::LogToFuture;
-use side_contract::{IsMainToSideSignedOnSide, SideContract};
-use helpers::{self, Transaction};
+use side_contract::SideContract;
+use helpers::{self, AsyncCall, AsyncTransaction};
 
 enum State<T: Transport> {
-    AwaitAlreadySigned(Timeout<IsMainToSideSignedOnSide<T>>),
-    AwaitTxSent(Timeout<Transaction<T>>),
+    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::functions::HasAuthoritySignedMainToSide>),
+    AwaitTxSent(AsyncTransaction<T>),
     AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
-    HasAlreadySigned,
 }
 
 /// `Future` responsible for doing a single relay from `main` to `side`
@@ -41,7 +41,10 @@ impl<T: Transport> MainToSideSign<T> {
         let recipient = log.recipient;
         let value = log.value;
 
-        let future = side.is_main_to_side_signed_on_side(recipient, value, main_tx_hash);
+        let future = side.call(ForeignBridge::default()
+                .functions()
+                .deposit()
+                .input(recipient, value, main_tx_hash));
         let state = State::AwaitAlreadySigned(future);
 
         Self { main_tx_hash, side, state, recipient, value }
@@ -49,22 +52,23 @@ impl<T: Transport> MainToSideSign<T> {
 }
 
 impl<T: Transport> Future for MainToSideSign<T> {
-    type Item = TransactionReceipt;
+    type Item = Option<TransactionReceipt>;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
                 State::AwaitAlreadySigned(ref mut future) => {
-                    if try_ready!(future.poll()) {
-                        State::HasAlreadySigned
-                    } else {
-                        State::AwaitTxSent(
-                            self.side.sign_main_to_side(
-                                self.recipient,
-                                self.value,
-                                self.main_tx_hash))
+                    let has_already_signed = try_ready!(future.poll());
+                    if has_already_signed {
+                        return Ok(Async::Ready(None));
                     }
+
+                    State::AwaitTxSent(
+                        self.side.sign_main_to_side(
+                            self.recipient,
+                            self.value,
+                            self.main_tx_hash))
                 }
                 State::AwaitTxSent(ref mut future) => {
                     let side_tx_hash = try_ready!(

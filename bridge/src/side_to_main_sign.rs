@@ -5,19 +5,22 @@ use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, FromErr, JoinAll};
 use tokio_timer::Timeout;
 use web3::Transport;
+use web3;
 use web3::types::{Address, Bytes, H256, H520, Log, U256};
 use log_stream::LogStream;
+use contracts;
 use contracts::foreign::ForeignBridge;
 use error::{self, ResultExt};
 use message_to_main::{MessageToMain, MESSAGE_LENGTH};
 use web3::helpers::CallResult;
 use relay_stream::LogToFuture;
-use side_contract::{SideContract, IsSideToMainSignedOnSide};
+use side_contract::SideContract;
+use helpers::{AsyncCall, AsyncTransaction};
 
 enum State<T: Transport> {
-    AwaitCallHasSubmittedSignature(Timeout<IsSideToMainSignedOnSide<T>>),
+    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::functions::HasAuthoritySignedSideToMain>),
     AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
-    AwaitTransaction(Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>),
+    AwaitTransaction(AsyncTransaction<T>),
 }
 
 pub struct SideToMainSign<T: Transport> {
@@ -44,8 +47,8 @@ impl<T: Transport> SideToMainSign<T> {
             MESSAGE_LENGTH
         );
 
-        let future = side.sign(Bytes(message_bytes));
-        let state = State::AwaitSignature(future);
+        let future = side.is_side_to_main_signed_on_side(&message);
+        let state = State::AwaitCheckAlreadySigned(future);
         info!("{:?} - step 1/3 - about to sign message", tx_hash);
 
         Self {
@@ -59,12 +62,26 @@ impl<T: Transport> SideToMainSign<T> {
 
 impl<T: Transport> Future for SideToMainSign<T> {
     /// transaction hash
-    type Item = H256;
+    type Item = Option<H256>;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
+                State::AwaitCheckAlreadySigned(ref mut future) => {
+                    let is_already_signed = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: message signing failed")
+                    );
+                    if is_already_signed {
+                        return Ok(Async::Ready(None));
+                    }
+
+                    let future = web3::api::Eth::new(self.side.transport)
+                        .sign(self.side.authority_address, self.message.to_bytes());
+                    State::AwaitSignature(future)
+                },
                 State::AwaitSignature(ref mut future) => {
                     let signature = try_ready!(
                         future

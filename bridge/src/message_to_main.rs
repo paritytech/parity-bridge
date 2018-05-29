@@ -4,6 +4,7 @@ use web3::types::Log;
 use ethabi;
 use error::Error;
 use tiny_keccak;
+use helpers;
 
 /// the message that is relayed from side to main.
 /// contains all the information required for the relay.

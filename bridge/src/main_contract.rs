@@ -1,4 +1,4 @@
-use helpers::{call, Transaction};
+use helpers::{AsyncCall, AsyncTransaction};
 use contracts::home::HomeBridge;
 use error;
 use ethereum_types::{Address, U256, H256};
@@ -49,10 +49,6 @@ impl<T: Transport> MainContract<T> {
     //         self.config.max_single_deposit_value,
     //     );
 
-    pub fn is_side_to_main_relayed(&self, side_tx_hash: H256) -> IsSideToMainSignaturesRelayed<T> {
-        IsSideToMainSignaturesRelayed::new(self.transport, self.contract_address, side_tx_hash)
-    }
-
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
@@ -71,7 +67,7 @@ impl<T: Transport> MainContract<T> {
         &self,
         message: &MessageToMain,
         signatures: &Vec<Signature>
-    ) -> Transaction<T> {
+    ) -> AsyncTransaction<T> {
         let payload = HomeBridge::default()
             .functions()
             .withdraw()
@@ -81,7 +77,7 @@ impl<T: Transport> MainContract<T> {
                 signatures.iter().map(|x| x.s),
                 message.to_bytes()
             );
-        Transaction::new(
+        AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
@@ -90,30 +86,3 @@ impl<T: Transport> MainContract<T> {
             payload)
     }
 }
-
-pub struct IsSideToMainSignaturesRelayed<T: Transport> {
-    future: CallResult<Bytes, T::Out>,
-}
-
-impl<T: Transport> IsSideToMainSignaturesRelayed<T> {
-    pub fn new(
-        transport: T,
-        contract_address: Address,
-        side_tx_hash: H256
-    ) -> Self {
-        let payload = HomeBridge::default().functions().withdraws().input(side_tx_hash);
-        let future = call(&transport, contract_address, payload);
-        Self { future }
-    }
-}
-
-impl<T: Transport> Future for IsSideToMainSignaturesRelayed<T> {
-    type Item = bool;
-    type Error = error::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.future.poll());
-        Ok(Async::Ready(HomeBridge::default().functions().withdraws().output(&response.0)?))
-    }
-}
-

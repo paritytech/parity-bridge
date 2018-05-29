@@ -6,34 +6,35 @@ use web3::types::{Address, Bytes, H256, Log, U256, TransactionReceipt};
 use web3;
 use ethabi::{self, RawLog};
 use log_stream::LogStream;
-use contracts::foreign;
+use contracts;
 use contracts::home::HomeBridge;
+use contracts::foreign::ForeignBridge;
 use error::{self, ResultExt};
 use message_to_main::MessageToMain;
 use signature::Signature;
 use web3::helpers::CallResult;
 use relay_stream::LogToFuture;
-use side_contract::{SideContract, GetMessage, GetSignature};
-use main_contract::{MainContract, IsSideToMainSignaturesRelayed};
+use side_contract::SideContract;
+use main_contract::MainContract;
 use web3::api::Namespace;
-use helpers;
+use helpers::{AsyncCall, AsyncTransaction};
 
 /// state of the state machine that is the future responsible for
 /// the SideToMain relay
 enum State<T: Transport> {
-    AwaitMessage(Timeout<GetMessage<T>>),
+    AwaitMessage(AsyncCall<T, contracts::foreign::functions::Message>),
     /// authority is not responsible for relaying this. noop
     NotResponsible,
     AwaitIsRelayed {
-        future: Timeout<IsSideToMainSignaturesRelayed<T>>,
+        future: AsyncCall<T, contracts::home::functions::Withdraws>,
         message: MessageToMain,
     },
     AwaitSignatures {
-        future: Timeout<JoinAll<Vec<GetSignature<T>>>>,
+        future: JoinAll<Vec<AsyncCall<T, contracts::foreign::functions::Signature>>>,
         message: MessageToMain,
     },
-    AwaitTxSent(Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>),
-    AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
+    AwaitTxSent(AsyncTransaction<T>),
+    // AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
 }
 
 pub struct SideToMainSignatures<T: Transport> {
@@ -49,7 +50,7 @@ impl<T: Transport> SideToMainSignatures<T> {
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
         let log = helpers::parse_log(
-            &foreign::ForeignBridge::default().events().collected_signatures(),
+            &ForeignBridge::default().events().collected_signatures(),
             raw_log
         ).expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
@@ -66,7 +67,9 @@ impl<T: Transport> SideToMainSignatures<T> {
                 "{:?} - step 1/3 - about to fetch message",
                 side_tx_hash,
             );
-            State::AwaitMessage(side.get_message(log.message_hash))
+            State::AwaitMessage(side.call(
+                ForeignBridge::default().functions().message().input(log.message_hash)
+            ))
         };
 
         Self {
@@ -91,7 +94,9 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                 State::AwaitMessage(ref mut future) => {
                     let message = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
                     State::AwaitIsRelayed {
-                        future: self.main.is_side_to_main_relayed(message.side_tx_hash),
+                        future: self.main.call(
+                            HomeBridge::default().functions().withdraws().input(message.side_tx_hash)
+                        ),
                         message
                     }
                 }

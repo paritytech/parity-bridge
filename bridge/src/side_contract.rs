@@ -5,13 +5,15 @@ use web3::helpers::CallResult;
 use error::{self, ResultExt};
 use message_to_main::MessageToMain;
 use futures::future::{join_all, JoinAll};
-use helpers::{call, Transaction};
+use helpers::{AsyncCall, AsyncTransaction};
 use signature::Signature;
-use contracts::foreign::ForeignBridge;
+use contracts::foreign::{self, ForeignBridge};
+use contracts;
 use log_stream::{LogStream, LogStreamOptions};
 use std::time::Duration;
 use config::Config;
 use database::State;
+use ethabi::ContractFunction;
 
 /// a more highlevel wrapper around the auto generated ethabi contract
 #[derive(Clone)]
@@ -45,24 +47,30 @@ impl<T: Transport> SideContract<T> {
         }
     }
 
-    /// returns `Future` that resolves with `bool` whether `authority`
-    /// has signed main to side relay for `tx_hash`
-    pub fn is_main_to_side_signed_on_side(&self, recipient: Address, value: U256, main_tx_hash: H256) -> IsMainToSideSignedOnSide<T> {
-        IsMainToSideSignedOnSide::new(self.transport, self.contract_address, self.authority_address, recipient, value, main_tx_hash)
+    pub fn call<F: ContractFunction>(f: F) -> AsyncCall<T, F> {
+
+    }
+
+    pub fn transact<F: ContractFunction>(f: F) -> AsyncTransaction<T> {
+
     }
 
     /// returns `Future` that resolves with `bool` whether `authority`
     /// has signed side to main relay for `tx_hash`
-    pub fn is_side_to_main_signed_on_side(&self, message: &MessageToMain) -> IsSideToMainSignedOnSide<T> {
-        IsSideToMainSignedOnSide::new(&self.transport, self.contract_address, self.authority_address, message)
+    pub fn is_side_to_main_signed_on_side(&self, message: &MessageToMain) -> AsyncCall<T, contracts::foreign::functions::HasAuthoritySignedSideToMain> {
+        let f = ForeignBridge::default()
+            .functions()
+            .has_authority_signed_side_to_main()
+            .input(self.authority_address, message.keccak256());
+        self.call(f)
     }
 
-    pub fn sign_main_to_side(&self, recipient: Address, value: U256, breakout_tx_hash: H256) -> Transaction<T> {
+    pub fn sign_main_to_side(&self, recipient: Address, value: U256, breakout_tx_hash: H256) -> AsyncTransaction<T> {
         let payload = ForeignBridge::default()
             .functions()
             .deposit()
             .input(recipient, value, breakout_tx_hash);
-        Transaction::new(
+        AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
@@ -98,12 +106,12 @@ impl<T: Transport> SideContract<T> {
         })
     }
 
-    pub fn submit_side_to_main_signature(&self, message: &MessageToMain, signature: &Signature) -> Transaction<T> {
+    pub fn submit_side_to_main_signature(&self, message: &MessageToMain, signature: &Signature) -> AsyncTransaction<T> {
         let payload = ForeignBridge::default()
             .functions()
             .submit_signature()
             .input(signature.to_bytes(), message.to_bytes());
-        Transaction::new(
+        AsyncTransaction::new(
             &self.transport,
             self.contract_address,
             self.authority_address,
@@ -112,137 +120,15 @@ impl<T: Transport> SideContract<T> {
             payload)
     }
 
-    pub fn get_message(&self, message_hash: H256) -> GetMessage<T> {
-        GetMessage::new(&self.transport, self.contract_address, message_hash)
-    }
-
-    pub fn get_signatures(&self, message_hash: H256) -> JoinAll<Vec<GetSignature<T>>> {
+    pub fn get_signatures(&self, message_hash: H256) -> JoinAll<Vec<AsyncCall<T, foreign::functions::Signature>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
             .map(|index| {
-                GetSignature::new(&self.transport, self.contract_address, message_hash, index)
+                self.call(
+                    ForeignBridge::default().functions().signature().input(message_hash)
+                )
             })
             .collect::<Vec<_>>();
         join_all(futures)
     }
 }
-
-pub struct IsMainToSideSignedOnSide<T: Transport> {
-    future: CallResult<Bytes, T::Out>,
-    authority_address: Address,
-}
-
-impl<T: Transport> IsMainToSideSignedOnSide<T> {
-    pub fn new(
-        transport: T,
-        contract_address: Address,
-        authority_address: Address,
-        recipient: Address,
-        value: U256,
-        main_tx_hash: H256) -> Self {
-        let payload = ForeignBridge::default().functions().has_authority_signed_main_to_side().input(
-            authority_address,
-            recipient,
-            value,
-            main_tx_hash);
-        let future = call(&transport, contract_address, payload);
-        Self { future, authority_address }
-    }
-}
-
-impl<T: Transport> Future for IsMainToSideSignedOnSide<T> {
-    type Item = bool;
-    type Error = error::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.future.poll());
-        Ok(Async::Ready(ForeignBridge::default()
-            .functions()
-            .has_authority_signed_main_to_side()
-            .output(&response.0)
-            .expect("output is definitely from call to `has_authority_signed_main_to_side` and must decode without error. q.e.d.")))
-    }
-}
-
-pub struct IsSideToMainSignedOnSide<T: Transport> {
-    future: CallResult<Bytes, T::Out>,
-}
-
-impl<T: Transport> IsSideToMainSignedOnSide<T> {
-    pub fn new(transport: &T, contract_address: Address, authority_address: Address, message: &MessageToMain) -> Self {
-        let payload = ForeignBridge::default()
-            .functions()
-            .has_authority_signed_side_to_main()
-            .input(authority_address, message.keccak256());
-        let future = call(transport, contract_address, payload);
-        Self { future }
-    }
-}
-
-impl<T: Transport> Future for IsSideToMainSignedOnSide<T> {
-    type Item = bool;
-    type Error = error::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.future.poll());
-        Ok(Async::Ready(ForeignBridge::default()
-            .functions()
-            .has_authority_signed_side_to_main()
-            .output(&response.0)
-            .expect("output is definitely from call to `has_authority_signed_side_to_main` and must decode without error. q.e.d.")))
-    }
-}
-
-pub struct GetMessage<T: Transport>(CallResult<Bytes, T::Out>);
-
-impl<T: Transport> GetMessage<T> {
-    pub fn new(transport: &T, contract_address: Address, message_hash: H256) -> Self {
-        let payload = ForeignBridge::default().functions().message().input(message_hash);
-        GetMessage(call(transport, contract_address, payload))
-    }
-}
-
-impl<T: Transport> Future for GetMessage<T> {
-    type Item = MessageToMain;
-    type Error = error::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.0.poll());
-        let message_bytes = ForeignBridge::default()
-            .functions()
-            .message()
-            .output(response.0.as_slice())
-            .chain_err(|| "WithdrawRelay: decoding message failed")?;
-        Ok(Async::Ready(MessageToMain::from_bytes(&message_bytes)))
-    }
-}
-
-pub struct GetSignature<T: Transport>(CallResult<Bytes, T::Out>);
-
-impl<T: Transport> GetSignature<T> {
-    pub fn new(transport: &T, contract_address: Address, message_hash: H256, index: u32) -> Self {
-        let payload = ForeignBridge::default()
-            .functions()
-            .signature()
-            .input(message_hash, index);
-        GetSignature(call(transport, contract_address, payload))
-    }
-}
-
-impl<T: Transport> Future for GetSignature<T> {
-    type Item = Signature;
-    type Error = error::Error;
-
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let response = try_ready!(self.0.poll());
-        let raw_signature = ForeignBridge::default()
-            .functions()
-            .signature()
-            .output(&response.0)
-            .expect("output is definitely from call to `signature` and must decode without error. q.e.d.");
-        let signature = Signature::from_bytes(&raw_signature)
-            .expect("we know the signature comes from the contract and decoded correctly to bytes. it must parse correctly from bytes. q.e.d.");
-        Ok(Async::Ready(signature))
-    }
-}
-
