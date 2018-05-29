@@ -1,5 +1,5 @@
 [package]
-name = "tests"
+name = "parity-bridge-tests"
 version = "0.1.0"
 authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
