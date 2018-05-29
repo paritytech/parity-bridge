@@ -5,8 +5,10 @@ use futures::{Async, Future, Poll, Stream};
 use web3::{self, Transport};
 use web3::helpers::CallResult;
 use web3::api::Namespace;
-use ethabi::{self, RawLog, ParseLog};
+use ethabi::{self, RawLog, ParseLog, ContractFunction};
 use error;
+use tokio_timer::Timeout;
+use std::time::Duration;
 
 pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi::Result<T::Log> {
     let ethabi_log = RawLog {
@@ -16,24 +18,42 @@ pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi:
     event.parse_log(ethabi_log)
 }
 
-/// helper so calls require less typing
-pub fn call<T: Transport>(transport: &T, contract_address: Address, payload: Vec<u8>) -> CallResult<Bytes, T::Out> {
-    let request = CallRequest {
-        from: None,
-        to: contract_address,
-        gas: None,
-        gas_price: None,
-        value: None,
-        data: Some(Bytes(payload)),
-    };
-    web3::api::Eth::new(transport).call(request, None)
+pub struct AsyncCall<T: Transport, F: ContractFunction> {
+    future: Timeout<CallResult<Bytes, T::Out>>,
+    function: F,
 }
 
-pub struct Transaction<T: Transport> {
-    future: CallResult<H256, T::Out>
+impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
+    pub fn new(transport: T, address: Address, timeout: Duration, function: F) -> Self {
+        let payload = function.encoded();
+        let request = CallRequest {
+            from: None,
+            to: address,
+            gas: None,
+            gas_price: None,
+            value: None,
+            data: Some(Bytes(payload)),
+        };
+        let future = web3::api::Eth::new(transport).call(request, None);
+        Self { future, function }
+    }
 }
 
-impl<T: Transport> Transaction<T> {
+impl<T: Transport, F: ContractFunction> Future for AsyncCall<T, F> {
+    type Item = F::Output;
+    type Error = web3::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let response = try_ready!(self.future.poll);
+        Ok(Async::Ready(self.function.output(response)?))
+    }
+}
+
+pub struct AsyncTransaction<T: Transport> {
+    future: Timeout<CallResult<H256, T::Out>>
+}
+
+impl<T: Transport> AsyncTransaction<T> {
     pub fn new(
        transport: &T,
        contract_address: Address,
@@ -57,7 +77,7 @@ impl<T: Transport> Transaction<T> {
     }
 }
 
-impl<T: Transport> Future for Transaction<T> {
+impl<T: Transport> Future for AsyncTransaction<T> {
     type Item = H256;
     type Error = error::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
