@@ -13,8 +13,8 @@ tokio-core = "0.1.8"
 tokio-timer = "0.1.2"
 toml = "0.4.2"
 web3 = "0.3"
-error-chain = "0.11.0-rc.2"
-ethabi = { git = "https://github.com/paritytech/ethabi", branch = "tomusdrw-master" }
+error-chain = "0.11.0"
+ethabi = { git = "https://github.com/paritytech/ethabi" }
 rustc-hex = "1.0"
 log = "0.3"
 ethereum-types = "0.3"
