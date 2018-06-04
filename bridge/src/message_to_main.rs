@@ -22,15 +22,17 @@ pub const MESSAGE_LENGTH: usize = 116;
 
 impl MessageToMain {
     /// parses message from a byte slice
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        assert_eq!(bytes.len(), MESSAGE_LENGTH);
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        if bytes.len() != MESSAGE_LENGTH {
+            bail!("`bytes`.len() must be {}", MESSAGE_LENGTH);
+        }
 
-        Self {
+        Ok(Self {
             recipient: bytes[0..20].into(),
             value: U256::from_big_endian(&bytes[20..52]),
             side_tx_hash: bytes[52..84].into(),
             main_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
-        }
+        })
     }
 
     pub fn keccak256(&self) -> H256 {
