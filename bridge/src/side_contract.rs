@@ -59,6 +59,12 @@ impl<T: Transport> SideContract<T> {
             .has_authority_signed_side_to_main(self.authority_address, message.keccak256()))
     }
 
+    pub fn is_main_to_side_signed_on_side(&self, recipient: Address, value: U256, main_tx_hash: H256) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput> {
+        self.call(ForeignBridge::default()
+            .functions()
+            .has_authority_signed_main_to_side(self.authority_address, recipient, value, main_tx_hash))
+    }
+
     pub fn sign_main_to_side(&self, recipient: Address, value: U256, breakout_tx_hash: H256) -> AsyncTransaction<T> {
         AsyncTransaction::new(
             &self.transport,

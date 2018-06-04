@@ -17,7 +17,6 @@ use helpers::{self, AsyncCall, AsyncTransaction};
 enum State<T: Transport> {
     AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput>),
     AwaitTxSent(AsyncTransaction<T>),
-    AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
 }
 
 /// `Future` responsible for doing a single relay from `main` to `side`
@@ -41,9 +40,8 @@ impl<T: Transport> MainToSideSign<T> {
         let recipient = log.recipient;
         let value = log.value;
 
-        let future = side.call(ForeignBridge::default()
-                .functions()
-                .deposit(recipient, value, main_tx_hash));
+        let future = side.is_main_to_side_signed_on_side(
+            recipient, value, main_tx_hash);
         let state = State::AwaitAlreadySigned(future);
 
         Self { main_tx_hash, side, state, recipient, value }
@@ -51,7 +49,7 @@ impl<T: Transport> MainToSideSign<T> {
 }
 
 impl<T: Transport> Future for MainToSideSign<T> {
-    type Item = Option<TransactionReceipt>;
+    type Item = Option<H256>;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
@@ -75,21 +73,7 @@ impl<T: Transport> Future for MainToSideSign<T> {
                             .poll()
                             .chain_err(|| format!("MainToSideSign: checking whether {} already was relayed failed", self.main_tx_hash))
                     );
-                    State::AwaitTxReceipt(web3::api::Eth::new(self.side.transport)
-                        .transaction_receipt(side_tx_hash))
-                }
-                State::AwaitTxReceipt(ref mut future) => {
-                    let receipt = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| format!("MainToSideSign: checking whether {} already was relayed failed", self.main_tx_hash))
-                    );
-                    info!(
-                        "{:?} - step 2/2 - DONE - transaction sent {:?}",
-                        self.main_tx_hash, receipt.transaction_hash
-                    );
-
-                    return Ok(Async::Ready(receipt));
+                    return Ok(Async::Ready(Some(side_tx_hash)));
                 }
             };
             self.state = next_state;

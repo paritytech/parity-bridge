@@ -20,7 +20,7 @@ use web3::api::Namespace;
 use signature::Signature;
 
 enum State<T: Transport> {
-    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>),
     AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -99,7 +99,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
 
                     let signature = Signature::from_bytes(&signature_bytes)?;
 
-                    let future = self.side.submit_side_to_main_signature(&self.message, &self.signature);
+                    let future = self.side.submit_side_to_main_signature(&self.message, &signature);
                     State::AwaitTransaction(future)
                 }
                 State::AwaitTransaction(ref mut future) => {
@@ -112,7 +112,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
                         self.tx_hash, tx_hash
                     );
-                    return Ok(Async::Ready(tx_hash));
+                    return Ok(Async::Ready(Some(tx_hash)));
                 }
             };
             self.state = next_state;

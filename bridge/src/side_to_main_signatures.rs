@@ -35,7 +35,6 @@ enum State<T: Transport> {
         message: MessageToMain,
     },
     AwaitTxSent(AsyncTransaction<T>),
-    // AwaitTxReceipt(Timeout<FromErr<CallResult<Option<TransactionReceipt>, T::Out>, error::Error>>),
 }
 
 pub struct SideToMainSignatures<T: Transport> {
@@ -83,7 +82,7 @@ impl<T: Transport> SideToMainSignatures<T> {
 }
 
 impl<T: Transport> Future for SideToMainSignatures<T> {
-    type Item = Option<TransactionReceipt>;
+    type Item = Option<H256>;
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
@@ -93,7 +92,8 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     return Ok(Async::Ready(None));
                 }
                 State::AwaitMessage(ref mut future) => {
-                    let message = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
+                    let message_bytes = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
+                    let message = MessageToMain::from_bytes(&message_bytes)?;
                     State::AwaitIsRelayed {
                         future: self.main.call(
                             HomeBridge::default().functions().withdraws(message.side_tx_hash)
@@ -114,7 +114,11 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     }
                 }
                 State::AwaitSignatures { ref mut future, message }  => {
-                    let signatures = try_ready!(future.poll().chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
+                    let raw_signatures = try_ready!(future.poll().chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
+                    let signatures: Vec<Signature> = raw_signatures
+                        .iter()
+                        .map(|x| Signature::from_bytes(x))
+                        .collect::<Result<_, _>>()?;
                     info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.side_tx_hash, signatures.len());
                     State::AwaitTxSent(self.main.relay_side_to_main(&message, &signatures))
                 }
@@ -128,12 +132,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
                         self.side_tx_hash, main_tx_hash
                     );
-                    State::AwaitTxReceipt(web3::api::Eth::new(self.side.transport)
-                        .transaction_receipt(main_tx_hash))
-                }
-                State::AwaitTxReceipt(ref mut future) => {
-                    let receipt = try_ready!(future.poll().chain_err(|| "WithdrawRelay: sending transaction failed")).unwrap();
-                    return Ok(Async::Ready(Some(receipt)));
+                    return Ok(Async::Ready(Some(main_tx_hash)));
                 }
             };
             self.state = next_state;
