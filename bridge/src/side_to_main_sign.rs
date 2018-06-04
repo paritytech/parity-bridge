@@ -3,7 +3,7 @@
 use std::ops;
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, FromErr, JoinAll};
-use tokio_timer::Timeout;
+use tokio_timer::{Timeout, Timer};
 use web3::Transport;
 use web3;
 use web3::types::{Address, Bytes, H256, H520, Log, U256};
@@ -80,9 +80,11 @@ impl<T: Transport> Future for SideToMainSign<T> {
                         return Ok(Async::Ready(None));
                     }
 
-                    let future = web3::api::Eth::new(self.side.transport)
-                        .sign(self.side.authority_address, Bytes(self.message.to_bytes()));
-                    State::AwaitSignature(future)
+                    let inner_future = web3::api::Eth::new(self.side.transport)
+                        .sign(self.side.authority_address, Bytes(self.message.to_bytes()))
+                        .from_err();
+                    let timeout_future = Timer::default().timeout(inner_future, self.side.request_timeout);
+                    State::AwaitSignature(timeout_future)
                 },
                 State::AwaitSignature(ref mut future) => {
                     let signature_bytes = try_ready!(

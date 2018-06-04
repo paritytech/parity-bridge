@@ -66,6 +66,7 @@ impl<T: Transport> SideContract<T> {
             self.authority_address,
             self.sign_main_to_side_gas,
             self.sign_main_to_side_gas_price,
+            self.request_timeout,
             ForeignBridge::default()
                 .functions()
                 .deposit(recipient, value, breakout_tx_hash))
@@ -105,6 +106,7 @@ impl<T: Transport> SideContract<T> {
             self.authority_address,
             self.submit_side_to_main_gas,
             message.main_gas_price,
+            self.request_timeout,
             ForeignBridge::default()
                 .functions()
                 .submit_signature(signature.to_bytes(), message.to_bytes()))

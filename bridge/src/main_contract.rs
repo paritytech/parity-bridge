@@ -79,6 +79,7 @@ impl<T: Transport> MainContract<T> {
             self.authority_address,
             self.submit_collected_signatures_gas,
             message.main_gas_price,
+            self.request_timeout,
             HomeBridge::default()
                 .functions()
                 .withdraw(

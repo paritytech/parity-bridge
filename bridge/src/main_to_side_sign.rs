@@ -1,6 +1,6 @@
 use futures::{Async, Future, Poll, Stream};
 use futures::future::{join_all, FromErr, JoinAll};
-use tokio_timer::Timeout;
+use tokio_timer::{Timeout, Timer};
 use web3::{self, Transport};
 use web3::types::{Bytes, H256, Log, U256, TransactionReceipt, Address};
 use web3::helpers::CallResult;
