@@ -52,9 +52,9 @@ impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
 
     /// `O(n)` where `n = self.entries.len()`
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        let maybe_min_not_ready_order = None;
-        let maybe_index_of_min_ready = None;
-        let maybe_min_ready_order = None;
+        let maybe_min_not_ready_order: Option<O> = None;
+        let maybe_min_ready_order: Option<O> = None;
+        let maybe_index_of_min_ready: Option<usize> = None;
 
         for (index, entry) in self.entries.iter_mut().enumerate() {
             // poll futures which aren't resolved yet
@@ -76,7 +76,8 @@ impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
                     maybe_index_of_min_ready = Some(index);
                 }
             } else {
-                maybe_min_not_ready_order = maybe_min_not_ready_order.map(|x| x.min(entry.order));
+                maybe_min_not_ready_order = maybe_min_not_ready_order
+                    .map(|x| x.min(entry.order));
             }
         }
 
