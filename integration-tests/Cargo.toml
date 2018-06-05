@@ -5,6 +5,7 @@ authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
 [dependencies]
 bridge = { path = "../bridge" }
+bridge-contracts = { path = "../contracts" }
 futures = "0.1"
 jsonrpc-core = "8.0"
 web3 = { git = "https://github.com/forrest-marshall/rust-web3", branch = "get-logs" }
@@ -13,3 +14,4 @@ pretty_assertions = "0.2.1"
 tempdir = "0.3.5"
 ethereum-types = "0.3"
 tokio-core = "0.1.8"
+ethabi = { git = "https://github.com/paritytech/ethabi" }
