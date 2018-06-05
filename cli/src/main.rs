@@ -22,8 +22,8 @@ use bridge::config::Config;
 use bridge::error::{self, ResultExt};
 use bridge::database::{Database, TomlFileDatabase};
 use bridge::helpers::StreamExt;
-use bridge::MainContract;
-use bridge::SideContract;
+use bridge::main_contract::MainContract;
+use bridge::side_contract::SideContract;
 
 const MAX_PARALLEL_REQUESTS: usize = 10;
 
@@ -123,7 +123,7 @@ Options:
         &config,
         &initial_state);
 
-    let bridge_stream = Bridge::new(config, initial_state, home_contract, foreign_contract);
+    let bridge_stream = Bridge::new(initial_state, main_contract, side_contract);
     info!("Listening to events");
     let persisted_bridge_stream = bridge_stream.and_then(|state| {
         database.write(&state)?;
