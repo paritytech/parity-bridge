@@ -46,15 +46,15 @@ impl<O: Ord, F: Future> FutureHeap<O, F> {
     }
 }
 
-impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
+impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
     type Item = (O, F::Item);
     type Error = F::Error;
 
     /// `O(n)` where `n = self.entries.len()`
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        let maybe_min_not_ready_order: Option<O> = None;
-        let maybe_min_ready_order: Option<O> = None;
-        let maybe_index_of_min_ready: Option<usize> = None;
+        let mut maybe_min_not_ready_order: Option<O> = None;
+        let mut maybe_min_ready_order: Option<O> = None;
+        let mut maybe_index_of_min_ready: Option<usize> = None;
 
         for (index, entry) in self.entries.iter_mut().enumerate() {
             // poll futures which aren't resolved yet
@@ -66,18 +66,18 @@ impl<O: Ord, F: Future> Stream for FutureHeap<O, F> {
             }
 
             if entry.result.is_some() {
-                if let Some(order) = maybe_min_ready_order {
+                if let Some(order) = maybe_min_ready_order.clone() {
                     if entry.order < order {
-                        maybe_min_ready_order = Some(entry.order);
+                        maybe_min_ready_order = Some(entry.order.clone());
                         maybe_index_of_min_ready = Some(index);
                     }
                 } else {
-                    maybe_min_ready_order = Some(entry.order);
+                    maybe_min_ready_order = Some(entry.order.clone());
                     maybe_index_of_min_ready = Some(index);
                 }
             } else {
                 maybe_min_not_ready_order = maybe_min_not_ready_order
-                    .map(|x| x.min(entry.order));
+                    .map(|x| x.min(entry.order.clone()));
             }
         }
 

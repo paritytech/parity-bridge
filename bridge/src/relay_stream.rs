@@ -61,7 +61,7 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
                     .chain_err(|| "RelayStream: fetching logs failed")
             );
 
-            if let Some(logs_in_block_range) = maybe_logs_in_block_range {
+            if let Some(ref logs_in_block_range) = maybe_logs_in_block_range {
                 // keep track of the min number of block
                 // where all logs have been relayed
                 // and yield that number if it has changed

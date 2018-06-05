@@ -80,7 +80,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
                         return Ok(Async::Ready(None));
                     }
 
-                    let inner_future = web3::api::Eth::new(self.side.transport)
+                    let inner_future = web3::api::Eth::new(self.side.transport.clone())
                         .sign(self.side.authority_address, Bytes(self.message.to_bytes()))
                         .from_err();
                     let timeout_future = Timer::default().timeout(inner_future, self.side.request_timeout);

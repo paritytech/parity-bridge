@@ -61,7 +61,7 @@ impl<T: Transport> MainContract<T> {
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
-            transport: self.transport,
+            transport: self.transport.clone(),
             contract_address: self.contract_address,
             after,
         })

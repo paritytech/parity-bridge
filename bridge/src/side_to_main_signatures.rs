@@ -101,7 +101,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         message
                     }
                 }
-                State::AwaitIsRelayed { ref mut future, message } => {
+                State::AwaitIsRelayed { ref mut future, ref message } => {
                     let is_relayed = try_ready!(future.poll().chain_err(|| "SubmitSignature: fetching message failed"));
 
                     if is_relayed {
@@ -110,10 +110,10 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
 
                     State::AwaitSignatures {
                         future: self.side.get_signatures(message.keccak256()),
-                        message
+                        message: message.clone(),
                     }
                 }
-                State::AwaitSignatures { ref mut future, message }  => {
+                State::AwaitSignatures { ref mut future, ref message }  => {
                     let raw_signatures = try_ready!(future.poll().chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
                     let signatures: Vec<Signature> = raw_signatures
                         .iter()

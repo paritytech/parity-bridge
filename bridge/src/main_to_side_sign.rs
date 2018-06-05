@@ -68,10 +68,11 @@ impl<T: Transport> Future for MainToSideSign<T> {
                             self.main_tx_hash))
                 }
                 State::AwaitTxSent(ref mut future) => {
+                    let main_tx_hash = self.main_tx_hash;
                     let side_tx_hash = try_ready!(
                         future
                             .poll()
-                            .chain_err(|| format!("MainToSideSign: checking whether {} already was relayed failed", self.main_tx_hash))
+                            .chain_err(|| format!("MainToSideSign: checking whether {} already was relayed failed", main_tx_hash))
                     );
                     return Ok(Async::Ready(Some(side_tx_hash)));
                 }

@@ -9,7 +9,7 @@ use helpers;
 /// the message that is relayed from side to main.
 /// contains all the information required for the relay.
 /// validators sign off on this message.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct MessageToMain {
     pub recipient: Address,
     pub value: U256,
