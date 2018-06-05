@@ -130,7 +130,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .from_block(from.into())
                             .to_block(last_confirmed_block.into())
                             .build();
-                        let future = web3::api::Eth::new(&self.transport).logs(&filter);
+                        let future = web3::api::Eth::new(&self.transport).logs(filter);
 
                         State::AwaitLogs {
                             from: from,
