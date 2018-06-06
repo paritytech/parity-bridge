@@ -32,7 +32,7 @@ impl<T: Transport> MainToSideSign<T> {
     pub fn new(raw_log: &Log, side: SideContract<T>) -> Self {
         let main_tx_hash = raw_log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
-        info!("{:?} - step 1/3 - about to check whether it is already relayed", main_tx_hash);
+        info!("{:?} - step 1/3 - about to check whether already signed", main_tx_hash);
 
         let log = helpers::parse_log(&HomeBridge::default().events().deposit(), raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
@@ -58,9 +58,11 @@ impl<T: Transport> Future for MainToSideSign<T> {
                 State::AwaitAlreadySigned(ref mut future) => {
                     let has_already_signed = try_ready!(future.poll());
                     if has_already_signed {
+                        info!("{:?} - DONE - already signed", self.main_tx_hash);
                         return Ok(Async::Ready(None));
                     }
 
+                    info!("{:?} - 2/3 - signing", self.main_tx_hash);
                     State::AwaitTxSent(
                         self.side.sign_main_to_side(
                             self.recipient,
@@ -74,6 +76,7 @@ impl<T: Transport> Future for MainToSideSign<T> {
                             .poll()
                             .chain_err(|| format!("MainToSideSign: checking whether {} already was relayed failed", main_tx_hash))
                     );
+                    info!("{:?} - DONE - signed", self.main_tx_hash);
                     return Ok(Async::Ready(Some(side_tx_hash)));
                 }
             };
