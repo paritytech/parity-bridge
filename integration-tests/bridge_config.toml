@@ -55,11 +55,11 @@ required_signatures = 1
 # `gas_price` might need adjustment once in a while.
 
 # these happen on `home`:
-home_deploy = { gas = 1000000 , gas_price = 0 }
-withdraw_relay = { gas = 200000 , gas_price = 0 }
+home_deploy = { gas = "1000000" , gas_price = "0" }
+withdraw_relay = { gas = "200000" , gas_price = "0" }
 
 # these happen on `foreign`:
-foreign_deploy = { gas = 3000000 , gas_price = 0 }
-deposit_relay = { gas = 150000 , gas_price = 0 }
+foreign_deploy = { gas = "3000000" , gas_price = "0" }
+deposit_relay = { gas = "150000" , gas_price = "0" }
 
-withdraw_confirm = { gas = 300000 , gas_price = 0 }
+withdraw_confirm = { gas = "300000" , gas_price = "0" }
