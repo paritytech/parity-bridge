@@ -18,6 +18,7 @@ matrix:
       before_script:
         - export PATH=/snap/bin:${PATH}
         - rustup component add rustfmt-preview
+        - rustfmt --version
       script:
         # using --write-mode=diff instructs rustfmt to exit with an error code if the input is not formatted correctly
         - cargo fmt --all -- --write-mode=diff
