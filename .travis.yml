@@ -5,7 +5,7 @@ branches:
 matrix:
   include:
     - language: rust
-      rust: stable
+      rust: stable-2018-05-29
       sudo: required
       dist: trusty
       cache: cargo
