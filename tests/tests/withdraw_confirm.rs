@@ -9,11 +9,11 @@ extern crate serde_json;
 #[macro_use]
 extern crate tests;
 
-use rustc_hex::{FromHex, ToHex};
 use bridge::bridge::create_withdraw_confirm;
-use bridge::message_to_mainnet::MessageToMainnet;
 use bridge::contracts;
+use bridge::message_to_mainnet::MessageToMainnet;
 use ethabi::{encode, Token};
+use rustc_hex::{FromHex, ToHex};
 
 const WITHDRAW_TOPIC: &str = "0xf279e6a1f5e320cca91135676d9cb6e44ca8a08c0b88342bcdb1144f6511b568";
 

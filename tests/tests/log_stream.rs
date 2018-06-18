@@ -7,9 +7,9 @@ extern crate serde_json;
 extern crate tests;
 extern crate web3;
 
+use bridge::api::{log_stream, LogStreamInit, LogStreamItem};
 use std::time::Duration;
 use web3::types::{FilterBuilder, H160, H256, Log};
-use bridge::api::{log_stream, LogStreamInit, LogStreamItem};
 
 test_transport_stream! {
     name => log_stream_basic,
