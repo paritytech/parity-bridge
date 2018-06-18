@@ -1,10 +1,10 @@
-use ethereum_types::{Address, H256, U256};
 use contracts::foreign::events::Withdraw;
-use web3::types::Log;
-use ethabi;
 use error::Error;
-use tiny_keccak;
+use ethabi;
+use ethereum_types::{Address, H256, U256};
 use helpers;
+use tiny_keccak;
+use web3::types::Log;
 
 /// the message that is relayed from side to main.
 /// contains all the information required for the relay.
@@ -74,8 +74,8 @@ impl MessageToMain {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::TestResult;
     use super::*;
+    use quickcheck::TestResult;
     use rustc_hex::FromHex;
 
     #[test]

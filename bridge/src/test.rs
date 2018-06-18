@@ -1,14 +1,13 @@
+use futures;
 /// helpers for testing:
 ///
 /// - mocking transports
-
 use jsonrpc_core;
-use web3;
 use serde_json;
 use std::cell::RefCell;
 use std::rc::Rc;
+use web3;
 use web3::Transport;
-use futures;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RequestData {

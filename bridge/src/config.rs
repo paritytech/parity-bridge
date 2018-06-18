@@ -1,12 +1,12 @@
-use std::path::{Path, PathBuf};
+use error::{Error, ResultExt};
+use ethereum_types::U256;
+use rustc_hex::FromHex;
 use std::fs;
 use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
-use rustc_hex::FromHex;
-use web3::types::{Address, Bytes};
-use ethereum_types::U256;
-use error::{Error, ResultExt};
 use toml;
+use web3::types::{Address, Bytes};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
 const DEFAULT_TIMEOUT: u64 = 5;
@@ -157,10 +157,10 @@ pub struct Authorities {
 /// `load` module separates `Config` representation in file with optional from the one used
 /// in application.
 mod load {
-    use std::path::PathBuf;
-    use web3::types::Address;
     use ethereum_types::U256;
     use helpers::deserialize_u256;
+    use std::path::PathBuf;
+    use web3::types::Address;
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -223,10 +223,10 @@ mod load {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-    use rustc_hex::FromHex;
     use super::{Authorities, Config, ContractConfig, NodeConfig, TransactionConfig, Transactions};
     use ethereum_types::U256;
+    use rustc_hex::FromHex;
+    use std::time::Duration;
 
     #[test]
     fn load_full_setup_from_str() {

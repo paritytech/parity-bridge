@@ -1,4 +1,5 @@
 extern crate bridge;
+extern crate bridge_contracts;
 extern crate ethabi;
 extern crate ethereum_types;
 /// spins up two parity nodes with the dev chain.
@@ -10,20 +11,19 @@ extern crate ethereum_types;
 extern crate tempdir;
 extern crate tokio_core;
 extern crate web3;
-extern crate bridge_contracts;
 
-use std::process::Command;
-use std::time::Duration;
-use std::thread;
 use std::path::Path;
+use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use tokio_core::reactor::Core;
 
-use web3::transports::http::Http;
-use web3::api::Namespace;
-use ethereum_types::{Address, U256};
 use bridge::helpers::AsyncCall;
 use ethabi::ContractFunction;
+use ethereum_types::{Address, U256};
+use web3::api::Namespace;
+use web3::transports::http::Http;
 
 const TMP_PATH: &str = "tmp";
 const MAX_PARALLEL_REQUESTS: usize = 10;
@@ -238,12 +238,14 @@ fn test_basic_deposit_then_withdraw() {
     ).expect("failed to connect to foreign at http://localhost:8551");
     let foreign = bridge_contracts::foreign::ForeignBridge::default();
 
-    let response = event_loop.run(AsyncCall::new(
-        &home_transport,
-        home_contract_address.into(),
-        TIMEOUT,
-        home.functions().estimated_gas_cost_of_withdraw()
-    )).unwrap();
+    let response = event_loop
+        .run(AsyncCall::new(
+            &home_transport,
+            home_contract_address.into(),
+            TIMEOUT,
+            home.functions().estimated_gas_cost_of_withdraw(),
+        ))
+        .unwrap();
 
     assert_eq!(
         response,
@@ -320,12 +322,14 @@ fn test_basic_deposit_then_withdraw() {
     println!("\ndeposit into home complete. give it plenty of time to get mined and relayed\n");
     thread::sleep(Duration::from_millis(10000));
 
-    let response = event_loop.run(AsyncCall::new(
-        &foreign_transport,
-        foreign_contract_address.into(),
-        TIMEOUT,
-        foreign.functions().total_supply()
-    )).unwrap();
+    let response = event_loop
+        .run(AsyncCall::new(
+            &foreign_transport,
+            foreign_contract_address.into(),
+            TIMEOUT,
+            foreign.functions().total_supply(),
+        ))
+        .unwrap();
 
     assert_eq!(
         response,
@@ -333,14 +337,14 @@ fn test_basic_deposit_then_withdraw() {
         "totalSupply on ForeignBridge should have increased"
     );
 
-    let response = event_loop.run(AsyncCall::new(
-        &foreign_transport,
-        foreign_contract_address.into(),
-        TIMEOUT,
-        foreign
-            .functions()
-            .balance_of(Address::from(user_address))
-    )).unwrap();
+    let response = event_loop
+        .run(AsyncCall::new(
+            &foreign_transport,
+            foreign_contract_address.into(),
+            TIMEOUT,
+            foreign.functions().balance_of(Address::from(user_address)),
+        ))
+        .unwrap();
 
     assert_eq!(
         response,
@@ -351,11 +355,14 @@ fn test_basic_deposit_then_withdraw() {
     println!("\nconfirmed that deposit reached foreign\n");
 
     println!("\nuser executes ForeignBridge.transferHomeViaRelay\n");
-    let transfer_payload = foreign.functions().transfer_home_via_relay(
-        Address::from(receiver_address),
-        U256::from(1000000000),
-        U256::from(1000),
-    ).encoded();
+    let transfer_payload = foreign
+        .functions()
+        .transfer_home_via_relay(
+            Address::from(receiver_address),
+            U256::from(1000000000),
+            U256::from(1000),
+        )
+        .encoded();
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &foreign_transport,

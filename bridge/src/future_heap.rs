@@ -4,9 +4,9 @@
 /// you want to get the results back in an order that is
 /// defined before the
 ///
-/// example: 
+/// example:
 ///
-/// only in ascending order of blocks 
+/// only in ascending order of blocks
 ///
 /// OrderedStream can
 ///
@@ -23,7 +23,6 @@
 /// that complete at different times but should be output
 /// in a specific order regardless of when they complete
 /// futures which are associated with
-
 use futures::{Async, Future, Poll, Stream};
 
 struct Entry<O, F: Future> {
@@ -38,11 +37,17 @@ pub struct FutureHeap<O, F: Future> {
 
 impl<O: Ord, F: Future> FutureHeap<O, F> {
     pub fn new() -> Self {
-        Self { entries: Vec::new() }
+        Self {
+            entries: Vec::new(),
+        }
     }
 
     pub fn insert(&mut self, order: O, future: F) {
-        self.entries.push(Entry { order, future, result: None });
+        self.entries.push(Entry {
+            order,
+            future,
+            result: None,
+        });
     }
 }
 
@@ -60,8 +65,10 @@ impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
             // poll futures which aren't resolved yet
             if !entry.result.is_some() {
                 match entry.future.poll()? {
-                    Async::Ready(result) => { entry.result = Some(result); },
-                    Async::NotReady => {},
+                    Async::Ready(result) => {
+                        entry.result = Some(result);
+                    }
+                    Async::NotReady => {}
                 }
             }
 
@@ -76,8 +83,8 @@ impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
                     maybe_index_of_min_ready = Some(index);
                 }
             } else {
-                maybe_min_not_ready_order = maybe_min_not_ready_order
-                    .map(|x| x.min(entry.order.clone()));
+                maybe_min_not_ready_order =
+                    maybe_min_not_ready_order.map(|x| x.min(entry.order.clone()));
             }
         }
 
@@ -86,8 +93,10 @@ impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
             return Ok(Async::NotReady);
         }
 
-        let min_ready_order = maybe_min_ready_order.expect("check and early return if none above. q.e.d.");
-        let index_of_min_ready = maybe_index_of_min_ready.expect("always set with `maybe_min_ready_order` above. q.e.d.");
+        let min_ready_order =
+            maybe_min_ready_order.expect("check and early return if none above. q.e.d.");
+        let index_of_min_ready = maybe_index_of_min_ready
+            .expect("always set with `maybe_min_ready_order` above. q.e.d.");
 
         if let Some(min_not_ready_order) = maybe_min_not_ready_order {
             if min_not_ready_order < min_ready_order {
@@ -99,7 +108,12 @@ impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
         // this is O(1)
         let entry = self.entries.swap_remove(index_of_min_ready);
 
-        Ok(Async::Ready(Some((entry.order, entry.result.expect("`index_of_min_ready` points to index of entry with result. q.e.d.")))))
+        Ok(Async::Ready(Some((
+            entry.order,
+            entry
+                .result
+                .expect("`index_of_min_ready` points to index of entry with result. q.e.d."),
+        ))))
     }
 }
 

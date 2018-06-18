@@ -1,15 +1,15 @@
-use serde::{Deserialize, Deserializer, Serializer};
-use serde::de::Error;
-use web3::types::{U256, H256, TransactionRequest, CallRequest, Address, Bytes};
-use futures::{Async, Future, Poll, Stream};
-use futures::future::FromErr;
-use web3::{self, Transport};
-use web3::helpers::CallResult;
-use web3::api::Namespace;
-use ethabi::{self, RawLog, ParseLog, ContractFunction};
 use error;
-use tokio_timer::{Timeout, Timer};
+use ethabi::{self, ContractFunction, ParseLog, RawLog};
+use futures::future::FromErr;
+use futures::{Async, Future, Poll, Stream};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serializer};
 use std::time::Duration;
+use tokio_timer::{Timeout, Timer};
+use web3::api::Namespace;
+use web3::helpers::CallResult;
+use web3::types::{Address, Bytes, CallRequest, H256, TransactionRequest, U256};
+use web3::{self, Transport};
 
 pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi::Result<T::Log> {
     let ethabi_log = RawLog {
@@ -35,7 +35,9 @@ impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
             value: None,
             data: Some(Bytes(payload)),
         };
-        let inner_future = web3::api::Eth::new(transport).call(request, None).from_err();
+        let inner_future = web3::api::Eth::new(transport)
+            .call(request, None)
+            .from_err();
         let future = Timer::default().timeout(inner_future, timeout);
         Self { future, function }
     }
@@ -57,13 +59,13 @@ pub struct AsyncTransaction<T: Transport> {
 
 impl<T: Transport> AsyncTransaction<T> {
     pub fn new<F: ContractFunction>(
-       transport: &T,
-       contract_address: Address,
-       authority_address: Address,
-       gas: U256,
-       gas_price: U256,
-       timeout: Duration,
-       f: F
+        transport: &T,
+        contract_address: Address,
+        authority_address: Address,
+        gas: U256,
+        gas_price: U256,
+        timeout: Duration,
+        f: F,
     ) -> Self {
         let request = TransactionRequest {
             from: authority_address,
@@ -75,7 +77,9 @@ impl<T: Transport> AsyncTransaction<T> {
             nonce: None,
             condition: None,
         };
-        let inner_future = web3::api::Eth::new(transport).send_transaction(request).from_err();
+        let inner_future = web3::api::Eth::new(transport)
+            .send_transaction(request)
+            .from_err();
         let future = Timer::default().timeout(inner_future, timeout);
         Self { future }
     }
@@ -160,8 +164,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio_core::reactor::Core;
     use futures;
+    use tokio_core::reactor::Core;
 
     #[test]
     fn test_stream_ext_last_empty() {

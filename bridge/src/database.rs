@@ -1,13 +1,12 @@
+use error::{Error, ErrorKind, ResultExt};
+use ethereum_types::U256;
+use helpers::{deserialize_u256, serialize_u256};
+use std::io::{Read, Write};
 /// the state of a bridge node process and ways to persist it
-
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, io, str};
-use std::io::{Read, Write};
-use web3::types::{Address, TransactionReceipt};
 use toml;
-use error::{Error, ErrorKind, ResultExt};
-use helpers::{deserialize_u256, serialize_u256};
-use ethereum_types::U256;
+use web3::types::{Address, TransactionReceipt};
 
 /// bridge process state
 #[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone)]
@@ -46,7 +45,9 @@ impl State {
             side_deployed_at_block: side_contract_deployment_receipt.block_number.as_u64(),
             last_main_to_side_sign_at_block: main_contract_deployment_receipt.block_number.as_u64(),
             last_side_to_main_sign_at_block: side_contract_deployment_receipt.block_number.as_u64(),
-            last_side_to_main_signatures_at_block: side_contract_deployment_receipt.block_number.as_u64(),
+            last_side_to_main_signatures_at_block: side_contract_deployment_receipt
+                .block_number
+                .as_u64(),
         }
     }
 }

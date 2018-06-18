@@ -1,18 +1,18 @@
-use helpers::{AsyncCall, AsyncTransaction};
-use contracts::home::HomeBridge;
-use error;
-use ethereum_types::{Address, U256, H256};
-use web3::types::Bytes;
-use web3::Transport;
-use web3::helpers::CallResult;
-use futures::{Future, Poll, Async};
 use config::Config;
+use contracts::home::HomeBridge;
 use database::State;
+use error;
+use ethabi::ContractFunction;
+use ethereum_types::{Address, H256, U256};
+use futures::{Async, Future, Poll};
+use helpers::{AsyncCall, AsyncTransaction};
+use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;
 use signature::Signature;
-use log_stream::{LogStream, LogStreamOptions};
 use std::time::Duration;
-use ethabi::ContractFunction;
+use web3::helpers::CallResult;
+use web3::types::Bytes;
+use web3::Transport;
 
 /// a more highlevel wrapper around the auto generated ethabi contract
 #[derive(Clone)]
@@ -40,7 +40,12 @@ impl<T: Transport> MainContract<T> {
     }
 
     pub fn call<F: ContractFunction>(&self, f: F) -> AsyncCall<T, F> {
-        AsyncCall::new(&self.transport, self.contract_address, self.request_timeout, f)
+        AsyncCall::new(
+            &self.transport,
+            self.contract_address,
+            self.request_timeout,
+            f,
+        )
     }
 
     // pub fn deploy
@@ -71,7 +76,7 @@ impl<T: Transport> MainContract<T> {
     pub fn relay_side_to_main(
         &self,
         message: &MessageToMain,
-        signatures: &Vec<Signature>
+        signatures: &Vec<Signature>,
     ) -> AsyncTransaction<T> {
         AsyncTransaction::new(
             &self.transport,
@@ -80,13 +85,12 @@ impl<T: Transport> MainContract<T> {
             self.submit_collected_signatures_gas,
             message.main_gas_price,
             self.request_timeout,
-            HomeBridge::default()
-                .functions()
-                .withdraw(
-                    signatures.iter().map(|x| x.v),
-                    signatures.iter().map(|x| x.r),
-                    signatures.iter().map(|x| x.s),
-                    message.to_bytes()
-                ))
+            HomeBridge::default().functions().withdraw(
+                signatures.iter().map(|x| x.v),
+                signatures.iter().map(|x| x.r),
+                signatures.iter().map(|x| x.s),
+                message.to_bytes(),
+            ),
+        )
     }
 }

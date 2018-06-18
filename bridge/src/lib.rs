@@ -17,12 +17,12 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+extern crate bridge_contracts as contracts;
+extern crate tiny_keccak;
 extern crate tokio_core;
 extern crate tokio_timer;
 extern crate toml;
 extern crate web3;
-extern crate bridge_contracts as contracts;
-extern crate tiny_keccak;
 
 #[macro_use]
 mod macros;
@@ -31,19 +31,19 @@ mod macros;
 #[macro_use]
 mod test;
 
-pub mod config;
 pub mod bridge;
+pub mod config;
 pub mod database;
+pub mod deploy;
 pub mod error;
+pub mod future_heap;
+pub mod helpers;
+pub mod main_contract;
+pub mod main_to_side_sign;
 pub mod relay_stream;
 pub mod side_contract;
-pub mod main_contract;
-pub mod deploy;
-pub mod main_to_side_sign;
 pub mod side_to_main_sign;
 pub mod side_to_main_signatures;
-pub mod helpers;
-pub mod future_heap;
 
 mod log_stream;
 pub use log_stream::{LogStream, LogStreamOptions};

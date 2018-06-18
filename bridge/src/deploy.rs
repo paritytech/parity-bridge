@@ -1,17 +1,17 @@
-use futures::{Future, Poll};
-use web3::Transport;
-use web3::confirm::{send_transaction_with_confirmation, SendTransactionWithConfirmation};
-use web3::types::{TransactionReceipt, TransactionRequest};
-use std::path::Path;
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use error::{self, ResultExt};
-use rustc_hex::ToHex;
 use config::Config;
 use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
+use error::{self, ResultExt};
 use ethabi::ContractFunction;
+use futures::{Future, Poll};
+use rustc_hex::ToHex;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+use web3::confirm::{send_transaction_with_confirmation, SendTransactionWithConfirmation};
+use web3::types::{TransactionReceipt, TransactionRequest};
+use web3::Transport;
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
@@ -73,7 +73,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                         self.home_connection.clone(),
                         tx_request,
                         self.config.home.poll_interval,
-                        self.config.home.required_confirmations as usize
+                        self.config.home.required_confirmations as usize,
                     );
 
                     info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.config.home.required_confirmations);
@@ -162,7 +162,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                         self.foreign_connection.clone(),
                         tx_request,
                         self.config.foreign.poll_interval,
-                        self.config.foreign.required_confirmations as usize
+                        self.config.foreign.required_confirmations as usize,
                     );
 
                     info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.config.foreign.required_confirmations);

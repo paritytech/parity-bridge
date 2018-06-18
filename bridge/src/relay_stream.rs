@@ -1,17 +1,16 @@
+use error::{self, ResultExt};
+use future_heap::FutureHeap;
+use futures::future::{join_all, JoinAll};
+use futures::{Async, Future, Poll, Stream};
+use log_stream::LogsInBlockRange;
+use std::collections::BTreeMap;
+use std::collections::HashSet;
 /// extraction of a pattern that occurred repeatedly in the codebase
 ///
 /// where a "relay" is the detection of an event on chain A
 /// followed by a transaction on chain B
-
 use web3::types::Log;
-use futures::{Async, Future, Poll, Stream};
-use futures::future::{join_all, JoinAll};
 use web3::Transport;
-use log_stream::LogsInBlockRange;
-use error::{self, ResultExt};
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-use future_heap::FutureHeap;
 
 /// something that can create relay futures from logs.
 /// to be called by `RelayStream` for every log.
@@ -30,7 +29,7 @@ pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>,
     log_to_future: F,
     /// maps the last block
     /// if all relays for this a block have finished yield that block
-    future_heap: FutureHeap<u64, JoinAll<Vec<F::Future>>>
+    future_heap: FutureHeap<u64, JoinAll<Vec<F::Future>>>,
 }
 
 impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> RelayStream<S, F> {
@@ -72,12 +71,14 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
                 // only after all Logs in the LogsInBlockRange have
                 // been relayed can we safely mark the number
                 // as done
-                let futures: Vec<_> = logs_in_block_range.logs
+                let futures: Vec<_> = logs_in_block_range
+                    .logs
                     .iter()
                     .map(|log| log_to_future.log_to_future(log))
                     .collect();
                 let joined_futures = join_all(futures);
-                self.future_heap.insert(logs_in_block_range.to, joined_futures);
+                self.future_heap
+                    .insert(logs_in_block_range.to, joined_futures);
             }
 
             let maybe_block_range_fully_relayed = try_maybe_stream!(

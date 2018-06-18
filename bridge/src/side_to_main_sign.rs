@@ -1,26 +1,27 @@
-/// concerning the collection of signatures on `side`
-
-use std::ops;
-use futures::{Async, Future, Poll, Stream};
-use futures::future::{join_all, FromErr, JoinAll};
-use tokio_timer::{Timeout, Timer};
-use web3::Transport;
-use web3;
-use web3::types::{Address, Bytes, H256, H520, Log, U256};
-use log_stream::LogStream;
 use contracts;
 use contracts::foreign::ForeignBridge;
 use error::{self, ResultExt};
+use futures::future::{join_all, FromErr, JoinAll};
+use futures::{Async, Future, Poll, Stream};
+use helpers::{AsyncCall, AsyncTransaction};
+use log_stream::LogStream;
 use message_to_main::{MessageToMain, MESSAGE_LENGTH};
-use web3::helpers::CallResult;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
-use helpers::{AsyncCall, AsyncTransaction};
-use web3::api::Namespace;
 use signature::Signature;
+/// concerning the collection of signatures on `side`
+use std::ops;
+use tokio_timer::{Timeout, Timer};
+use web3;
+use web3::api::Namespace;
+use web3::helpers::CallResult;
+use web3::types::{Address, Bytes, H256, H520, Log, U256};
+use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>),
+    AwaitCheckAlreadySigned(
+        AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>,
+    ),
     AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -31,7 +32,6 @@ pub struct SideToMainSign<T: Transport> {
     message: MessageToMain,
     state: State<T>,
 }
-
 
 impl<T: Transport> SideToMainSign<T> {
     pub fn new(log: &Log, side: SideContract<T>) -> Self {
@@ -83,9 +83,10 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     let inner_future = web3::api::Eth::new(self.side.transport.clone())
                         .sign(self.side.authority_address, Bytes(self.message.to_bytes()))
                         .from_err();
-                    let timeout_future = Timer::default().timeout(inner_future, self.side.request_timeout);
+                    let timeout_future =
+                        Timer::default().timeout(inner_future, self.side.request_timeout);
                     State::AwaitSignature(timeout_future)
-                },
+                }
                 State::AwaitSignature(ref mut future) => {
                     let signature_bytes = try_ready!(
                         future
@@ -99,7 +100,8 @@ impl<T: Transport> Future for SideToMainSign<T> {
 
                     let signature = Signature::from_bytes(&signature_bytes)?;
 
-                    let future = self.side.submit_side_to_main_signature(&self.message, &signature);
+                    let future = self.side
+                        .submit_side_to_main_signature(&self.message, &signature);
                     State::AwaitTransaction(future)
                 }
                 State::AwaitTransaction(ref mut future) => {
@@ -121,7 +123,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
 }
 
 pub struct LogToSideToMainSign<T: Transport> {
-    pub side: SideContract<T>
+    pub side: SideContract<T>,
 }
 
 /// from the options and a log a relay future can be made

@@ -1,16 +1,16 @@
 use futures::{Async, Poll, Stream};
 use web3::Transport;
 
-use database::{Database, State};
 use config::Config;
-use log_stream::{LogStream, LogStreamOptions};
-use error::{self, ResultExt};
 use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
-use relay_stream::RelayStream;
+use database::{Database, State};
+use error::{self, ResultExt};
+use log_stream::{LogStream, LogStreamOptions};
 use main_contract::MainContract;
-use side_contract::SideContract;
 use main_to_side_sign;
+use relay_stream::RelayStream;
+use side_contract::SideContract;
 use side_to_main_sign;
 use side_to_main_signatures;
 
@@ -23,7 +23,8 @@ use side_to_main_signatures;
 pub struct Bridge<T: Transport> {
     main_to_side_sign: RelayStream<LogStream<T>, main_to_side_sign::LogToMainToSideSign<T>>,
     side_to_main_sign: RelayStream<LogStream<T>, side_to_main_sign::LogToSideToMainSign<T>>,
-    side_to_main_signatures: RelayStream<LogStream<T>, side_to_main_signatures::LogToSideToMainSignatures<T>>,
+    side_to_main_signatures:
+        RelayStream<LogStream<T>, side_to_main_signatures::LogToSideToMainSignatures<T>>,
     state: State,
 }
 
@@ -37,22 +38,25 @@ impl<T: Transport> Bridge<T> {
             main_contract.main_to_side_log_stream(initial_state.last_main_to_side_sign_at_block),
             main_to_side_sign::LogToMainToSideSign {
                 side: side_contract.clone(),
-            }
+            },
         );
 
         let side_to_main_sign = RelayStream::new(
-            side_contract.side_to_main_sign_log_stream(initial_state.last_side_to_main_sign_at_block),
+            side_contract
+                .side_to_main_sign_log_stream(initial_state.last_side_to_main_sign_at_block),
             side_to_main_sign::LogToSideToMainSign {
                 side: side_contract.clone(),
-            }
+            },
         );
 
         let side_to_main_signatures = RelayStream::new(
-            side_contract.side_to_main_signatures_log_stream(initial_state.last_side_to_main_signatures_at_block),
+            side_contract.side_to_main_signatures_log_stream(
+                initial_state.last_side_to_main_signatures_at_block,
+            ),
             side_to_main_signatures::LogToSideToMainSignatures {
                 main: main_contract.clone(),
                 side: side_contract.clone(),
-            }
+            },
         );
 
         Self {

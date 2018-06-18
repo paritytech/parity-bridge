@@ -1,9 +1,8 @@
+use ethabi;
 /// ECDSA signatures:
 /// conversion from/to byte vectors.
 /// from/to v, r, s components.
-
 use ethereum_types::H256;
-use ethabi;
 
 use error::Error;
 
@@ -45,8 +44,8 @@ impl Signature {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::TestResult;
     use super::*;
+    use quickcheck::TestResult;
 
     quickcheck! {
         fn quickcheck_signature_roundtrips(v: u8, r_raw: Vec<u8>, s_raw: Vec<u8>) -> TestResult {

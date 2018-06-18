@@ -1,14 +1,14 @@
+use error::{self, ResultExt};
+use ethabi;
+use futures::future::FromErr;
+use futures::{Async, Future, Poll, Stream};
 use std::time::Duration;
 use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::helpers::CallResult;
-use futures::{Async, Future, Poll, Stream};
-use futures::future::FromErr;
+use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::Transport;
-use error::{self, ResultExt};
-use ethabi;
 
 fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
     let t: Vec<ethabi::Hash> = topic.into();
@@ -108,6 +108,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .poll()
                             .chain_err(|| "LogStream: polling interval failed")
                     );
+                    trace!("LogStream: polling last block number");
                     let future = web3::api::Eth::new(&self.transport).block_number();
                     let next_state = State::AwaitBlockNumber(
                         self.timer.timeout(future.from_err(), self.request_timeout),
@@ -118,8 +119,9 @@ impl<T: Transport> Stream for LogStream<T> {
                     let last_block = try_ready!(
                         future
                             .poll()
-                            .chain_err(|| "LogStream: fetching of block number failed")
+                            .chain_err(|| "LogStream: fetching of last block number failed")
                     ).as_u64();
+                    trace!("LogStream: fetched last block number {}", last_block);
                     // subtraction that saturates at zero
                     let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 
@@ -175,9 +177,9 @@ mod tests {
     use super::*;
     use contracts::home::HomeBridge;
     use helpers::StreamExt;
+    use rustc_hex::FromHex;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};
-    use rustc_hex::FromHex;
 
     #[test]
     fn test_log_stream_twice_no_logs() {

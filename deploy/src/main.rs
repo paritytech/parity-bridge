@@ -10,16 +10,16 @@ extern crate serde_derive;
 extern crate tokio_core;
 extern crate web3;
 
-use std::{env, fs};
-use std::path::PathBuf;
 use docopt::Docopt;
+use std::path::PathBuf;
+use std::{env, fs};
 use tokio_core::reactor::Core;
 use web3::transports::http::Http;
 
-use bridge::deploy::{DeployForeign, DeployHome};
 use bridge::config::Config;
-use bridge::error::{self, ResultExt};
 use bridge::database::State;
+use bridge::deploy::{DeployForeign, DeployHome};
+use bridge::error::{self, ResultExt};
 
 const MAX_PARALLEL_REQUESTS: usize = 10;
 

@@ -10,17 +10,17 @@ extern crate serde_derive;
 extern crate tokio_core;
 extern crate web3;
 
-use std::env;
-use std::path::PathBuf;
 use docopt::Docopt;
 use futures::{future, Stream};
+use std::env;
+use std::path::PathBuf;
 use tokio_core::reactor::Core;
 use web3::transports::http::Http;
 
 use bridge::bridge::Bridge;
 use bridge::config::Config;
-use bridge::error::{self, ResultExt};
 use bridge::database::{Database, TomlFileDatabase};
+use bridge::error::{self, ResultExt};
 use bridge::helpers::StreamExt;
 use bridge::main_contract::MainContract;
 use bridge::side_contract::SideContract;
@@ -113,21 +113,15 @@ Options:
     info!("Reading initial state from database");
     let initial_state = database.read();
 
-    let main_contract = MainContract::new(
-        main_transport.clone(),
-        &config,
-        &initial_state);
+    let main_contract = MainContract::new(main_transport.clone(), &config, &initial_state);
 
-    let side_contract = SideContract::new(
-        main_transport.clone(),
-        &config,
-        &initial_state);
+    let side_contract = SideContract::new(main_transport.clone(), &config, &initial_state);
 
     let bridge_stream = Bridge::new(initial_state, main_contract, side_contract);
     info!("Listening to events");
     let persisted_bridge_stream = bridge_stream.and_then(|state| {
         database.write(&state)?;
-        info!("state change: {}", state);
+        // info!("state change: {}", state);
         Ok(())
     });
 
