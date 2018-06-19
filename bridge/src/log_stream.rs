@@ -298,7 +298,13 @@ mod tests {
                         topics: deposit_topic.into(),
                         data: Bytes("000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap()),
                         transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
-                        ..Default::default()
+                        block_hash: None,
+                        block_number: None,
+                        transaction_index: None,
+                        log_index: None,
+                        transaction_log_index: None,
+                        log_type: None,
+                        removed: None,
                     }
                 ] },
             ]);
