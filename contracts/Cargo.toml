@@ -7,3 +7,6 @@ authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 ethabi = { git = "https://github.com/paritytech/ethabi" }
 ethabi-derive = { git = "https://github.com/paritytech/ethabi" }
 ethabi-contract = { git = "https://github.com/paritytech/ethabi" }
+
+[build-dependencies]
+solc = { git = "https://github.com/snd/rust_solc" }
