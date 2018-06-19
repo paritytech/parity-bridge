@@ -195,11 +195,10 @@ mod tests {
                 res => json!("0x1011");
             "eth_getLogs" =>
                 req => json!([{
-                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "address": "0x0000000000000000000000000000000000000001",
                     "fromBlock": "0x4",
-                    "limit": null,
                     "toBlock": "0x1005",
-                    "topics": [[deposit_topic], null, null, null]
+                    "topics": [deposit_topic]
                 }]),
                 res => json!([]);
             "eth_blockNumber" =>
@@ -207,11 +206,10 @@ mod tests {
                 res => json!("0x1012");
             "eth_getLogs" =>
                 req => json!([{
-                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "address": "0x0000000000000000000000000000000000000001",
                     "fromBlock": "0x1006",
-                    "limit": null,
                     "toBlock": "0x1006",
-                    "topics": [[deposit_topic], null, null, null]
+                    "topics": [deposit_topic]
                 }]),
                 res => json!([]);
         );
@@ -261,11 +259,10 @@ mod tests {
                 res => json!("0x1011");
             "eth_getLogs" =>
                 req => json!([{
-                    "address": ["0x0000000000000000000000000000000000000001"],
+                    "address": "0x0000000000000000000000000000000000000001",
                     "fromBlock": "0x4",
-                    "limit": null,
                     "toBlock": "0x1005",
-                    "topics": [[deposit_topic], null, null, null]
+                    "topics": [deposit_topic],
                 }]),
                 res => json!([{
                     "address": "0x0000000000000000000000000000000000000cc1",
