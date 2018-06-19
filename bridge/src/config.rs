@@ -303,8 +303,8 @@ home_deploy = { gas = 20 }
         };
 
         expected.txs.home_deploy = TransactionConfig {
-            gas: 20,
-            gas_price: 0,
+            gas: 20.into(),
+            gas_price: 0.into(),
         };
 
         let config = Config::load_from_str(toml).unwrap();
