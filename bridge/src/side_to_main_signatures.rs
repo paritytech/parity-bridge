@@ -2,22 +2,17 @@ use contracts;
 use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
 use error::{self, ResultExt};
-use ethabi::{self, RawLog};
-use futures::future::{join_all, FromErr, Join, JoinAll};
+use futures::future::JoinAll;
 use futures::{Async, Future, Poll, Stream};
 use helpers;
 use helpers::{AsyncCall, AsyncTransaction};
-use log_stream::LogStream;
 use main_contract::MainContract;
 use message_to_main::MessageToMain;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
 use signature::Signature;
-use tokio_timer::Timeout;
-use web3;
 use web3::api::Namespace;
-use web3::helpers::CallResult;
-use web3::types::{Address, Bytes, H256, Log, TransactionReceipt, U256};
+use web3::types::{H256, Log};
 use web3::Transport;
 
 /// state of the state machine that is the future responsible for

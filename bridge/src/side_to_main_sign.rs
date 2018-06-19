@@ -1,16 +1,13 @@
+/// concerning the collection of signatures on `side`
 use contracts;
-use contracts::foreign::ForeignBridge;
 use error::{self, ResultExt};
-use futures::future::{join_all, FromErr, JoinAll};
+use futures::future::FromErr;
 use futures::{Async, Future, Poll, Stream};
 use helpers::{AsyncCall, AsyncTransaction};
-use log_stream::LogStream;
 use message_to_main::{MessageToMain, MESSAGE_LENGTH};
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
 use signature::Signature;
-/// concerning the collection of signatures on `side`
-use std::ops;
 use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;

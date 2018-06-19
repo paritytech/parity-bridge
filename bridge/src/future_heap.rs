@@ -119,8 +119,6 @@ impl<O: Ord + Clone, F: Future> Stream for FutureHeap<O, F> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_future_heap() {
         // TODO test multiple ready at same time

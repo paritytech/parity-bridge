@@ -4,14 +4,13 @@ use contracts::foreign::{self, ForeignBridge};
 use database::State;
 use ethabi::ContractFunction;
 use futures::future::{join_all, JoinAll};
-use futures::{Async, Future, Poll, Stream};
+use futures::{Future, Stream};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;
 use signature::Signature;
 use std::time::Duration;
-use web3::helpers::CallResult;
-use web3::types::{Address, Bytes, H256, Log, U256};
+use web3::types::{Address, H256, U256};
 use web3::Transport;
 
 /// a more highlevel wrapper around the auto generated ethabi contract

@@ -1,5 +1,4 @@
 use contracts;
-use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
 use error::{self, ResultExt};
 use futures::{Async, Future, Poll, Stream};
