@@ -2,17 +2,13 @@ use contracts;
 use contracts::foreign::ForeignBridge;
 use contracts::home::HomeBridge;
 use error::{self, ResultExt};
-use ethabi::RawLog;
-use futures::future::{join_all, FromErr, JoinAll};
 use futures::{Async, Future, Poll, Stream};
 use helpers::{self, AsyncCall, AsyncTransaction};
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
-use tokio_timer::{Timeout, Timer};
 use web3::api::Namespace;
-use web3::helpers::CallResult;
-use web3::types::{Address, Bytes, H256, Log, TransactionReceipt, U256};
-use web3::{self, Transport};
+use web3::types::{Address, H256, Log, U256};
+use web3::Transport;
 
 enum State<T: Transport> {
     AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput>),

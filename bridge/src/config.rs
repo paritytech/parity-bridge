@@ -3,7 +3,7 @@ use ethereum_types::U256;
 use rustc_hex::FromHex;
 use std::fs;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Duration;
 use toml;
 use web3::types::{Address, Bytes};

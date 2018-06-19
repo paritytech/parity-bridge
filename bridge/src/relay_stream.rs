@@ -1,16 +1,13 @@
+/// extraction of a pattern that occurred repeatedly in the codebase
+///
+/// where a "relay" is the detection of an event on chain A
+/// followed by a transaction on chain B
 use error::{self, ResultExt};
 use future_heap::FutureHeap;
 use futures::future::{join_all, JoinAll};
 use futures::{Async, Future, Poll, Stream};
 use log_stream::LogsInBlockRange;
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-/// extraction of a pattern that occurred repeatedly in the codebase
-///
-/// where a "relay" is the detection of an event on chain A
-/// followed by a transaction on chain B
 use web3::types::Log;
-use web3::Transport;
 
 /// something that can create relay futures from logs.
 /// to be called by `RelayStream` for every log.

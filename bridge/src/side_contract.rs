@@ -2,7 +2,6 @@ use config::Config;
 use contracts;
 use contracts::foreign::{self, ForeignBridge};
 use database::State;
-use error::{self, ResultExt};
 use ethabi::ContractFunction;
 use futures::future::{join_all, JoinAll};
 use futures::{Async, Future, Poll, Stream};

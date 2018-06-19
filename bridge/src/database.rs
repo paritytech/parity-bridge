@@ -1,6 +1,4 @@
 use error::{Error, ErrorKind, ResultExt};
-use ethereum_types::U256;
-use helpers::{deserialize_u256, serialize_u256};
 use std::io::{Read, Write};
 /// the state of a bridge node process and ways to persist it
 use std::path::{Path, PathBuf};

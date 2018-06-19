@@ -1,12 +1,9 @@
 use futures::{Async, Poll, Stream};
 use web3::Transport;
 
-use config::Config;
-use contracts::foreign::ForeignBridge;
-use contracts::home::HomeBridge;
-use database::{Database, State};
+use database::State;
 use error::{self, ResultExt};
-use log_stream::{LogStream, LogStreamOptions};
+use log_stream::LogStream;
 use main_contract::MainContract;
 use main_to_side_sign;
 use relay_stream::RelayStream;
