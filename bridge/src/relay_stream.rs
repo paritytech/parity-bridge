@@ -81,7 +81,7 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
             let maybe_block_range_fully_relayed = try_maybe_stream!(
                 self.future_heap
                     .poll()
-                    .chain_err(|| "RelayStream: fetching logs failed")
+                    .chain_err(|| "RelayStream: relaying logs failed")
             );
 
             if let Some((last_block, _)) = maybe_block_range_fully_relayed {
