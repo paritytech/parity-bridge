@@ -259,7 +259,7 @@ accounts = [
 required_signatures = 2
 
 [transactions]
-home_deploy = { gas = 20 }
+home_deploy = { gas = "20", gas_price = "0" }
 "#;
 
         let mut expected = Config {
