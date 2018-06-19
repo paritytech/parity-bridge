@@ -60,7 +60,8 @@ impl Transport for MockTransport {
         );
         assert_eq!(
             self.expected_requests[current_request_index].params, params,
-            "invalid method params"
+            "invalid method params at request #{}",
+            current_request_index
         );
         self.actual_requests
             .as_ref()
