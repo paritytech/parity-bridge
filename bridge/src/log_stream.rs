@@ -10,21 +10,19 @@ use web3::helpers::CallResult;
 use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::Transport;
 
-fn web3_topic(topic: ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
-    let t: Vec<ethabi::Hash> = topic.into();
-    // parity does not conform to an ethereum spec
-    if t.is_empty() {
-        None
-    } else {
-        Some(t)
+fn ethabi_topic_to_web3(topic: &ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
+    match topic {
+        ethabi::Topic::Any => None,
+        ethabi::Topic::OneOf(options) => Some(options.clone()),
+        ethabi::Topic::This(hash) => Some(vec![hash.clone()]),
     }
 }
 
-fn web3_filter(filter: ethabi::TopicFilter, address: Address) -> FilterBuilder {
-    let t0 = web3_topic(filter.topic0);
-    let t1 = web3_topic(filter.topic1);
-    let t2 = web3_topic(filter.topic2);
-    let t3 = web3_topic(filter.topic3);
+fn filter_to_builder(filter: &ethabi::TopicFilter, address: Address) -> FilterBuilder {
+    let t0 = ethabi_topic_to_web3(&filter.topic0);
+    let t1 = ethabi_topic_to_web3(&filter.topic1);
+    let t2 = ethabi_topic_to_web3(&filter.topic2);
+    let t3 = ethabi_topic_to_web3(&filter.topic3);
     FilterBuilder::default()
         .address(vec![address])
         .topics(t0, t1, t2, t3)
@@ -74,13 +72,18 @@ pub struct LogStream<T: Transport> {
     timer: Timer,
     poll_interval: Interval,
     state: State<T>,
-    filter: FilterBuilder,
+    filter_builder: FilterBuilder,
+    topic: Vec<H256>,
 }
 
 impl<T: Transport> LogStream<T> {
     /// creates a `LogStream`
     pub fn new(options: LogStreamOptions<T>) -> Self {
         let timer = Timer::default();
+
+        let topic = ethabi_topic_to_web3(&options.filter.topic0)
+            .expect("filter must have at least 1 topic. q.e.d.");
+        let filter_builder = filter_to_builder(&options.filter, options.contract_address);
         LogStream {
             request_timeout: options.request_timeout,
             confirmations: options.confirmations,
@@ -89,7 +92,8 @@ impl<T: Transport> LogStream<T> {
             last_checked_block: options.after,
             timer: timer,
             state: State::AwaitInterval,
-            filter: web3_filter(options.filter, options.contract_address),
+            filter_builder,
+            topic,
         }
     }
 }
@@ -127,7 +131,7 @@ impl<T: Transport> Stream for LogStream<T> {
 
                     let next_state = if self.last_checked_block < last_confirmed_block {
                         let from = self.last_checked_block + 1;
-                        let filter = self.filter
+                        let filter = self.filter_builder
                             .clone()
                             .from_block(from.into())
                             .to_block(last_confirmed_block.into())
