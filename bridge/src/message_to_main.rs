@@ -120,13 +120,13 @@ mod test {
             };
 
             let bytes = message.to_bytes();
-            assert_eq!(message, MessageToMain::from_bytes(bytes.as_slice()));
+            assert_eq!(message, MessageToMain::from_bytes(bytes.as_slice()).unwrap());
 
             let payload = message.to_payload();
             let mut tokens = ethabi::decode(&[ethabi::ParamType::Bytes], payload.as_slice())
                 .unwrap();
             let decoded = tokens.pop().unwrap().to_bytes().unwrap();
-            assert_eq!(message, MessageToMain::from_bytes(decoded.as_slice()));
+            assert_eq!(message, MessageToMain::from_bytes(decoded.as_slice()).unwrap());
 
             TestResult::passed()
         }
