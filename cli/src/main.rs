@@ -118,7 +118,7 @@ Options:
     let side_contract = SideContract::new(main_transport.clone(), &config, &initial_state);
 
     let bridge_stream = Bridge::new(initial_state, main_contract, side_contract);
-    info!("Listening to events");
+    info!("Started polling logs");
     let persisted_bridge_stream = bridge_stream.and_then(|state| {
         database.write(&state)?;
         // info!("state change: {}", state);
