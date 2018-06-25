@@ -60,7 +60,7 @@ impl<T: Transport> Future for MainToSideSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitAlreadySigned(ref mut future) => {
-                    let has_already_signed = try_ready!(future.poll());
+                    let has_already_signed = try_ready!(future.poll().chain_err(|| "MainToSideSign: failed to check if already signed"));
                     if has_already_signed {
                         info!("{:?} - DONE - already signed", self.main_tx_hash);
                         return Ok(Async::Ready(None));

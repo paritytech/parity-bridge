@@ -110,9 +110,9 @@ impl<T: Transport> Stream for LogStream<T> {
                     let _ = try_stream!(
                         self.poll_interval
                             .poll()
-                            .chain_err(|| "LogStream: polling interval failed")
+                            .chain_err(|| format!("LogStream (topic: #{:?}): polling interval failed", self.topic))
                     );
-                    trace!("LogStream: polling last block number");
+                    info!("LogStream (topic: #{:?}): polling last block number", self.topic);
                     let future = web3::api::Eth::new(&self.transport).block_number();
                     let next_state = State::AwaitBlockNumber(
                         self.timer.timeout(future.from_err(), self.request_timeout),
@@ -125,7 +125,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .poll()
                             .chain_err(|| "LogStream: fetching of last block number failed")
                     ).as_u64();
-                    trace!("LogStream: fetched last block number {}", last_block);
+                    info!("LogStream: fetched last block number {}", last_block);
                     // subtraction that saturates at zero
                     let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 
@@ -138,13 +138,14 @@ impl<T: Transport> Stream for LogStream<T> {
                             .build();
                         let future = web3::api::Eth::new(&self.transport).logs(filter);
 
+                        info!("LogStream: fetching logs in blocks {} to {}", from, last_confirmed_block);
                         State::AwaitLogs {
                             from: from,
                             to: last_confirmed_block,
                             future: self.timer.timeout(future.from_err(), self.request_timeout),
                         }
                     } else {
-                        trace!("LogStream: no blocks confirmed since we last checked. waiting some more");
+                        info!("LogStream: no blocks confirmed since we last checked. waiting some more");
                         State::AwaitInterval
                     };
 
@@ -160,6 +161,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .poll()
                             .chain_err(|| "LogStream: polling web3 logs failed")
                     );
+                    info!("LogStream (topic: {:?}): fetched {} logs from {} to {}", self.topic, logs.len(), from, to);
                     let log_range_to_yield = LogsInBlockRange { from, to, logs };
 
                     self.last_checked_block = to;
