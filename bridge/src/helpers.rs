@@ -48,8 +48,14 @@ impl<T: Transport, F: ContractFunction> Future for AsyncCall<T, F> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let encoded = try_ready!(self.future.poll().chain_err(|| "failed to poll inner web3 CallResult future"));
-        let decoded = self.function.output(encoded.0.clone()).chain_err(|| format!("failed to decode response {:?}", encoded))?;
+        let encoded = try_ready!(
+            self.future
+                .poll()
+                .chain_err(|| "failed to poll inner web3 CallResult future")
+        );
+        let decoded = self.function
+            .output(encoded.0.clone())
+            .chain_err(|| format!("failed to decode response {:?}", encoded))?;
         Ok(Async::Ready(decoded))
     }
 }

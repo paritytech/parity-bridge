@@ -107,12 +107,14 @@ impl<T: Transport> Stream for LogStream<T> {
             let (next_state, value_to_yield) = match self.state {
                 State::AwaitInterval => {
                     // wait until `interval` has passed
-                    let _ = try_stream!(
-                        self.poll_interval
-                            .poll()
-                            .chain_err(|| format!("LogStream (topic: #{:?}): polling interval failed", self.topic))
+                    let _ = try_stream!(self.poll_interval.poll().chain_err(|| format!(
+                        "LogStream (topic: #{:?}): polling interval failed",
+                        self.topic
+                    )));
+                    info!(
+                        "LogStream (topic: #{:?}): polling last block number",
+                        self.topic
                     );
-                    info!("LogStream (topic: #{:?}): polling last block number", self.topic);
                     let future = web3::api::Eth::new(&self.transport).block_number();
                     let next_state = State::AwaitBlockNumber(
                         self.timer.timeout(future.from_err(), self.request_timeout),
@@ -138,7 +140,10 @@ impl<T: Transport> Stream for LogStream<T> {
                             .build();
                         let future = web3::api::Eth::new(&self.transport).logs(filter);
 
-                        info!("LogStream: fetching logs in blocks {} to {}", from, last_confirmed_block);
+                        info!(
+                            "LogStream: fetching logs in blocks {} to {}",
+                            from, last_confirmed_block
+                        );
                         State::AwaitLogs {
                             from: from,
                             to: last_confirmed_block,
@@ -161,7 +166,13 @@ impl<T: Transport> Stream for LogStream<T> {
                             .poll()
                             .chain_err(|| "LogStream: polling web3 logs failed")
                     );
-                    info!("LogStream (topic: {:?}): fetched {} logs from {} to {}", self.topic, logs.len(), from, to);
+                    info!(
+                        "LogStream (topic: {:?}): fetched {} logs from {} to {}",
+                        self.topic,
+                        logs.len(),
+                        from,
+                        to
+                    );
                     let log_range_to_yield = LogsInBlockRange { from, to, logs };
 
                     self.last_checked_block = to;
