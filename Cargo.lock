@@ -245,6 +245,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "error-chain"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "ethabi"
 version = "5.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -261,9 +266,9 @@ dependencies = [
 [[package]]
 name = "ethabi"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#dfb6128cad11784b472edcae8f8614186a1d3a0d"
+source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
 dependencies = [
- "error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hex 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.66 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -275,12 +280,12 @@ dependencies = [
 [[package]]
 name = "ethabi-contract"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#dfb6128cad11784b472edcae8f8614186a1d3a0d"
+source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
 
 [[package]]
 name = "ethabi-derive"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#dfb6128cad11784b472edcae8f8614186a1d3a0d"
+source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
 dependencies = [
  "ethabi 6.0.0 (git+https://github.com/paritytech/ethabi)",
  "heck 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1592,6 +1597,7 @@ dependencies = [
 "checksum env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3ddf21e73e016298f5cb37d6ef8e8da8e39f91f9ec8b0df44b7deb16a9f8cd5b"
 "checksum env_logger 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)" = "0e6e40ebb0e66918a37b38c7acab4e10d299e0463fe2af5d29b9cc86710cfd2a"
 "checksum error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ff511d5dc435d703f4971bc399647c9bc38e20cb41452e3b9feb4765419ed3f3"
+"checksum error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "07e791d3be96241c77c43846b665ef1384606da2cd2a48730abe606a12906e02"
 "checksum ethabi 5.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05e33a914b94b763f0a92333e4e5c95c095563f06ef7d6b295b3d3c2cf31e21f"
 "checksum ethabi 6.0.0 (git+https://github.com/paritytech/ethabi)" = "<none>"
 "checksum ethabi-contract 6.0.0 (git+https://github.com/paritytech/ethabi)" = "<none>"
