@@ -1,5 +1,4 @@
 use contracts;
-use contracts::home::HomeBridge;
 use error::{self, ResultExt};
 use futures::{Async, Future, Poll, Stream};
 use helpers::{self, AsyncCall, AsyncTransaction};
@@ -33,7 +32,7 @@ impl<T: Transport> MainToSideSign<T> {
             main_tx_hash
         );
 
-        let log = helpers::parse_log(&HomeBridge::default().events().deposit(), raw_log)
+        let log = helpers::parse_log(&contracts::home::events::deposit(), raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
 
         let recipient = log.recipient;

@@ -1,6 +1,4 @@
 use contracts;
-use contracts::foreign::ForeignBridge;
-use contracts::home::HomeBridge;
 use error::{self, ResultExt};
 use futures::future::JoinAll;
 use futures::{Async, Future, Poll, Stream};
@@ -45,10 +43,8 @@ impl<T: Transport> SideToMainSignatures<T> {
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let log = helpers::parse_log(
-            &ForeignBridge::default().events().collected_signatures(),
-            raw_log,
-        ).expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
+        let log = helpers::parse_log(&contracts::foreign::events::collected_signatures(), raw_log)
+            .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
         let state = if log.authority_responsible_for_relay != main.authority_address {
             info!(
@@ -60,13 +56,7 @@ impl<T: Transport> SideToMainSignatures<T> {
             State::NotResponsible
         } else {
             info!("{:?} - step 1/3 - about to fetch message", side_tx_hash,);
-            State::AwaitMessage(
-                side.call(
-                    ForeignBridge::default()
-                        .functions()
-                        .message(log.message_hash),
-                ),
-            )
+            State::AwaitMessage(side.call(contracts::foreign::functions::message(log.message_hash)))
         };
 
         Self {
@@ -96,11 +86,8 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     );
                     let message = MessageToMain::from_bytes(&message_bytes)?;
                     State::AwaitIsRelayed {
-                        future: self.main.call(
-                            HomeBridge::default()
-                                .functions()
-                                .withdraws(message.side_tx_hash),
-                        ),
+                        future: self.main
+                            .call(contracts::home::functions::withdraws(message.side_tx_hash)),
                         message,
                     }
                 }

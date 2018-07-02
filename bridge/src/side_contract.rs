@@ -1,6 +1,5 @@
 use config::Config;
 use contracts;
-use contracts::foreign::{self, ForeignBridge};
 use database::State;
 use ethabi::ContractFunction;
 use futures::future::{join_all, JoinAll};
@@ -61,9 +60,10 @@ impl<T: Transport> SideContract<T> {
         message: &MessageToMain,
     ) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput> {
         self.call(
-            ForeignBridge::default()
-                .functions()
-                .has_authority_signed_side_to_main(self.authority_address, message.keccak256()),
+            contracts::foreign::functions::has_authority_signed_side_to_main(
+                self.authority_address,
+                message.keccak256(),
+            ),
         )
     }
 
@@ -74,14 +74,12 @@ impl<T: Transport> SideContract<T> {
         main_tx_hash: H256,
     ) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput> {
         self.call(
-            ForeignBridge::default()
-                .functions()
-                .has_authority_signed_main_to_side(
-                    self.authority_address,
-                    recipient,
-                    value,
-                    main_tx_hash,
-                ),
+            contracts::foreign::functions::has_authority_signed_main_to_side(
+                self.authority_address,
+                recipient,
+                value,
+                main_tx_hash,
+            ),
         )
     }
 
@@ -98,15 +96,13 @@ impl<T: Transport> SideContract<T> {
             self.sign_main_to_side_gas,
             self.sign_main_to_side_gas_price,
             self.request_timeout,
-            ForeignBridge::default()
-                .functions()
-                .deposit(recipient, value, breakout_tx_hash),
+            contracts::foreign::functions::deposit(recipient, value, breakout_tx_hash),
         )
     }
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: ForeignBridge::default().events().withdraw().create_filter(),
+            filter: contracts::foreign::events::withdraw().create_filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -118,10 +114,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_signatures_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: ForeignBridge::default()
-                .events()
-                .collected_signatures()
-                .create_filter(),
+            filter: contracts::foreign::events::collected_signatures().create_filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -143,24 +136,24 @@ impl<T: Transport> SideContract<T> {
             self.submit_side_to_main_gas,
             message.main_gas_price,
             self.request_timeout,
-            ForeignBridge::default()
-                .functions()
-                .submit_signature(signature.to_bytes(), message.to_bytes()),
+            contracts::foreign::functions::submit_signature(
+                signature.to_bytes(),
+                message.to_bytes(),
+            ),
         )
     }
 
     pub fn get_signatures(
         &self,
         message_hash: H256,
-    ) -> JoinAll<Vec<AsyncCall<T, foreign::SignatureWithInput>>> {
+    ) -> JoinAll<Vec<AsyncCall<T, contracts::foreign::SignatureWithInput>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
             .map(|index| {
-                self.call(
-                    ForeignBridge::default()
-                        .functions()
-                        .signature(message_hash, index),
-                )
+                self.call(contracts::foreign::functions::signature(
+                    message_hash,
+                    index,
+                ))
             })
             .collect::<Vec<_>>();
         join_all(futures)

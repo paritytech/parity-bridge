@@ -227,7 +227,6 @@ fn test_basic_deposit_then_withdraw() {
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
     ).expect("failed to connect to home at http://localhost:8550");
-    let home = bridge_contracts::home::HomeBridge::default();
     let home_eth = web3::api::Eth::new(home_transport.clone());
 
     // connect to foreign
@@ -236,14 +235,13 @@ fn test_basic_deposit_then_withdraw() {
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
     ).expect("failed to connect to foreign at http://localhost:8551");
-    let foreign = bridge_contracts::foreign::ForeignBridge::default();
 
     let response = event_loop
         .run(AsyncCall::new(
             &home_transport,
             home_contract_address.into(),
             TIMEOUT,
-            home.functions().estimated_gas_cost_of_withdraw(),
+            bridge_contracts::home::functions::estimated_gas_cost_of_withdraw(),
         ))
         .unwrap();
 
@@ -327,7 +325,7 @@ fn test_basic_deposit_then_withdraw() {
             &foreign_transport,
             foreign_contract_address.into(),
             TIMEOUT,
-            foreign.functions().total_supply(),
+            bridge_contracts::foreign::functions::total_supply(),
         ))
         .unwrap();
 
@@ -342,7 +340,7 @@ fn test_basic_deposit_then_withdraw() {
             &foreign_transport,
             foreign_contract_address.into(),
             TIMEOUT,
-            foreign.functions().balance_of(Address::from(user_address)),
+            bridge_contracts::foreign::functions::balance_of(Address::from(user_address)),
         ))
         .unwrap();
 
@@ -355,14 +353,11 @@ fn test_basic_deposit_then_withdraw() {
     println!("\nconfirmed that deposit reached foreign\n");
 
     println!("\nuser executes ForeignBridge.transferHomeViaRelay\n");
-    let transfer_payload = foreign
-        .functions()
-        .transfer_home_via_relay(
-            Address::from(receiver_address),
-            U256::from(1000000000),
-            U256::from(1000),
-        )
-        .encoded();
+    let transfer_payload = bridge_contracts::foreign::functions::transfer_home_via_relay(
+        Address::from(receiver_address),
+        U256::from(1000000000),
+        U256::from(1000),
+    ).encoded();
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &foreign_transport,

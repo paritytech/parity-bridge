@@ -1,6 +1,5 @@
 use config::Config;
-use contracts::foreign::ForeignBridge;
-use contracts::home::HomeBridge;
+use contracts;
 use error::{self, ResultExt};
 use ethabi::ContractFunction;
 use futures::{Future, Poll};
@@ -49,7 +48,7 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = HomeBridge::default().constructor(
+                    let data = contracts::home::constructor(
                         self.config.home.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),
@@ -140,7 +139,7 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = ForeignBridge::default().constructor(
+                    let data = contracts::foreign::constructor(
                         self.config.foreign.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),

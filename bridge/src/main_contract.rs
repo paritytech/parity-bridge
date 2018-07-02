@@ -1,5 +1,5 @@
 use config::Config;
-use contracts::home::HomeBridge;
+use contracts;
 use database::State;
 use ethabi::ContractFunction;
 use ethereum_types::{Address, U256};
@@ -59,7 +59,7 @@ impl<T: Transport> MainContract<T> {
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: HomeBridge::default().events().deposit().create_filter(),
+            filter: contracts::home::events::deposit().create_filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -82,7 +82,7 @@ impl<T: Transport> MainContract<T> {
             self.submit_collected_signatures_gas,
             message.main_gas_price,
             self.request_timeout,
-            HomeBridge::default().functions().withdraw(
+            contracts::home::functions::withdraw(
                 signatures.iter().map(|x| x.v),
                 signatures.iter().map(|x| x.r),
                 signatures.iter().map(|x| x.s),

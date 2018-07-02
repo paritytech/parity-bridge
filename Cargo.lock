@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "ethabi"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
+source = "git+https://github.com/paritytech/ethabi#ad77c92ec7cf735d702f19915c3a4cd6c83a4cb4"
 dependencies = [
  "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -280,12 +280,12 @@ dependencies = [
 [[package]]
 name = "ethabi-contract"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
+source = "git+https://github.com/paritytech/ethabi#ad77c92ec7cf735d702f19915c3a4cd6c83a4cb4"
 
 [[package]]
 name = "ethabi-derive"
 version = "6.0.0"
-source = "git+https://github.com/paritytech/ethabi#66b82a737e0127e9493ddf373cc432449d60dc90"
+source = "git+https://github.com/paritytech/ethabi#ad77c92ec7cf735d702f19915c3a4cd6c83a4cb4"
 dependencies = [
  "ethabi 6.0.0 (git+https://github.com/paritytech/ethabi)",
  "heck 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
