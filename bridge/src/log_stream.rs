@@ -167,7 +167,7 @@ impl<T: Transport> Stream for LogStream<T> {
                             .chain_err(|| "LogStream: polling web3 logs failed")
                     );
                     info!(
-                        "LogStream (topic: {:?}): fetched {} logs from {} to {}",
+                        "LogStream (topic: {:?}): fetched {} logs from block {} to block {}",
                         self.topic,
                         logs.len(),
                         from,
