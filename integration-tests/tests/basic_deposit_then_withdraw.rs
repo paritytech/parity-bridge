@@ -192,10 +192,12 @@ fn test_basic_deposit_then_withdraw() {
 
     // deploy bridge contracts
 
+    println!("\ndeploying contracts\n");
     assert!(
         Command::new("env")
             .arg("RUST_BACKTRACE=1")
             .arg("../target/debug/parity-bridge-deploy")
+            .env("RUST_LOG", "info")
             .arg("--config")
             .arg("bridge_config.toml")
             .arg("--database")
