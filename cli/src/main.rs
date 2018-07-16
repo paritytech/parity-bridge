@@ -132,7 +132,7 @@ Options:
         )
         })?;
 
-    let side_contract = SideContract::new(main_transport.clone(), &config, &initial_state);
+    let side_contract = SideContract::new(side_transport.clone(), &config, &initial_state);
     event_loop
         .run(side_contract.is_side_contract())
         .chain_err(|| {
