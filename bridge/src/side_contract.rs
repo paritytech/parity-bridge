@@ -102,7 +102,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::foreign::events::withdraw().create_filter(),
+            filter: contracts::foreign::events::withdraw().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -114,7 +114,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_signatures_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::foreign::events::collected_signatures().create_filter(),
+            filter: contracts::foreign::events::collected_signatures().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,

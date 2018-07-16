@@ -192,7 +192,7 @@ impl<T: Transport> Stream for LogStream<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use contracts::home::HomeBridge;
+    use contracts;
     use helpers::StreamExt;
     use rustc_hex::FromHex;
     use tokio_core::reactor::Core;
@@ -200,10 +200,8 @@ mod tests {
 
     #[test]
     fn test_log_stream_twice_no_logs() {
-        let deposit_topic = HomeBridge::default()
-            .events()
-            .deposit()
-            .create_filter()
+        let deposit_topic = contracts::home::events::deposit()
+            .filter()
             .topic0;
 
         let transport = mock_transport!(
@@ -238,7 +236,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: HomeBridge::default().events().deposit().create_filter(),
+            filter: contracts::home::events::deposit().filter(),
         });
 
         let mut event_loop = Core::new().unwrap();
@@ -264,10 +262,8 @@ mod tests {
 
     #[test]
     fn test_log_stream_once_one_log() {
-        let deposit_topic = HomeBridge::default()
-            .events()
-            .deposit()
-            .create_filter()
+        let deposit_topic = contracts::home::events::deposit()
+            .filter()
             .topic0;
 
         let transport = mock_transport!(
@@ -297,7 +293,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: HomeBridge::default().events().deposit().create_filter(),
+            filter: contracts::home::events::deposit().filter(),
         });
 
         let mut event_loop = Core::new().unwrap();

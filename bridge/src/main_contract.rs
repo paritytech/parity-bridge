@@ -59,7 +59,7 @@ impl<T: Transport> MainContract<T> {
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::home::events::deposit().create_filter(),
+            filter: contracts::home::events::deposit().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
