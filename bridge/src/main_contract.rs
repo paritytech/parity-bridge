@@ -45,17 +45,6 @@ impl<T: Transport> MainContract<T> {
         )
     }
 
-    // pub fn deploy
-    //
-    //     let data = HomeBridge::default().constructor(
-    //         self.config.home.contract.bin.clone().0,
-    //         self.config.authorities.required_signatures,
-    //         self.config.authorities.accounts.clone(),
-    //         self.config.estimated_gas_cost_of_withdraw,
-    //         self.config.max_total_home_contract_balance,
-    //         self.config.max_single_deposit_value,
-    //     );
-
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
