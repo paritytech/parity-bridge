@@ -25,7 +25,8 @@ pub struct SideContract<T> {
     pub required_log_confirmations: u32,
     pub sign_main_to_side_gas: U256,
     pub sign_main_to_side_gas_price: U256,
-    pub submit_side_to_main_gas: U256,
+    pub sign_side_to_main_gas: U256,
+    pub sign_side_to_main_gas_price: U256,
 }
 
 impl<T: Transport> SideContract<T> {
@@ -40,7 +41,8 @@ impl<T: Transport> SideContract<T> {
             required_log_confirmations: config.foreign.required_confirmations,
             sign_main_to_side_gas: config.txs.deposit_relay.gas,
             sign_main_to_side_gas_price: config.txs.deposit_relay.gas_price,
-            submit_side_to_main_gas: config.txs.withdraw_relay.gas,
+            sign_side_to_main_gas: config.txs.withdraw_confirm.gas,
+            sign_side_to_main_gas_price: config.txs.withdraw_confirm.gas_price,
         }
     }
 
@@ -139,8 +141,8 @@ impl<T: Transport> SideContract<T> {
             &self.transport,
             self.contract_address,
             self.authority_address,
-            self.submit_side_to_main_gas,
-            message.main_gas_price,
+            self.sign_side_to_main_gas,
+            self.sign_side_to_main_gas_price,
             self.request_timeout,
             contracts::foreign::functions::submit_signature(
                 signature.to_bytes(),
