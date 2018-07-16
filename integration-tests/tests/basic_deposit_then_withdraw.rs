@@ -267,7 +267,7 @@ fn test_basic_deposit_then_withdraw() {
                 from: user_address.into(),
                 to: Some(authority_address.into()),
                 gas: None,
-                gas_price: Some(10.into()),
+                gas_price: None,
                 value: Some(1000000000.into()),
                 data: None,
                 condition: None,
