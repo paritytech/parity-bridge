@@ -75,7 +75,12 @@ impl Node {
             contract: ContractConfig {
                 bin: {
                     let mut read = String::new();
-                    let mut file = fs::File::open(node.contract.bin)?;
+                    let mut file = fs::File::open(&node.contract.bin).chain_err(|| {
+                        format!(
+                            "Cannot open compiled contract file at {}",
+                            node.contract.bin.to_string_lossy()
+                        )
+                    })?;
                     file.read_to_string(&mut read)?;
                     Bytes(read.from_hex()?)
                 },
