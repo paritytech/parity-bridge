@@ -80,32 +80,40 @@ Options:
         .map_err(|e| e.to_string())?;
 
     info!("Loading config from {:?}", args.arg_config);
-    let config = Config::load(args.arg_config)?;
+    let config = Config::load(&args.arg_config)?;
 
     info!("Starting event loop");
     let mut event_loop = Core::new().unwrap();
 
     info!(
-        "Establishing HTTP connection to main {:?}",
+        "Establishing HTTP connection to parity node connected to main chain at {:?}",
         config.home.http
     );
-    let main_transport =
-        Http::with_event_loop(
-            &config.home.http,
-            &event_loop.handle(),
-            MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to main at {}", config.home.http))?;
+    let main_transport = Http::with_event_loop(
+        &config.home.http,
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    ).chain_err(|| {
+        format!(
+            "Cannot connect to parity node connected to main chain at {}",
+            config.home.http
+        )
+    })?;
 
     info!(
-        "Establishing HTTP connection to side {:?}",
+        "Establishing HTTP connection to parity node connected to side chain at {:?}",
         config.foreign.http
     );
-    let side_transport =
-        Http::with_event_loop(
-            &config.foreign.http,
-            &event_loop.handle(),
-            MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to side at {}", config.foreign.http))?;
+    let side_transport = Http::with_event_loop(
+        &config.foreign.http,
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    ).chain_err(|| {
+        format!(
+            "Cannot connect to parity node connected to side chain at {}",
+            config.foreign.http
+        )
+    })?;
 
     info!("Loading database from {:?}", args.arg_database);
     let mut database = TomlFileDatabase::from_path(&args.arg_database)?;
@@ -114,8 +122,26 @@ Options:
     let initial_state = database.read();
 
     let main_contract = MainContract::new(main_transport.clone(), &config, &initial_state);
+    event_loop
+        .run(main_contract.is_main_contract())
+        .chain_err(|| {
+            format!(
+            "call to main contract `is_home_bridge_contract` failed. this is likely due to field `main_contract_address = {}` in database file {:?} not pointing to a bridge main contract. please verify!",
+            initial_state.main_contract_address,
+            args.arg_database
+        )
+        })?;
 
     let side_contract = SideContract::new(main_transport.clone(), &config, &initial_state);
+    event_loop
+        .run(side_contract.is_side_contract())
+        .chain_err(|| {
+            format!(
+            "call to side contract `is_foreign_bridge_contract` failed. this is likely due to field `side_contract_address = {}` in database file {:?} not pointing to a bridge side contract. please verify!",
+            initial_state.side_contract_address,
+            args.arg_database
+        )
+        })?;
 
     let bridge_stream = Bridge::new(initial_state, main_contract, side_contract);
     info!("Started polling logs");

@@ -256,6 +256,15 @@ contract HomeBridge {
         Deposit(msg.sender, msg.value);
     }
 
+    /// Called by the bridge node processes on startup
+    /// to determine early whether the address pointing to the home
+    /// bridge contract is misconfigured.
+    /// so we can provide a helpful error message instead of the very
+    /// unhelpful errors encountered otherwise.
+    function isHomeBridgeContract() public pure returns (bool) {
+        return true;
+    }
+
     /// final step of a withdraw.
     /// checks that `requiredSignatures` `authorities` have signed of on the `message`.
     /// then transfers `value` to `recipient` (both extracted from `message`).
@@ -442,6 +451,15 @@ contract ForeignBridge {
         requiredSignatures = _requiredSignatures;
         authorities = _authorities;
         estimatedGasCostOfWithdraw = _estimatedGasCostOfWithdraw;
+    }
+
+    // Called by the bridge node processes on startup
+    // to determine early whether the address pointing to the foreign
+    // bridge contract is misconfigured.
+    // so we can provide a helpful error message instead of the
+    // very unhelpful errors encountered otherwise.
+    function isForeignBridgeContract() public pure returns (bool) {
+        return true;
     }
 
     /// require that sender is an authority

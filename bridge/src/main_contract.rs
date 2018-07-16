@@ -45,6 +45,10 @@ impl<T: Transport> MainContract<T> {
         )
     }
 
+    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::home::IsHomeBridgeContractWithInput> {
+        self.call(contracts::home::functions::is_home_bridge_contract())
+    }
+
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {

@@ -53,6 +53,12 @@ impl<T: Transport> SideContract<T> {
         )
     }
 
+    pub fn is_side_contract(
+        &self,
+    ) -> AsyncCall<T, contracts::foreign::IsForeignBridgeContractWithInput> {
+        self.call(contracts::foreign::functions::is_foreign_bridge_contract())
+    }
+
     /// returns `Future` that resolves with `bool` whether `authority`
     /// has signed side to main relay for `tx_hash`
     pub fn is_side_to_main_signed_on_side(
