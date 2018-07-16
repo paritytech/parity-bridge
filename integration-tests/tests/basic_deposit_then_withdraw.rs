@@ -146,6 +146,7 @@ fn test_basic_deposit_then_withdraw() {
     assert!(exit_status.success());
     // TODO [snd] assert that created address matches authority_address
 
+    // TODO don't shell out to curl
     // create authority account on foreign
     // this is currently not supported in web3 crate so we have to use curl
     let exit_status = Command::new("curl")
