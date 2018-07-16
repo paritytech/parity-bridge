@@ -200,9 +200,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_twice_no_logs() {
-        let deposit_topic = contracts::home::events::deposit()
-            .filter()
-            .topic0;
+        let deposit_topic = contracts::home::events::deposit().filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
@@ -262,9 +260,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_once_one_log() {
-        let deposit_topic = contracts::home::events::deposit()
-            .filter()
-            .topic0;
+        let deposit_topic = contracts::home::events::deposit().filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
