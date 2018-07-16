@@ -254,24 +254,6 @@ fn test_basic_deposit_then_withdraw() {
         "estimated gas cost of withdraw must be correct"
     );
 
-    println!("\ncheck that `has_authority_signed_main_to_side` is callable\n");
-    assert_eq!(
-        event_loop
-            .run(AsyncCall::new(
-                &foreign_transport,
-                foreign_contract_address.into(),
-                TIMEOUT,
-                bridge_contracts::foreign::functions::has_authority_signed_main_to_side(
-                    authority_address,
-                    receiver_address,
-                    1,
-                    "0xe84e8eb2858407252d57af032cd775f170d7e578f2ddbc17dddfa7547f9643a4"
-                )
-            ))
-            .unwrap(),
-        false
-    );
-
     println!("\ngive authority some funds to do relay later\n");
 
     let balance = event_loop
