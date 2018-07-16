@@ -11,7 +11,7 @@ extern crate tokio_core;
 extern crate web3;
 
 use docopt::Docopt;
-use futures::{future, Stream};
+use futures::Stream;
 use std::env;
 use std::path::PathBuf;
 use tokio_core::reactor::Core;
