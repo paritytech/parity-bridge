@@ -32,12 +32,12 @@ const DEFAULT_CONFIRMATIONS: u32 = 12;
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub address: Address,
-    pub home: NodeConfig,
-    pub foreign: NodeConfig,
+    pub main: NodeConfig,
+    pub side: NodeConfig,
     pub authorities: Authorities,
     pub txs: Transactions,
     pub estimated_gas_cost_of_withdraw: U256,
-    pub max_total_home_contract_balance: U256,
+    pub max_total_main_contract_balance: U256,
     pub max_single_deposit_value: U256,
 }
 
@@ -57,8 +57,8 @@ impl Config {
     fn from_load_struct(config: load::Config) -> Result<Config, Error> {
         let result = Config {
             address: config.address,
-            home: NodeConfig::from_load_struct(config.home)?,
-            foreign: NodeConfig::from_load_struct(config.foreign)?,
+            main: NodeConfig::from_load_struct(config.main)?,
+            side: NodeConfig::from_load_struct(config.side)?,
             authorities: Authorities {
                 accounts: config.authorities.accounts,
                 required_signatures: config.authorities.required_signatures,
@@ -68,7 +68,7 @@ impl Config {
                 .map(Transactions::from_load_struct)
                 .unwrap_or_default(),
             estimated_gas_cost_of_withdraw: config.estimated_gas_cost_of_withdraw,
-            max_total_home_contract_balance: config.max_total_home_contract_balance,
+            max_total_main_contract_balance: config.max_total_main_contract_balance,
             max_single_deposit_value: config.max_single_deposit_value,
         };
 
@@ -113,8 +113,8 @@ impl NodeConfig {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transactions {
-    pub home_deploy: TransactionConfig,
-    pub foreign_deploy: TransactionConfig,
+    pub main_deploy: TransactionConfig,
+    pub side_deploy: TransactionConfig,
     pub deposit_relay: TransactionConfig,
     pub withdraw_confirm: TransactionConfig,
     pub withdraw_relay: TransactionConfig,
@@ -123,10 +123,10 @@ pub struct Transactions {
 impl Transactions {
     fn from_load_struct(cfg: load::Transactions) -> Self {
         Transactions {
-            home_deploy: cfg.home_deploy
+            main_deploy: cfg.main_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            foreign_deploy: cfg.foreign_deploy
+            side_deploy: cfg.side_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
             deposit_relay: cfg.deposit_relay
@@ -181,14 +181,14 @@ mod load {
     #[serde(deny_unknown_fields)]
     pub struct Config {
         pub address: Address,
-        pub home: NodeConfig,
-        pub foreign: NodeConfig,
+        pub main: NodeConfig,
+        pub side: NodeConfig,
         pub authorities: Authorities,
         pub transactions: Option<Transactions>,
         #[serde(deserialize_with = "deserialize_u256")]
         pub estimated_gas_cost_of_withdraw: U256,
         #[serde(deserialize_with = "deserialize_u256")]
-        pub max_total_home_contract_balance: U256,
+        pub max_total_main_contract_balance: U256,
         #[serde(deserialize_with = "deserialize_u256")]
         pub max_single_deposit_value: U256,
     }
@@ -206,8 +206,8 @@ mod load {
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct Transactions {
-        pub home_deploy: Option<TransactionConfig>,
-        pub foreign_deploy: Option<TransactionConfig>,
+        pub main_deploy: Option<TransactionConfig>,
+        pub side_deploy: Option<TransactionConfig>,
         pub deposit_relay: Option<TransactionConfig>,
         pub withdraw_confirm: Option<TransactionConfig>,
         pub withdraw_relay: Option<TransactionConfig>,
@@ -248,22 +248,22 @@ mod tests {
         let toml = r#"
 address = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 estimated_gas_cost_of_withdraw = "100000"
-max_total_home_contract_balance = "10000000000000000000"
+max_total_main_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
-[home]
+[main]
 http = "http://localhost:8545"
 poll_interval = 2
 required_confirmations = 100
 
-[home.contract]
-bin = "../compiled_contracts/HomeBridge.bin"
+[main.contract]
+bin = "../compiled_contracts/MainBridge.bin"
 
-[foreign]
+[side]
 http = "http://localhost:8546"
 
-[foreign.contract]
-bin = "../compiled_contracts/ForeignBridge.bin"
+[side.contract]
+bin = "../compiled_contracts/SideBridge.bin"
 
 [authorities]
 accounts = [
@@ -274,16 +274,16 @@ accounts = [
 required_signatures = 2
 
 [transactions]
-home_deploy = { gas = "20", gas_price = "0" }
+main_deploy = { gas = "20", gas_price = "0" }
 "#;
 
         let mut expected = Config {
             address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
             txs: Transactions::default(),
-            home: NodeConfig {
+            main: NodeConfig {
                 http: "http://localhost:8545".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/HomeBridge.bin")
+                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -292,9 +292,9 @@ home_deploy = { gas = "20", gas_price = "0" }
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 100,
             },
-            foreign: NodeConfig {
+            side: NodeConfig {
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
+                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -313,11 +313,11 @@ home_deploy = { gas = "20", gas_price = "0" }
                 required_signatures: 2,
             },
             estimated_gas_cost_of_withdraw: U256::from_dec_str("100000").unwrap(),
-            max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+            max_total_main_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
             max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
         };
 
-        expected.txs.home_deploy = TransactionConfig {
+        expected.txs.main_deploy = TransactionConfig {
             gas: 20.into(),
             gas_price: 0.into(),
         };
@@ -331,20 +331,20 @@ home_deploy = { gas = "20", gas_price = "0" }
         let toml = r#"
 address = "0x0000000000000000000000000000000000000001"
 estimated_gas_cost_of_withdraw = "200000000"
-max_total_home_contract_balance = "10000000000000000000"
+max_total_main_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
-[home]
+[main]
 http = ""
 
-[home.contract]
-bin = "../compiled_contracts/HomeBridge.bin"
+[main.contract]
+bin = "../compiled_contracts/MainBridge.bin"
 
-[foreign]
+[side]
 http = ""
 
-[foreign.contract]
-bin = "../compiled_contracts/ForeignBridge.bin"
+[side.contract]
+bin = "../compiled_contracts/SideBridge.bin"
 
 [authorities]
 accounts = [
@@ -357,10 +357,10 @@ required_signatures = 2
         let expected = Config {
             address: "0000000000000000000000000000000000000001".into(),
             txs: Transactions::default(),
-            home: NodeConfig {
+            main: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/HomeBridge.bin")
+                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -369,10 +369,10 @@ required_signatures = 2
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 12,
             },
-            foreign: NodeConfig {
+            side: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
+                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -390,7 +390,7 @@ required_signatures = 2
                 required_signatures: 2,
             },
             estimated_gas_cost_of_withdraw: U256::from_dec_str("200000000").unwrap(),
-            max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+            max_total_main_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
             max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
         };
 

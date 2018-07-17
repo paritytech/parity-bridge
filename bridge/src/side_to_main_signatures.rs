@@ -31,15 +31,15 @@ use web3::Transport;
 /// state of the state machine that is the future responsible for
 /// the SideToMain relay
 enum State<T: Transport> {
-    AwaitMessage(AsyncCall<T, contracts::foreign::MessageWithInput>),
+    AwaitMessage(AsyncCall<T, contracts::side::MessageWithInput>),
     /// authority is not responsible for relaying this. noop
     NotResponsible,
     AwaitIsRelayed {
-        future: AsyncCall<T, contracts::home::WithdrawsWithInput>,
+        future: AsyncCall<T, contracts::main::WithdrawsWithInput>,
         message: MessageToMain,
     },
     AwaitSignatures {
-        future: JoinAll<Vec<AsyncCall<T, contracts::foreign::SignatureWithInput>>>,
+        future: JoinAll<Vec<AsyncCall<T, contracts::side::SignatureWithInput>>>,
         message: MessageToMain,
     },
     AwaitTxSent(AsyncTransaction<T>),
@@ -58,7 +58,7 @@ impl<T: Transport> SideToMainSignatures<T> {
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let log = helpers::parse_log(&contracts::foreign::events::collected_signatures(), raw_log)
+        let log = helpers::parse_log(&contracts::side::events::collected_signatures(), raw_log)
             .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
         let state = if log.authority_responsible_for_relay != main.authority_address {
@@ -67,11 +67,11 @@ impl<T: Transport> SideToMainSignatures<T> {
                 side_tx_hash
             );
             // this bridge node is not responsible for relaying this transaction.
-            // someone else will relay this transaction to home.
+            // someone else will relay this transaction to main.
             State::NotResponsible
         } else {
             info!("{:?} - step 1/3 - about to fetch message", side_tx_hash,);
-            State::AwaitMessage(side.call(contracts::foreign::functions::message(log.message_hash)))
+            State::AwaitMessage(side.call(contracts::side::functions::message(log.message_hash)))
         };
 
         Self {
@@ -102,7 +102,7 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                     let message = MessageToMain::from_bytes(&message_bytes)?;
                     State::AwaitIsRelayed {
                         future: self.main
-                            .call(contracts::home::functions::withdraws(message.side_tx_hash)),
+                            .call(contracts::main::functions::withdraws(message.side_tx_hash)),
                         message,
                     }
                 }

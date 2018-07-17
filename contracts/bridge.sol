@@ -121,7 +121,7 @@ library Message {
     // offset 32: 20 bytes :: address - recipient address
     // offset 52: 32 bytes :: uint256 (big endian) - value
     // offset 84: 32 bytes :: bytes32 - transaction hash
-    // offset 116: 32 bytes :: uint256 (big endian) - home gas price
+    // offset 116: 32 bytes :: uint256 (big endian) - main gas price
 
     // mload always reads 32 bytes.
     // if mload reads an address it only interprets the last 20 bytes as the address.
@@ -161,7 +161,7 @@ library Message {
         return hash;
     }
 
-    function getHomeGasPrice(bytes message) internal pure returns (uint256) {
+    function getMainGasPrice(bytes message) internal pure returns (uint256) {
         uint256 gasPrice;
         // solium-disable-next-line security/no-inline-assembly
         assembly {
@@ -186,31 +186,31 @@ library MessageTest {
         return Message.getTransactionHash(message);
     }
 
-    function getHomeGasPrice(bytes message) public pure returns (uint256) {
-        return Message.getHomeGasPrice(message);
+    function getMainGasPrice(bytes message) public pure returns (uint256) {
+        return Message.getMainGasPrice(message);
     }
 }
 
 
-contract HomeBridge {
+contract MainBridge {
     /// Number of authorities signatures required to withdraw the money.
     ///
     /// Must be lesser than number of authorities.
     uint256 public requiredSignatures;
 
-    /// The gas cost of calling `HomeBridge.withdraw`.
+    /// The gas cost of calling `MainBridge.withdraw`.
     ///
     /// Is subtracted from `value` on withdraw.
     /// recipient pays the relaying authority for withdraw.
-    /// this shuts down attacks that exhaust authorities funds on home chain.
+    /// this shuts down attacks that exhaust authorities funds on main chain.
     uint256 public estimatedGasCostOfWithdraw;
 
     /// reject deposits that would increase `this.balance` beyond this value.
     /// security feature:
-    /// limits the total amount of home/mainnet ether that can be lost
+    /// limits the total amount of mainnet ether that can be lost
     /// if the bridge is faulty or compromised in any way!
     /// set to 0 to disable.
-    uint256 public maxTotalHomeContractBalance;
+    uint256 public maxTotalMainContractBalance;
 
     /// reject deposits whose `msg.value` is higher than this value.
     /// security feature.
@@ -220,7 +220,7 @@ contract HomeBridge {
     /// Contract authorities.
     address[] public authorities;
 
-    /// Used foreign transaction hashes.
+    /// Used side transaction hashes.
     mapping (bytes32 => bool) public withdraws;
 
     /// Event created on money deposit.
@@ -230,11 +230,11 @@ contract HomeBridge {
     event Withdraw (address recipient, uint256 value, bytes32 transactionHash);
 
     /// Constructor.
-    function HomeBridge(
+    function MainBridge(
         uint256 requiredSignaturesParam,
         address[] authoritiesParam,
         uint256 estimatedGasCostOfWithdrawParam,
-        uint256 maxTotalHomeContractBalanceParam,
+        uint256 maxTotalMainContractBalanceParam,
         uint256 maxSingleDepositValueParam
     ) public
     {
@@ -243,7 +243,7 @@ contract HomeBridge {
         requiredSignatures = requiredSignaturesParam;
         authorities = authoritiesParam;
         estimatedGasCostOfWithdraw = estimatedGasCostOfWithdrawParam;
-        maxTotalHomeContractBalance = maxTotalHomeContractBalanceParam;
+        maxTotalMainContractBalance = maxTotalMainContractBalanceParam;
         maxSingleDepositValue = maxSingleDepositValueParam;
     }
 
@@ -252,16 +252,16 @@ contract HomeBridge {
         require(maxSingleDepositValue == 0 || msg.value <= maxSingleDepositValue);
         // the value of `this.balance` in payable methods is increased
         // by `msg.value` before the body of the payable method executes
-        require(maxTotalHomeContractBalance == 0 || this.balance <= maxTotalHomeContractBalance);
+        require(maxTotalMainContractBalance == 0 || this.balance <= maxTotalMainContractBalance);
         Deposit(msg.sender, msg.value);
     }
 
     /// Called by the bridge node processes on startup
-    /// to determine early whether the address pointing to the home
+    /// to determine early whether the address pointing to the main
     /// bridge contract is misconfigured.
     /// so we can provide a helpful error message instead of the very
     /// unhelpful errors encountered otherwise.
-    function isHomeBridgeContract() public pure returns (bool) {
+    function isMainBridgeContract() public pure returns (bool) {
         return true;
     }
 
@@ -285,17 +285,17 @@ contract HomeBridge {
         address recipient = Message.getRecipient(message);
         uint256 value = Message.getValue(message);
         bytes32 hash = Message.getTransactionHash(message);
-        uint256 homeGasPrice = Message.getHomeGasPrice(message);
+        uint256 mainGasPrice = Message.getMainGasPrice(message);
 
         // if the recipient calls `withdraw` they can choose the gas price freely.
         // if anyone else calls `withdraw` they have to use the gas price
-        // `homeGasPrice` specified by the user initiating the withdraw.
+        // `mainGasPrice` specified by the user initiating the withdraw.
         // this is a security mechanism designed to shut down
         // malicious senders setting extremely high gas prices
         // and effectively burning recipients withdrawn value.
         // see https://github.com/paritytech/parity-bridge/issues/112
         // for further explanation.
-        require((recipient == msg.sender) || (tx.gasprice == homeGasPrice));
+        require((recipient == msg.sender) || (tx.gasprice == mainGasPrice));
 
         // The following two statements guard against reentry into this function.
         // Duplicated withdraw or reentry.
@@ -303,7 +303,7 @@ contract HomeBridge {
         // Order of operations below is critical to avoid TheDAO-like re-entry bug
         withdraws[hash] = true;
 
-        uint256 estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * homeGasPrice;
+        uint256 estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * mainGasPrice;
 
         // charge recipient for relay cost
         uint256 valueRemainingAfterSubtractingCost = value - estimatedWeiCostOfWithdraw;
@@ -319,13 +319,13 @@ contract HomeBridge {
 }
 
 
-contract ForeignBridge {
-    // following is the part of ForeignBridge that implements an ERC20 token.
+contract SideBridge {
+    // following is the part of SideBridge that implements an ERC20 token.
     // ERC20 spec: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
 
     uint256 public totalSupply;
 
-    string public name = "ForeignBridge";
+    string public name = "SideBridge";
     // BETH = bridged ether
     string public symbol = "BETH";
     // 1-1 mapping of ether to tokens
@@ -345,9 +345,9 @@ contract ForeignBridge {
         return balances[tokenOwner];
     }
 
-    /// Transfer `value` to `recipient` on this `foreign` chain.
+    /// Transfer `value` to `recipient` on this `side` chain.
     ///
-    /// does not affect `home` chain. does not do a relay.
+    /// does not affect `main` chain. does not do a relay.
     /// as specificed in ERC20 this doesn't fail if tokens == 0.
     function transfer(address recipient, uint256 tokens) public returns (bool) {
         require(balances[msg.sender] >= tokens);
@@ -360,7 +360,7 @@ contract ForeignBridge {
         return true;
     }
 
-    // following is the part of ForeignBridge that is concerned
+    // following is the part of SideBridge that is concerned
     // with the part of the ERC20 standard responsible for giving others spending rights
     // and spending others tokens
 
@@ -397,9 +397,9 @@ contract ForeignBridge {
         return true;
     }
 
-    // following is the part of ForeignBridge that is
+    // following is the part of SideBridge that is
     // no longer part of ERC20 and is concerned with
-    // with moving tokens from and to HomeBridge
+    // with moving tokens from and to MainBridge
 
     struct SignaturesCollection {
         /// Signed message.
@@ -433,14 +433,14 @@ contract ForeignBridge {
     event Deposit(address recipient, uint256 value, bytes32 transactionHash);
 
     /// Event created on money withdraw.
-    event Withdraw(address recipient, uint256 value, uint256 homeGasPrice);
+    event Withdraw(address recipient, uint256 value, uint256 mainGasPrice);
 
     event WithdrawSignatureSubmitted(bytes32 messageHash);
 
-    /// Collected signatures which should be relayed to home chain.
+    /// Collected signatures which should be relayed to main chain.
     event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
 
-    function ForeignBridge(
+    function SideBridge(
         uint256 _requiredSignatures,
         address[] _authorities,
         uint256 _estimatedGasCostOfWithdraw
@@ -454,11 +454,11 @@ contract ForeignBridge {
     }
 
     // Called by the bridge node processes on startup
-    // to determine early whether the address pointing to the foreign
+    // to determine early whether the address pointing to the side
     // bridge contract is misconfigured.
     // so we can provide a helpful error message instead of the
     // very unhelpful errors encountered otherwise.
-    function isForeignBridgeContract() public pure returns (bool) {
+    function isSideBridgeContract() public pure returns (bool) {
         return true;
     }
 
@@ -498,21 +498,21 @@ contract ForeignBridge {
         Deposit(recipient, value, transactionHash);
     }
 
-    /// Transfer `value` from `msg.sender`s local balance (on `foreign` chain) to `recipient` on `home` chain.
+    /// Transfer `value` from `msg.sender`s local balance (on `side` chain) to `recipient` on `main` chain.
     ///
     /// immediately decreases `msg.sender`s local balance.
     /// emits a `Withdraw` event which will be picked up by the bridge authorities.
     /// bridge authorities will then sign off (by calling `submitSignature`) on a message containing `value`,
-    /// `recipient` and the `hash` of the transaction on `foreign` containing the `Withdraw` event.
+    /// `recipient` and the `hash` of the transaction on `side` containing the `Withdraw` event.
     /// once `requiredSignatures` are collected a `CollectedSignatures` event will be emitted.
-    /// an authority will pick up `CollectedSignatures` an call `HomeBridge.withdraw`
+    /// an authority will pick up `CollectedSignatures` an call `MainBridge.withdraw`
     /// which transfers `value - relayCost` to `recipient` completing the transfer.
-    function transferHomeViaRelay(address recipient, uint256 value, uint256 homeGasPrice) public {
+    function transferToMainViaRelay(address recipient, uint256 value, uint256 mainGasPrice) public {
         require(balances[msg.sender] >= value);
-        // don't allow 0 value transfers to home
+        // don't allow 0 value transfers to main
         require(value > 0);
 
-        uint256 estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * homeGasPrice;
+        uint256 estimatedWeiCostOfWithdraw = estimatedGasCostOfWithdraw * mainGasPrice;
         require(value > estimatedWeiCostOfWithdraw);
 
         balances[msg.sender] -= value;
@@ -522,7 +522,7 @@ contract ForeignBridge {
         // recommended by ERC20 (see implementation of `deposit` above)
         // we trigger a Transfer event to `0x0` on token destruction
         Transfer(msg.sender, 0x0, value);
-        Withdraw(recipient, value, homeGasPrice);
+        Withdraw(recipient, value, mainGasPrice);
     }
 
     /// Should be used as sync tool
@@ -532,7 +532,7 @@ contract ForeignBridge {
     /// for withdraw message contains:
     /// withdrawal recipient (bytes20)
     /// withdrawal value (uint256)
-    /// foreign transaction hash (bytes32) // to avoid transaction duplication
+    /// side transaction hash (bytes32) // to avoid transaction duplication
     function submitSignature(bytes signature, bytes message) public onlyAuthority() {
         // ensure that `signature` is really `message` signed by `msg.sender`
         require(msg.sender == MessageSigning.recoverAddressFromSignedMessage(signature, message));

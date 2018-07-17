@@ -24,7 +24,7 @@ use web3::types::{Address, H256, Log, U256};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitAlreadySigned(AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput>),
+    AwaitAlreadySigned(AsyncCall<T, contracts::side::HasAuthoritySignedMainToSideWithInput>),
     AwaitTxSent(AsyncTransaction<T>),
 }
 
@@ -47,7 +47,7 @@ impl<T: Transport> MainToSideSign<T> {
             main_tx_hash
         );
 
-        let log = helpers::parse_log(&contracts::home::events::deposit(), raw_log)
+        let log = helpers::parse_log(&contracts::main::events::deposit(), raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
 
         let recipient = log.recipient;
@@ -152,13 +152,13 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 //
 //     #[test]
 //     fn test_deposit_relay_future() {
-//         let deposit_topic = HomeBridge::default()
+//         let deposit_topic = MainBridge::default()
 //             .events()
 //             .deposit()
 //             .create_filter()
 //             .topic0;
 //
-//         let log = contracts::home::logs::Deposit {
+//         let log = contracts::main::logs::Deposit {
 //             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
 //             value: 1000.into(),
 //         };
@@ -183,9 +183,9 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 //         let authority_address = "0000000000000000000000000000000000000001".into();
 //
 //         let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-//         let foreign_contract_address = "0000000000000000000000000000000000000dd1".into();
+//         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 //
-//         let tx_data = ForeignBridge::default().functions().deposit().input(
+//         let tx_data = SideBridge::default().functions().deposit().input(
 //             log.recipient,
 //             log.value,
 //             log_tx_hash,
@@ -198,20 +198,20 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 //                     "from": "0x0000000000000000000000000000000000000001",
 //                     "gas": "0xfd",
 //                     "gasPrice": "0xa0",
-//                     "to": foreign_contract_address,
+//                     "to": side_contract_address,
 //                 }]),
 //             res => json!(tx_hash);
 //         );
 //
 //         let connection = ContractConnection::new(
 //             authority_address,
-//             foreign_contract_address,
+//             side_contract_address,
 //             transport.clone(),
 //             ::std::time::Duration::from_secs(1),
 //         );
 //
 //         let options = Options {
-//             foreign: connection,
+//             side: connection,
 //             gas: 0xfd.into(),
 //             gas_price: 0xa0.into(),
 //         };

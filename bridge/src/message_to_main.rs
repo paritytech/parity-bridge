@@ -13,7 +13,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-use contracts::foreign::events::Withdraw;
+use contracts::side::events::Withdraw;
 use error::Error;
 use ethabi;
 use ethereum_types::{Address, H256, U256};
@@ -54,7 +54,7 @@ impl MessageToMain {
         tiny_keccak::keccak256(&self.to_bytes()).into()
     }
 
-    /// construct a message from a `Withdraw` event that was logged on `foreign`
+    /// construct a message from a `Withdraw` event that was logged on `side`
     pub fn from_log(raw_log: &Log) -> Result<Self, Error> {
         let hash = raw_log
             .transaction_hash
@@ -64,13 +64,13 @@ impl MessageToMain {
             recipient: log.recipient,
             value: log.value,
             side_tx_hash: hash,
-            main_gas_price: log.home_gas_price,
+            main_gas_price: log.main_gas_price,
         })
     }
 
     /// serializes message to a byte vector.
     /// mainly used to construct the message byte vector that is then signed
-    /// and passed to `ForeignBridge.submitSignature`
+    /// and passed to `SideBridge.submitSignature`
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; MESSAGE_LENGTH];
         result[0..20].copy_from_slice(&self.recipient.0[..]);

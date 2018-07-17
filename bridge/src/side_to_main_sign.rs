@@ -32,7 +32,7 @@ use web3::Transport;
 
 enum State<T: Transport> {
     AwaitCheckAlreadySigned(
-        AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput>,
+        AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput>,
     ),
     AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
@@ -57,7 +57,7 @@ impl<T: Transport> SideToMainSign<T> {
         assert_eq!(
             message_bytes.len(),
             MESSAGE_LENGTH,
-            "ForeignBridge never accepts messages with len != {} bytes; qed",
+            "SideBridge never accepts messages with len != {} bytes; qed",
             MESSAGE_LENGTH
         );
 

@@ -6,38 +6,38 @@ address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e"
 
 estimated_gas_cost_of_withdraw = "200000"
 
-# limits total balance on `home` and therefore total ether that could get lost
+# limits total balance on `main` and therefore total ether that could get lost
 # if the bridge is faulty or compromised in any way!
 # set to `"0"` to disable limit (not recommended at this point)
 # currently set to 10 ether.
-max_total_home_contract_balance = "10000000000000000000"
+max_total_main_contract_balance = "10000000000000000000"
 
-# limit `msg.value` for a single deposit into the home contract.
+# limit `msg.value` for a single deposit into the main contract.
 # set to `"0"` to disable limit (not recommended at this point)
 # currently set to 1 ether.
 max_single_deposit_value = "1000000000000000000"
 
-[home]
-# ACTION REQUIRED: set the the url of the parity node that has `home.account` unlocked
+[main]
+# ACTION REQUIRED: set the the url of the parity node that has `main.account` unlocked
 http = "http://localhost:8550"
 # ACTION REQUIRED: for test deployment set this to 12
 required_confirmations = 0
 
-[home.contract]
+[main.contract]
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
-bin = "../compiled_contracts/HomeBridge.bin"
+bin = "../compiled_contracts/MainBridge.bin"
 
-[foreign]
-# ACTION REQUIRED: set the the url of the parity node that has `foreign.account` unlocked
+[side]
+# ACTION REQUIRED: set the the url of the parity node that has `side.account` unlocked
 http = "http://localhost:8551"
 # ACTION REQUIRED: for test deployment set this to 12
 required_confirmations = 0
 
-[foreign.contract]
+[side.contract]
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
-bin = "../compiled_contracts/ForeignBridge.bin"
+bin = "../compiled_contracts/SideBridge.bin"
 
 [authorities]
 # ACTION REQUIRED: set this to the addresses of the authority list
@@ -54,12 +54,12 @@ required_signatures = 1
 # if your authority can't do free transactions on the chain.
 # `gas_price` might need adjustment once in a while.
 
-# these happen on `home`:
-home_deploy = { gas = "1000000" , gas_price = "0" }
+# these happen on `main`:
+main_deploy = { gas = "1000000" , gas_price = "0" }
 withdraw_relay = { gas = "200000" , gas_price = "0" }
 
-# these happen on `foreign`:
-foreign_deploy = { gas = "3000000" , gas_price = "0" }
+# these happen on `side`:
+side_deploy = { gas = "3000000" , gas_price = "0" }
 deposit_relay = { gas = "150000" , gas_price = "0" }
 
 withdraw_confirm = { gas = "300000" , gas_price = "0" }

@@ -51,9 +51,9 @@ impl<T: Transport> SideContract<T> {
             contract_address: state.main_contract_address,
             authority_address: config.address,
             required_signatures: config.authorities.required_signatures,
-            request_timeout: config.foreign.request_timeout,
-            logs_poll_interval: config.foreign.poll_interval,
-            required_log_confirmations: config.foreign.required_confirmations,
+            request_timeout: config.side.request_timeout,
+            logs_poll_interval: config.side.poll_interval,
+            required_log_confirmations: config.side.required_confirmations,
             sign_main_to_side_gas: config.txs.deposit_relay.gas,
             sign_main_to_side_gas_price: config.txs.deposit_relay.gas_price,
             sign_side_to_main_gas: config.txs.withdraw_confirm.gas,
@@ -72,8 +72,8 @@ impl<T: Transport> SideContract<T> {
 
     pub fn is_side_contract(
         &self,
-    ) -> AsyncCall<T, contracts::foreign::IsForeignBridgeContractWithInput> {
-        self.call(contracts::foreign::functions::is_foreign_bridge_contract())
+    ) -> AsyncCall<T, contracts::side::IsSideBridgeContractWithInput> {
+        self.call(contracts::side::functions::is_side_bridge_contract())
     }
 
     /// returns `Future` that resolves with `bool` whether `authority`
@@ -81,9 +81,9 @@ impl<T: Transport> SideContract<T> {
     pub fn is_side_to_main_signed_on_side(
         &self,
         message: &MessageToMain,
-    ) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedSideToMainWithInput> {
+    ) -> AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput> {
         self.call(
-            contracts::foreign::functions::has_authority_signed_side_to_main(
+            contracts::side::functions::has_authority_signed_side_to_main(
                 self.authority_address,
                 message.keccak256(),
             ),
@@ -95,9 +95,9 @@ impl<T: Transport> SideContract<T> {
         recipient: Address,
         value: U256,
         main_tx_hash: H256,
-    ) -> AsyncCall<T, contracts::foreign::HasAuthoritySignedMainToSideWithInput> {
+    ) -> AsyncCall<T, contracts::side::HasAuthoritySignedMainToSideWithInput> {
         self.call(
-            contracts::foreign::functions::has_authority_signed_main_to_side(
+            contracts::side::functions::has_authority_signed_main_to_side(
                 self.authority_address,
                 recipient,
                 value,
@@ -119,13 +119,13 @@ impl<T: Transport> SideContract<T> {
             self.sign_main_to_side_gas,
             self.sign_main_to_side_gas_price,
             self.request_timeout,
-            contracts::foreign::functions::deposit(recipient, value, breakout_tx_hash),
+            contracts::side::functions::deposit(recipient, value, breakout_tx_hash),
         )
     }
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::foreign::events::withdraw().filter(),
+            filter: contracts::side::events::withdraw().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -137,7 +137,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_signatures_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::foreign::events::collected_signatures().filter(),
+            filter: contracts::side::events::collected_signatures().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -159,7 +159,7 @@ impl<T: Transport> SideContract<T> {
             self.sign_side_to_main_gas,
             self.sign_side_to_main_gas_price,
             self.request_timeout,
-            contracts::foreign::functions::submit_signature(
+            contracts::side::functions::submit_signature(
                 signature.to_bytes(),
                 message.to_bytes(),
             ),
@@ -169,11 +169,11 @@ impl<T: Transport> SideContract<T> {
     pub fn get_signatures(
         &self,
         message_hash: H256,
-    ) -> JoinAll<Vec<AsyncCall<T, contracts::foreign::SignatureWithInput>>> {
+    ) -> JoinAll<Vec<AsyncCall<T, contracts::side::SignatureWithInput>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
             .map(|index| {
-                self.call(contracts::foreign::functions::signature(
+                self.call(contracts::side::functions::signature(
                     message_hash,
                     index,
                 ))

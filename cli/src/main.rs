@@ -102,31 +102,31 @@ Options:
 
     info!(
         "Establishing HTTP connection to parity node connected to main chain at {:?}",
-        config.home.http
+        config.main.http
     );
     let main_transport = Http::with_event_loop(
-        &config.home.http,
+        &config.main.http,
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
     ).chain_err(|| {
         format!(
             "Cannot connect to parity node connected to main chain at {}",
-            config.home.http
+            config.main.http
         )
     })?;
 
     info!(
         "Establishing HTTP connection to parity node connected to side chain at {:?}",
-        config.foreign.http
+        config.side.http
     );
     let side_transport = Http::with_event_loop(
-        &config.foreign.http,
+        &config.side.http,
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
     ).chain_err(|| {
         format!(
             "Cannot connect to parity node connected to side chain at {}",
-            config.foreign.http
+            config.side.http
         )
     })?;
 
@@ -141,7 +141,7 @@ Options:
         .run(main_contract.is_main_contract())
         .chain_err(|| {
             format!(
-            "call to main contract `is_home_bridge_contract` failed. this is likely due to field `main_contract_address = {}` in database file {:?} not pointing to a bridge main contract. please verify!",
+            "call to main contract `is_main_bridge_contract` failed. this is likely due to field `main_contract_address = {}` in database file {:?} not pointing to a bridge main contract. please verify!",
             initial_state.main_contract_address,
             args.arg_database
         )
@@ -152,7 +152,7 @@ Options:
         .run(side_contract.is_side_contract())
         .chain_err(|| {
             format!(
-            "call to side contract `is_foreign_bridge_contract` failed. this is likely due to field `side_contract_address = {}` in database file {:?} not pointing to a bridge side contract. please verify!",
+            "call to side contract `is_side_bridge_contract` failed. this is likely due to field `side_contract_address = {}` in database file {:?} not pointing to a bridge side contract. please verify!",
             initial_state.side_contract_address,
             args.arg_database
         )

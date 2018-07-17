@@ -45,9 +45,9 @@ impl<T: Transport> MainContract<T> {
             contract_address: state.main_contract_address,
             authority_address: config.address,
             submit_collected_signatures_gas: config.estimated_gas_cost_of_withdraw,
-            request_timeout: config.home.request_timeout,
-            logs_poll_interval: config.home.poll_interval,
-            required_log_confirmations: config.home.required_confirmations,
+            request_timeout: config.main.request_timeout,
+            logs_poll_interval: config.main.poll_interval,
+            required_log_confirmations: config.main.required_confirmations,
         }
     }
 
@@ -60,14 +60,14 @@ impl<T: Transport> MainContract<T> {
         )
     }
 
-    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::home::IsHomeBridgeContractWithInput> {
-        self.call(contracts::home::functions::is_home_bridge_contract())
+    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::main::IsMainBridgeContractWithInput> {
+        self.call(contracts::main::functions::is_main_bridge_contract())
     }
 
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::home::events::deposit().filter(),
+            filter: contracts::main::events::deposit().filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -90,7 +90,7 @@ impl<T: Transport> MainContract<T> {
             self.submit_collected_signatures_gas,
             message.main_gas_price,
             self.request_timeout,
-            contracts::home::functions::withdraw(
+            contracts::main::functions::withdraw(
                 signatures.iter().map(|x| x.v),
                 signatures.iter().map(|x| x.r),
                 signatures.iter().map(|x| x.s),

@@ -38,23 +38,23 @@ pub enum DeployState<T: Transport + Clone> {
     },
 }
 
-pub struct DeployHome<T: Transport + Clone> {
+pub struct DeployMain<T: Transport + Clone> {
     config: Config,
-    home_connection: T,
+    main_transport: T,
     state: DeployState<T>,
 }
 
-impl<T: Transport + Clone> DeployHome<T> {
-    pub fn new(config: Config, home_connection: T) -> Self {
+impl<T: Transport + Clone> DeployMain<T> {
+    pub fn new(config: Config, main_transport: T) -> Self {
         Self {
             config,
-            home_connection,
+            main_transport,
             state: DeployState::NotDeployed,
         }
     }
 }
 
-impl<T: Transport + Clone> Future for DeployHome<T> {
+impl<T: Transport + Clone> Future for DeployMain<T> {
     type Item = DeployedContract;
     type Error = error::Error;
 
@@ -63,20 +63,20 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = contracts::home::constructor(
-                        self.config.home.contract.bin.clone().0,
+                    let data = contracts::main::constructor(
+                        self.config.main.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),
                         self.config.estimated_gas_cost_of_withdraw,
-                        self.config.max_total_home_contract_balance,
+                        self.config.max_total_main_contract_balance,
                         self.config.max_single_deposit_value,
                     );
 
                     let tx_request = TransactionRequest {
                         from: self.config.address,
                         to: None,
-                        gas: Some(self.config.txs.home_deploy.gas.into()),
-                        gas_price: Some(self.config.txs.home_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.main_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.main_deploy.gas_price.into()),
                         value: None,
                         data: Some(data.encoded().into()),
                         nonce: None,
@@ -84,13 +84,13 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     };
 
                     let future = send_transaction_with_confirmation(
-                        self.home_connection.clone(),
+                        self.main_transport.clone(),
                         tx_request,
-                        self.config.home.poll_interval,
-                        self.config.home.required_confirmations as usize,
+                        self.config.main.poll_interval,
+                        self.config.main.required_confirmations as usize,
                     );
 
-                    info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.config.home.required_confirmations);
+                    info!("sending MainBridge contract deployment transaction and waiting for {} confirmations...", self.config.main.required_confirmations);
 
                     DeployState::Deploying {
                         data: data.encoded(),
@@ -104,19 +104,19 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     let receipt = try_ready!(
                         future
                             .poll()
-                            .chain_err(|| "DeployHome: deployment transaction failed")
+                            .chain_err(|| "DeployMain: deployment transaction failed")
                     );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
-                    info!("HomeBridge deployment completed to {:?}", address);
+                    info!("MainBridge deployment completed to {:?}", address);
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "HomeBridge".into(),
+                            "MainBridge".into(),
                             include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/HomeBridge.abi").into(),
-                            include_str!("../../compiled_contracts/HomeBridge.bin").into(),
+                            include_str!("../../compiled_contracts/MainBridge.abi").into(),
+                            include_str!("../../compiled_contracts/MainBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -129,23 +129,23 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
     }
 }
 
-pub struct DeployForeign<T: Transport + Clone> {
+pub struct DeploySide<T: Transport + Clone> {
     config: Config,
-    foreign_connection: T,
+    side_transport: T,
     state: DeployState<T>,
 }
 
-impl<T: Transport + Clone> DeployForeign<T> {
-    pub fn new(config: Config, foreign_connection: T) -> Self {
+impl<T: Transport + Clone> DeploySide<T> {
+    pub fn new(config: Config, side_transport: T) -> Self {
         Self {
             config,
-            foreign_connection,
+            side_transport,
             state: DeployState::NotDeployed,
         }
     }
 }
 
-impl<T: Transport + Clone> Future for DeployForeign<T> {
+impl<T: Transport + Clone> Future for DeploySide<T> {
     type Item = DeployedContract;
     type Error = error::Error;
 
@@ -154,8 +154,8 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = contracts::foreign::constructor(
-                        self.config.foreign.contract.bin.clone().0,
+                    let data = contracts::side::constructor(
+                        self.config.side.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),
                         self.config.estimated_gas_cost_of_withdraw,
@@ -164,8 +164,8 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     let tx_request = TransactionRequest {
                         from: self.config.address,
                         to: None,
-                        gas: Some(self.config.txs.foreign_deploy.gas.into()),
-                        gas_price: Some(self.config.txs.foreign_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.side_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.side_deploy.gas_price.into()),
                         value: None,
                         data: Some(data.encoded().into()),
                         nonce: None,
@@ -173,13 +173,13 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     };
 
                     let future = send_transaction_with_confirmation(
-                        self.foreign_connection.clone(),
+                        self.side_transport.clone(),
                         tx_request,
-                        self.config.foreign.poll_interval,
-                        self.config.foreign.required_confirmations as usize,
+                        self.config.side.poll_interval,
+                        self.config.side.required_confirmations as usize,
                     );
 
-                    info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.config.foreign.required_confirmations);
+                    info!("sending SideBridge contract deployment transaction and waiting for {} confirmations...", self.config.side.required_confirmations);
 
                     DeployState::Deploying {
                         data: data.encoded(),
@@ -193,19 +193,19 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     let receipt = try_ready!(
                         future
                             .poll()
-                            .chain_err(|| "DeployForeign: deployment transaction failed")
+                            .chain_err(|| "DeploySide: deployment transaction failed")
                     );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
-                    info!("ForeignBridge deployment completed to {:?}", address);
+                    info!("SideBridge deployment completed to {:?}", address);
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "ForeignBridge".into(),
+                            "SideBridge".into(),
                             include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/ForeignBridge.abi").into(),
-                            include_str!("../../compiled_contracts/ForeignBridge.bin").into(),
+                            include_str!("../../compiled_contracts/SideBridge.abi").into(),
+                            include_str!("../../compiled_contracts/SideBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),

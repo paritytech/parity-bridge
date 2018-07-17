@@ -33,7 +33,7 @@ use web3::transports::http::Http;
 
 use bridge::config::Config;
 use bridge::database::State;
-use bridge::deploy::{DeployForeign, DeployHome};
+use bridge::deploy::{DeploySide, DeployMain};
 use bridge::error::{self, ResultExt};
 
 const MAX_PARALLEL_REQUESTS: usize = 10;
@@ -97,46 +97,46 @@ Options:
     let mut event_loop = Core::new().unwrap();
 
     info!(
-        "Establishing HTTP connection to home {:?}",
-        config.home.http
+        "Establishing HTTP connection to main {:?}",
+        config.main.http
     );
-    let home_transport =
+    let main_transport =
         Http::with_event_loop(
-            &config.home.http,
+            &config.main.http,
             &event_loop.handle(),
             MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to home at {}", config.home.http))?;
+        ).chain_err(|| format!("Cannot connect to main at {}", config.main.http))?;
 
     info!(
-        "Establishing HTTP connection to foreign {:?}",
-        config.foreign.http
+        "Establishing HTTP connection to side {:?}",
+        config.side.http
     );
-    let foreign_transport =
+    let side_transport =
         Http::with_event_loop(
-            &config.foreign.http,
+            &config.side.http,
             &event_loop.handle(),
             MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to foreign at {}", config.foreign.http))?;
+        ).chain_err(|| format!("Cannot connect to side at {}", config.side.http))?;
 
-    info!(target: "parity-bridge-deploy", "Deploying HomeBridge contract");
-    let home_deployed = event_loop.run(DeployHome::new(config.clone(), home_transport))?;
-    info!(target: "parity-bridge-deploy", "Successfully deployed HomeBridge contract");
+    info!(target: "parity-bridge-deploy", "Deploying MainBridge contract");
+    let main_deployed = event_loop.run(DeployMain::new(config.clone(), main_transport))?;
+    info!(target: "parity-bridge-deploy", "Successfully deployed MainBridge contract");
 
-    home_deployed.dump_info(format!(
-        "deployment-home-{}",
-        home_deployed.contract_address
+    main_deployed.dump_info(format!(
+        "deployment-main-{}",
+        main_deployed.contract_address
     ))?;
 
-    info!(target: "parity-bridge-deploy", "Deploying ForeignBridge contract");
-    let foreign_deployed = event_loop.run(DeployForeign::new(config.clone(), foreign_transport))?;
-    info!(target: "parity-bridge-deploy", "Successfully deployed ForeignBridge contract");
+    info!(target: "parity-bridge-deploy", "Deploying SideBridge contract");
+    let side_deployed = event_loop.run(DeploySide::new(config.clone(), side_transport))?;
+    info!(target: "parity-bridge-deploy", "Successfully deployed SideBridge contract");
 
-    foreign_deployed.dump_info(format!(
-        "deployment-foreign-{}",
-        foreign_deployed.contract_address
+    side_deployed.dump_info(format!(
+        "deployment-side-{}",
+        side_deployed.contract_address
     ))?;
 
-    let state = State::from_transaction_receipts(&home_deployed.receipt, &foreign_deployed.receipt);
+    let state = State::from_transaction_receipts(&main_deployed.receipt, &side_deployed.receipt);
     info!(target: "parity-bridge-deploy", "\n\n{}\n", state);
     state.write(fs::File::create(args.arg_database)?)?;
 
