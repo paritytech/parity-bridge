@@ -591,4 +591,23 @@ contract('SideBridge', function(accounts) {
         }, helpers.ignoreExpectedError)
     })
   })
+
+  it("should fail if hasAuthoritySignedSideToMain called with too short a message", function() {
+    var meta;
+    var signature;
+    var requiredSignatures = 1;
+    var estimatedGasCostOfWithdraw = 0;
+    var authorities = [accounts[0], accounts[1]];
+    var recipientAccount = accounts[2];
+    var transactionHash = "0x1045bfe274b88120a6b1e5d01b5ec00ab5d01098346e90e7c7a3c9b8f0181c80";
+    var mainGasPrice = web3.toBigNumber(web3.toWei(3, "gwei"));
+    var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, mainGasPrice);
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+      meta = instance;
+
+      return meta.hasAuthoritySignedSideToMain(authorities[0], message.substr(0, 83))
+    }).then(function() {
+        assert(false, "should fail");
+    }, helpers.ignoreExpectedError)
+  })
 })
