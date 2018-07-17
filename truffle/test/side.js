@@ -311,7 +311,7 @@ contract('SideBridge', function(accounts) {
     })
   })
 
-  it("should allow user to transfer main", function() {
+  it("should allow user to transfer to main", function() {
     var meta;
     var requiredSignatures = 1;
     var estimatedGasCostOfWithdraw = web3.toBigNumber(10000);
