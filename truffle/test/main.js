@@ -43,6 +43,10 @@ contract('MainBridge', function(accounts) {
       return Promise.all(authorities.map((_, index) => meta.authorities.call(index)));
     }).then(function(result) {
       assert.deepEqual(authorities, result, "Contract has invalid authorities");
+
+      return meta.isMainBridgeContract.call();
+    }).then(function(result) {
+      assert.equal(result, true)
     })
   })
 
