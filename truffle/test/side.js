@@ -363,14 +363,21 @@ contract('SideBridge', function(accounts) {
     var message = helpers.createMessage(recipientAccount, web3.toBigNumber(1000), transactionHash, mainGasPrice);
     return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
+
+      return meta.hasAuthoritySignedSideToMain(authorities[0], message);
+    }).then(function(result) {
+      assert.equal(result, false)
+
       return helpers.sign(authorities[0], message);
     }).then(function(result) {
       signature = result;
+
       return meta.submitSignature(result, message, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
       assert.equal("CollectedSignatures", result.logs[0].event, "Event name should be CollectedSignatures");
       assert.equal(authorities[0], result.logs[0].args.authorityResponsibleForRelay, "Event authority should be equal to transaction sender");
+
       return Promise.all([
         meta.signature.call(result.logs[0].args.messageHash, 0),
         meta.message(result.logs[0].args.messageHash),
@@ -378,6 +385,10 @@ contract('SideBridge', function(accounts) {
     }).then(function(result) {
       assert.equal(signature, result[0]);
       assert.equal(message, result[1]);
+
+      return meta.hasAuthoritySignedSideToMain(authorities[0], message);
+    }).then(function(result) {
+      assert.equal(result, true)
     })
   })
 
@@ -403,6 +414,10 @@ contract('SideBridge', function(accounts) {
     }).then(function(result) {
       console.log("estimated gas cost of SideBridge.submitSignature =", result);
 
+      return meta.hasAuthoritySignedSideToMain(authorities[0], message);
+    }).then(function(result) {
+      assert.equal(result, false)
+
       return meta.submitSignature(signature, message, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length, "Exactly one event should be created");
@@ -411,6 +426,10 @@ contract('SideBridge', function(accounts) {
       return meta.signature.call(result.logs[0].args.messageHash, 0);
     }).then(function(result) {
       assert.equal(signature, result);
+
+      return meta.hasAuthoritySignedSideToMain(authorities[0], message);
+    }).then(function(result) {
+      assert.equal(result, true)
     })
   })
 
