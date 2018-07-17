@@ -84,6 +84,10 @@ contract('SideBridge', function(accounts) {
     return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
 
+      return meta.hasAuthoritySignedMainToSide(authorities[0], userAccount, value, hash, { from: userAccount });
+    }).then(function(result) {
+      assert.equal(result, false)
+
       return meta.deposit(userAccount, value, hash, { from: authorities[0] });
     }).then(function(result) {
       assert.equal(1, result.logs.length);
@@ -93,6 +97,10 @@ contract('SideBridge', function(accounts) {
       assert.equal(value, result.logs[0].args.value);
       assert.equal(hash, result.logs[0].args.transactionHash);
 
+      return meta.hasAuthoritySignedMainToSide(authorities[0], userAccount, value, hash, { from: userAccount });
+    }).then(function(result) {
+      assert.equal(result, true)
+
       return meta.balances.call(userAccount);
     }).then(function(result) {
       assert.equal(web3.toWei(0, "ether"), result, "Contract balance should not change yet");
@@ -100,6 +108,10 @@ contract('SideBridge', function(accounts) {
       return meta.deposit.estimateGas(userAccount, value, hash, { from: authorities[1] });
     }).then(function(result) {
       console.log("estimated gas cost of SideBridge.deposit =", result);
+
+      return meta.hasAuthoritySignedMainToSide(authorities[1], userAccount, value, hash, { from: userAccount });
+    }).then(function(result) {
+      assert.equal(result, false)
 
       return meta.deposit(userAccount, value, hash, { from: authorities[1] });
     }).then(function(result) {
@@ -114,6 +126,10 @@ contract('SideBridge', function(accounts) {
       assert.equal(userAccount, result.logs[1].args.recipient, "Event recipient should be transaction sender");
       assert.equal(value, result.logs[1].args.value, "Event value should match deposited ether");
       assert.equal(hash, result.logs[1].args.transactionHash);
+
+      return meta.hasAuthoritySignedMainToSide(authorities[1], userAccount, value, hash, { from: userAccount });
+    }).then(function(result) {
+      assert.equal(result, true)
 
       return meta.balances.call(userAccount);
     }).then(function(result) {
