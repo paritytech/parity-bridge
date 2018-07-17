@@ -85,7 +85,7 @@ impl<T: Transport> SideContract<T> {
         self.call(
             contracts::side::functions::has_authority_signed_side_to_main(
                 self.authority_address,
-                message.keccak256(),
+                message.to_bytes()
             ),
         )
     }

@@ -560,7 +560,9 @@ contract SideBridge {
         return Helpers.addressArrayContains(deposits[hash], authority);
     }
 
-    function hasAuthoritySignedSideToMain(address authority, bytes32 messageHash) public view returns (bool) {
+    function hasAuthoritySignedSideToMain(address authority, bytes message) public view returns (bool) {
+        require(message.length == 116);
+        var messageHash = keccak256(message);
         return Helpers.addressArrayContains(signatures[messageHash].authorities, authority);
     }
 
