@@ -18,11 +18,11 @@
 /// where a "relay" is the detection of an event on chain A
 /// followed by a transaction on chain B
 use error::{self, ResultExt};
-use future_heap::FutureHeap;
 use futures::future::{join_all, JoinAll};
 use futures::{Async, Future, Poll, Stream};
 use log_stream::LogsInBlockRange;
 use web3::types::Log;
+use ::OrderedStream;
 
 /// something that can create relay futures from logs.
 /// to be called by `RelayStream` for every log.
@@ -37,19 +37,19 @@ pub trait LogToFuture {
 /// stream yields last block number on `home` for which all `HomeBrige.Deposit`
 /// events have been handled this way.
 pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> {
-    log_stream: S,
+    stream_of_logs: S,
     log_to_future: F,
     /// maps the last block
     /// if all relays for this a block have finished yield that block
-    future_heap: FutureHeap<u64, JoinAll<Vec<F::Future>>>,
+    ordered_stream: OrderedStream<u64, JoinAll<Vec<F::Future>>>,
 }
 
 impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> RelayStream<S, F> {
-    pub fn new(log_stream: S, log_to_future: F) -> Self {
+    pub fn new(stream_of_logs: S, log_to_future: F) -> Self {
         Self {
-            log_stream,
+            stream_of_logs,
             log_to_future,
-            future_heap: FutureHeap::new(),
+            ordered_stream: OrderedStream::new(),
         }
     }
 }
@@ -67,7 +67,7 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
             // fetch them and add them all to the
             // map
             let maybe_logs_in_block_range = try_maybe_stream!(
-                self.log_stream
+                self.stream_of_logs
                     .poll()
                     .chain_err(|| "RelayStream: fetching logs failed")
             );
@@ -89,12 +89,12 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
                     .map(|log| log_to_future.log_to_future(log))
                     .collect();
                 let joined_futures = join_all(futures);
-                self.future_heap
+                self.ordered_stream
                     .insert(logs_in_block_range.to, joined_futures);
             }
 
             let maybe_block_range_fully_relayed = try_maybe_stream!(
-                self.future_heap
+                self.ordered_stream
                     .poll()
                     .chain_err(|| "RelayStream: relaying logs failed")
             );
