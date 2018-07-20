@@ -9,4 +9,4 @@ ethabi-derive = { git = "https://github.com/paritytech/ethabi" }
 ethabi-contract = { git = "https://github.com/paritytech/ethabi" }
 
 [build-dependencies]
-solc = { git = "https://github.com/snd/rust_solc" }
+solc = { git = "https://github.com/paritytech/rust_solc" }

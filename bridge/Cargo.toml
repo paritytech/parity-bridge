@@ -27,4 +27,4 @@ quickcheck = "0.6.1"
 jsonrpc-core = "8.0"
 
 [build-dependencies]
-solc = { git = "https://github.com/snd/rust_solc" }
+solc = { git = "https://github.com/paritytech/rust_solc" }
