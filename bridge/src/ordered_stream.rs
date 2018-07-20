@@ -49,8 +49,11 @@ use futures::{Async, Future, Poll, Stream};
 /// assert_eq!(results[1], (4, ((), "a")));
 /// ```
 ///
+/// items with the same `order` are yielded in the order they were `insert`ed.
+///
 /// example in the context of the bridge:
 /// a `RelayStream` polls a Stream of logs
+/// TODO
 
 pub struct OrderedStream<O, F: Future> {
     entries: Vec<Entry<O, F>>,
