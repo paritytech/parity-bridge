@@ -160,10 +160,55 @@ struct Entry<O, F: Future> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    extern crate tokio_core;
+    extern crate tokio_timer;
+    extern crate futures;
+    use std::time::Duration;
+    use futures::stream::Stream;
+    use futures::Future;
+
+    // TODO test multiple ready at same time
+    //
+    // TODO all are ready. none are not ready
+
     #[test]
-    fn test_ordered_stream() {
-        // TODO test multiple ready at same time
-        //
-        // TODO all are ready. none are not ready
+    fn test_empty_ordered_stream_is_not_ready() {
+        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+
+        assert_eq!(ordered_stream.poll(), Ok(Async::NotReady));
+        assert_eq!(ordered_stream.ready_count(), 0);
+        assert_eq!(ordered_stream.not_ready_count(), 0);
+    }
+
+    #[test]
+    fn test_ordered_stream_7_insertions() {
+        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+
+        let timer = tokio_timer::Timer::default();
+
+        ordered_stream.insert(10, timer.sleep(Duration::from_millis(0)).join(futures::future::ok("f")));
+        ordered_stream.insert(4, timer.sleep(Duration::from_millis(1)).join(futures::future::ok("e")));
+        ordered_stream.insert(3, timer.sleep(Duration::from_millis(65)).join(futures::future::ok("d")));
+        ordered_stream.insert(0, timer.sleep(Duration::from_millis(500)).join(futures::future::ok("a")));
+        ordered_stream.insert(2, timer.sleep(Duration::from_millis(50)).join(futures::future::ok("b")));
+        ordered_stream.insert(2, timer.sleep(Duration::from_millis(10)).join(futures::future::ok("c")));
+        ordered_stream.insert(10, timer.sleep(Duration::from_millis(338)).join(futures::future::ok("g")));
+
+        assert_eq!(ordered_stream.ready_count(), 0);
+        assert_eq!(ordered_stream.not_ready_count(), 7);
+
+        let mut event_loop = tokio_core::reactor::Core::new().unwrap();
+
+        let results = event_loop.run(ordered_stream.take(7).collect()).unwrap();
+        assert_eq!(results, vec![
+            (0, ((), "a")),
+            (2, ((), "b")),
+            (2, ((), "c")),
+            (3, ((), "d")),
+            (4, ((), "e")),
+            (10, ((), "f")),
+            (10, ((), "g")),
+        ]);
     }
 }
