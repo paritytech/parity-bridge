@@ -22,7 +22,7 @@ use futures::future::{join_all, JoinAll};
 use futures::{Async, Future, Poll, Stream};
 use log_stream::LogsInBlockRange;
 use web3::types::Log;
-use ::OrderedStream;
+use OrderedStream;
 
 /// something that can create relay futures from logs.
 /// to be called by `RelayStream` for every log.

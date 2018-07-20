@@ -70,9 +70,7 @@ impl<T: Transport> SideContract<T> {
         )
     }
 
-    pub fn is_side_contract(
-        &self,
-    ) -> AsyncCall<T, contracts::side::IsSideBridgeContractWithInput> {
+    pub fn is_side_contract(&self) -> AsyncCall<T, contracts::side::IsSideBridgeContractWithInput> {
         self.call(contracts::side::functions::is_side_bridge_contract())
     }
 
@@ -85,7 +83,7 @@ impl<T: Transport> SideContract<T> {
         self.call(
             contracts::side::functions::has_authority_signed_side_to_main(
                 self.authority_address,
-                message.to_bytes()
+                message.to_bytes(),
             ),
         )
     }
@@ -159,10 +157,7 @@ impl<T: Transport> SideContract<T> {
             self.sign_side_to_main_gas,
             self.sign_side_to_main_gas_price,
             self.request_timeout,
-            contracts::side::functions::submit_signature(
-                signature.to_bytes(),
-                message.to_bytes(),
-            ),
+            contracts::side::functions::submit_signature(signature.to_bytes(), message.to_bytes()),
         )
     }
 
@@ -172,12 +167,7 @@ impl<T: Transport> SideContract<T> {
     ) -> JoinAll<Vec<AsyncCall<T, contracts::side::SignatureWithInput>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
-            .map(|index| {
-                self.call(contracts::side::functions::signature(
-                    message_hash,
-                    index,
-                ))
-            })
+            .map(|index| self.call(contracts::side::functions::signature(message_hash, index)))
             .collect::<Vec<_>>();
         join_all(futures)
     }

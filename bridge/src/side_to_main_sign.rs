@@ -31,9 +31,7 @@ use web3::types::{Address, Bytes, H256, H520, Log, U256};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(
-        AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput>,
-    ),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput>),
     AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }

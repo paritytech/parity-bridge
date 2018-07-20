@@ -33,7 +33,7 @@ use web3::transports::http::Http;
 
 use bridge::config::Config;
 use bridge::database::State;
-use bridge::deploy::{DeploySide, DeployMain};
+use bridge::deploy::{DeployMain, DeploySide};
 use bridge::error::{self, ResultExt};
 
 const MAX_PARALLEL_REQUESTS: usize = 10;

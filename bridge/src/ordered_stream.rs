@@ -104,7 +104,8 @@ impl<O: Ord + Clone, F: Future> Stream for OrderedStream<O, F> {
                 // we must initialize `maybe_min_ready`
                 && (maybe_min_ready.is_none()
                 // or entry is the new min
-                || entry.order < maybe_min_ready.clone().expect("check in prev line. q.e.d.").0) {
+                || entry.order < maybe_min_ready.clone().expect("check in prev line. q.e.d.").0)
+            {
                 maybe_min_ready = Some((entry.order.clone(), index));
             }
         }
