@@ -77,6 +77,14 @@ impl<O: Ord, F: Future> OrderedStream<O, F> {
             item_if_ready: None,
         });
     }
+
+    pub fn ready_count(&self) -> usize {
+        self.entries.iter().filter(|x| x.item_if_ready.is_some()).count()
+    }
+
+    pub fn not_ready_count(&self) -> usize {
+        self.entries.iter().filter(|x| x.item_if_ready.is_none()).count()
+    }
 }
 
 impl<O: Ord + Clone, F: Future> Stream for OrderedStream<O, F> {
