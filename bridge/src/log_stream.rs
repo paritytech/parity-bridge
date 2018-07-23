@@ -76,9 +76,9 @@ enum State<T: Transport> {
     },
 }
 
-/// `futures::Stream` that fetches logs from `contract_address` matching `filter`
+/// `Stream` that repeatedly polls logs matching `filter_builder` from `contract_address`
 /// with adjustable `poll_interval` and `request_timeout`.
-/// yields new logs that are `confirmations` blocks deep
+/// yields new logs that are `confirmations` blocks deep.
 pub struct LogStream<T: Transport> {
     request_timeout: Duration,
     confirmations: u32,
@@ -92,7 +92,6 @@ pub struct LogStream<T: Transport> {
 }
 
 impl<T: Transport> LogStream<T> {
-    /// creates a `LogStream`
     pub fn new(options: LogStreamOptions<T>) -> Self {
         let timer = Timer::default();
 

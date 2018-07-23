@@ -27,7 +27,7 @@ use std::time::Duration;
 use web3::types::{Address, H256, U256};
 use web3::Transport;
 
-/// a more highlevel wrapper around the auto generated ethabi contract
+/// highlevel wrapper around the auto generated ethabi contract `bridge_contracts::side`
 #[derive(Clone)]
 pub struct SideContract<T> {
     pub transport: T,

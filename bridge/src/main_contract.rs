@@ -26,7 +26,7 @@ use signature::Signature;
 use std::time::Duration;
 use web3::Transport;
 
-/// a more highlevel wrapper around the auto generated ethabi contract
+/// highlevel wrapper around the auto generated ethabi contract `bridge_contracts::main`
 #[derive(Clone)]
 pub struct MainContract<T> {
     pub transport: T,

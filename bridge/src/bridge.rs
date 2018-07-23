@@ -27,8 +27,9 @@ use side_to_main_sign;
 use side_to_main_signatures;
 
 /// Bridge `Stream`.
-/// internally polls the 3 relay streams
-/// combines relays streams with the database.
+/// creates and polls a `RelayStream` for each of the 3 relays.
+/// a relay in this context is a specific event on chain 1 that should
+/// be followed by execution of a a specific on chain 2.
 /// (relay streams have no knowledge of the database.)
 /// wraps the relay streams.
 /// if polled polls all relay streams which causes them fetch
