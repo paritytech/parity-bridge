@@ -133,39 +133,3 @@ impl Database for TomlFileDatabase {
         Ok(())
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     extern crate tempdir;
-//     use self::tempdir::TempDir;
-//     use database::Database;
-//
-//     #[test]
-//     fn test_file_backend() {
-//         let tempdir = TempDir::new("test_file_backend").unwrap();
-//         let mut path = tempdir.path().to_owned();
-//         path.push("db");
-//         let mut backend = FileBackend {
-//             path: path.clone(),
-//             database: Database::default(),
-//         };
-//
-//         backend.save(vec![BridgeChecked::DepositRelay(1)]).unwrap();
-//         assert_eq!(1, backend.database.checked_deposit_relay);
-//         assert_eq!(0, backend.database.checked_withdraw_confirm);
-//         assert_eq!(0, backend.database.checked_withdraw_relay);
-//         backend
-//             .save(vec![
-//                 BridgeChecked::DepositRelay(2),
-//                 BridgeChecked::WithdrawConfirm(3),
-//                 BridgeChecked::WithdrawRelay(2),
-//             ])
-//             .unwrap();
-//         assert_eq!(2, backend.database.checked_deposit_relay);
-//         assert_eq!(3, backend.database.checked_withdraw_confirm);
-//         assert_eq!(2, backend.database.checked_withdraw_relay);
-//
-//         let loaded = Database::load(path).unwrap();
-//         assert_eq!(backend.database, loaded);
-//     }
-// }
