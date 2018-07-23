@@ -54,10 +54,12 @@ pub mod error;
 mod ordered_stream;
 pub use ordered_stream::OrderedStream;
 pub mod helpers;
-pub mod main_contract;
+mod main_contract;
+pub use main_contract::MainContract;
 pub mod main_to_side_sign;
 pub mod relay_stream;
-pub mod side_contract;
+mod side_contract;
+pub use side_contract::SideContract;
 pub mod side_to_main_sign;
 pub mod side_to_main_signatures;
 

@@ -37,8 +37,6 @@ use bridge::config::Config;
 use bridge::database::{Database, TomlFileDatabase};
 use bridge::error::{self, ResultExt};
 use bridge::helpers::StreamExt;
-use bridge::main_contract::MainContract;
-use bridge::side_contract::SideContract;
 
 const MAX_PARALLEL_REQUESTS: usize = 10;
 
@@ -136,7 +134,7 @@ Options:
     info!("Reading initial state from database");
     let initial_state = database.read();
 
-    let main_contract = MainContract::new(main_transport.clone(), &config, &initial_state);
+    let main_contract = bridge::MainContract::new(main_transport.clone(), &config, &initial_state);
     event_loop
         .run(main_contract.is_main_contract())
         .chain_err(|| {
@@ -147,7 +145,7 @@ Options:
         )
         })?;
 
-    let side_contract = SideContract::new(side_transport.clone(), &config, &initial_state);
+    let side_contract = bridge::SideContract::new(side_transport.clone(), &config, &initial_state);
     event_loop
         .run(side_contract.is_side_contract())
         .chain_err(|| {
