@@ -78,10 +78,13 @@ impl<O: Ord, F: Future> OrderedStream<O, F> {
         });
     }
 
+    /// returns the count of futures that have completed but can't be
+    /// yielded since there are futures which are not ready
     pub fn ready_count(&self) -> usize {
         self.entries.iter().filter(|x| x.item_if_ready.is_some()).count()
     }
 
+    /// returns the count of futures that have not yet completed
     pub fn not_ready_count(&self) -> usize {
         self.entries.iter().filter(|x| x.item_if_ready.is_none()).count()
     }
