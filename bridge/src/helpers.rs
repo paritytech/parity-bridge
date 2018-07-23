@@ -13,6 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! various helper functions
+
 use error::{self, ResultExt};
 use ethabi::{self, ContractFunction, ParseLog, RawLog};
 use futures::future::FromErr;
