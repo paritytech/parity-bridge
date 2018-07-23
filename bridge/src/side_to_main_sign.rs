@@ -13,7 +13,6 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-/// concerning the collection of signatures on `side`
 use contracts;
 use error::{self, ResultExt};
 use futures::future::FromErr;
@@ -36,6 +35,8 @@ enum State<T: Transport> {
     AwaitTransaction(AsyncTransaction<T>),
 }
 
+/// `Future` that is responsible for calling `side_contract::submitSignature`
+/// for a single `side_contract::Withdraw` event
 pub struct SideToMainSign<T: Transport> {
     tx_hash: H256,
     side: SideContract<T>,

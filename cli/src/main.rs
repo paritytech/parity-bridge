@@ -32,7 +32,6 @@ use std::path::PathBuf;
 use tokio_core::reactor::Core;
 use web3::transports::http::Http;
 
-use bridge::bridge::Bridge;
 use bridge::config::Config;
 use bridge::database::{Database, TomlFileDatabase};
 use bridge::error::{self, ResultExt};
@@ -156,7 +155,7 @@ Options:
         )
         })?;
 
-    let bridge_stream = Bridge::new(initial_state, main_contract, side_contract);
+    let bridge_stream = bridge::Bridge::new(initial_state, main_contract, side_contract);
     info!("Started polling logs");
     let persisted_bridge_stream = bridge_stream.and_then(|state| {
         database.write(&state)?;

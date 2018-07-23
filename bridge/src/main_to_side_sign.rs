@@ -28,7 +28,10 @@ enum State<T: Transport> {
     AwaitTxSent(AsyncTransaction<T>),
 }
 
-/// `Future` responsible for doing a single relay from `main` to `side`
+/// `Future` that is responsible for calling `side_contract::deposit`
+/// for a single `main_contract::Deposit` event.
+/// these get created by the `main_to_side` `RelayStream` that's part
+/// of the `Bridge`.
 pub struct MainToSideSign<T: Transport> {
     main_tx_hash: H256,
     recipient: Address,

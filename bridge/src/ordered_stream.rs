@@ -53,6 +53,11 @@ use futures::{Async, Future, Poll, Stream};
 ///
 /// example in the context of the bridge:
 /// a `RelayStream` polls a Stream of logs
+/// calls a ... for every log and yields the block number for
+/// every block number 
+/// by using the block number as `order`, 
+/// and yielding the previous block number each time it changes
+/// this is easily accomplished.
 /// TODO
 
 pub struct OrderedStream<O, F: Future> {

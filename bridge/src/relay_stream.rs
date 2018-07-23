@@ -33,9 +33,9 @@ pub trait LogToFuture {
 }
 
 /// a tokio `Stream` that when polled fetches all new logs from `logs`
-/// executes a `ForeignBridge.deposit`
-/// stream yields last block number on `home` for which all `HomeBrige.Deposit`
-/// events have been handled this way.
+/// waits for that future to complete and yields the block numbers
+/// for which there are no pending
+/// these are then written into the database.
 pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> {
     stream_of_logs: S,
     log_to_future: F,

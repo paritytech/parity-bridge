@@ -26,12 +26,15 @@ use side_contract::SideContract;
 use side_to_main_sign;
 use side_to_main_signatures;
 
+/// Bridge `Stream`.
+/// internally polls the 3 relay streams
 /// combines relays streams with the database.
 /// (relay streams have no knowledge of the database.)
 /// wraps the relay streams.
 /// if polled polls all relay streams which causes them fetch
 /// all pending relays and relay them
 /// updates the database with results returned from relay streams.
+/// yields new state that should be persisted
 pub struct Bridge<T: Transport> {
     main_to_side_sign: RelayStream<LogStream<T>, main_to_side_sign::LogToMainToSideSign<T>>,
     side_to_main_sign: RelayStream<LogStream<T>, side_to_main_sign::LogToSideToMainSign<T>>,

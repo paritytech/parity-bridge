@@ -28,8 +28,6 @@ use web3::api::Namespace;
 use web3::types::{H256, Log};
 use web3::Transport;
 
-/// state of the state machine that is the future responsible for
-/// the SideToMain relay
 enum State<T: Transport> {
     AwaitMessage(AsyncCall<T, contracts::side::MessageWithInput>),
     /// authority is not responsible for relaying this. noop
@@ -45,6 +43,10 @@ enum State<T: Transport> {
     AwaitTxSent(AsyncTransaction<T>),
 }
 
+/// `Future` that completes a transfer from side to main by calling
+/// `main_contract::withdraw` for a single `side_contract::CollectedSignatures`
+/// event. these get created by the `RelayStream` responsible for this particular
+/// transfer.
 pub struct SideToMainSignatures<T: Transport> {
     side_tx_hash: H256,
     main: MainContract<T>,

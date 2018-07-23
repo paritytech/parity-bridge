@@ -13,6 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning reading configuration from toml files
+
 use error::{Error, ResultExt};
 use ethereum_types::U256;
 use rustc_hex::FromHex;

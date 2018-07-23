@@ -46,7 +46,8 @@ mod macros;
 #[macro_use]
 mod test;
 
-pub mod bridge;
+mod bridge;
+pub use bridge::Bridge;
 pub mod config;
 pub mod database;
 pub mod deploy;
@@ -56,12 +57,16 @@ pub use ordered_stream::OrderedStream;
 pub mod helpers;
 mod main_contract;
 pub use main_contract::MainContract;
-pub mod main_to_side_sign;
-pub mod relay_stream;
+mod main_to_side_sign;
+pub use main_to_side_sign::MainToSideSign;
+mod relay_stream;
+pub use relay_stream::RelayStream;
 mod side_contract;
 pub use side_contract::SideContract;
-pub mod side_to_main_sign;
-pub mod side_to_main_signatures;
+mod side_to_main_sign;
+pub use side_to_main_sign::SideToMainSign;
+mod side_to_main_signatures;
+pub use side_to_main_signatures::SideToMainSignatures;
 
 mod log_stream;
 pub use log_stream::{LogStream, LogStreamOptions};

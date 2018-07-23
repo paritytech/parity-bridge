@@ -13,6 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning reading/writing `State` from/to toml file
+
 use error::{Error, ErrorKind, ResultExt};
 use std::io::{Read, Write};
 /// the state of a bridge node process and ways to persist it

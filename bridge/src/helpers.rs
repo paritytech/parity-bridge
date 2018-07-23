@@ -29,6 +29,7 @@ use web3::helpers::CallResult;
 use web3::types::{Address, Bytes, CallRequest, H256, TransactionRequest, U256};
 use web3::{self, Transport};
 
+/// attempts to convert a raw `web3_log` into the ethabi log type of a specific `event`
 pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi::Result<T::Log> {
     let ethabi_log = RawLog {
         topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
@@ -37,17 +38,20 @@ pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi:
     event.parse_log(ethabi_log)
 }
 
+/// `Future`
 pub struct AsyncCall<T: Transport, F: ContractFunction> {
     future: Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>,
     function: F,
 }
 
 impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
-    pub fn new(transport: &T, address: Address, timeout: Duration, function: F) -> Self {
+    /// call `function` at `contract_address`.
+    /// returns a `Future` that resolves with the decoded output of `function`.
+    pub fn new(transport: &T, contract_address: Address, timeout: Duration, function: F) -> Self {
         let payload = function.encoded();
         let request = CallRequest {
             from: None,
-            to: address,
+            to: contract_address,
             gas: None,
             gas_price: None,
             value: None,
@@ -138,8 +142,9 @@ where
     serializer.serialize_str(&format!("{}", value))
 }
 
+/// extends the `Stream` trait by the `last` function
 pub trait StreamExt<I> {
-    // if you're interested only in the last item in a stream
+    /// if you're interested only in the last item in a stream
     fn last(self) -> Last<Self, I>
     where
         Self: Sized;
@@ -160,6 +165,8 @@ where
     }
 }
 
+/// `Future` that wraps a `Stream` and completes with the last
+/// item in the stream once the stream is over.
 pub struct Last<S, I> {
     stream: S,
     last: Option<I>,
