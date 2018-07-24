@@ -38,7 +38,9 @@ pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi:
     event.parse_log(ethabi_log)
 }
 
-/// `Future`
+/// use `AsyncCall::new(transport, contract_address, timeout, function)` to
+/// get a `Future` that resolves with the decoded output from calling `function`
+/// on `contract_address`.
 pub struct AsyncCall<T: Transport, F: ContractFunction> {
     future: Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>,
     function: F,

@@ -21,9 +21,10 @@ use helpers;
 use tiny_keccak;
 use web3::types::Log;
 
-/// the message that is relayed from side to main.
+/// the message that is relayed from `side` to  `main`.
 /// contains all the information required for the relay.
-/// validators sign off on this message.
+/// bridge nodes sign off on this message in `SideToMainSign`.
+/// one node submits this message and signatures in `SideToMainSignatures`.
 #[derive(PartialEq, Debug, Clone)]
 pub struct MessageToMain {
     pub recipient: Address,
