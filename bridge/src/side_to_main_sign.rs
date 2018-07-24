@@ -35,8 +35,10 @@ enum State<T: Transport> {
     AwaitTransaction(AsyncTransaction<T>),
 }
 
-/// `Future` that is responsible for calling `side_contract::submitSignature`
-/// for a single `side_contract::Withdraw` event
+/// `Future` that is responsible for calling `sideContract.submitSignature`
+/// for a single `sideContract.Withdraw` event.
+/// these get created by the `side_to_main_sign` `RelayStream` that's part
+/// of the `Bridge`.
 pub struct SideToMainSign<T: Transport> {
     tx_hash: H256,
     side: SideContract<T>,

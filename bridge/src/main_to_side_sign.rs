@@ -29,8 +29,8 @@ enum State<T: Transport> {
 }
 
 /// `Future` that is responsible for calling `side_contract::deposit`
-/// for a single `main_contract::Deposit` event.
-/// these get created by the `main_to_side` `RelayStream` that's part
+/// for a single `mainContract.Deposit` event.
+/// these get created by the `main_to_side_sign` `RelayStream` that's part
 /// of the `Bridge`.
 pub struct MainToSideSign<T: Transport> {
     main_tx_hash: H256,

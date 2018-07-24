@@ -44,9 +44,9 @@ enum State<T: Transport> {
 }
 
 /// `Future` that completes a transfer from side to main by calling
-/// `main_contract::withdraw` for a single `side_contract::CollectedSignatures`
-/// event. these get created by the `RelayStream` responsible for this particular
-/// transfer.
+/// `mainContract.withdraw` for a single `sideContract.CollectedSignatures`
+/// these get created by the `side_to_main_signatures` `RelayStream` that's part
+/// of the `Bridge`.
 pub struct SideToMainSignatures<T: Transport> {
     side_tx_hash: H256,
     main: MainContract<T>,
