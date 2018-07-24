@@ -15,7 +15,7 @@
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 #![allow(unknown_lints)]
 
-//! error chain...
+//! error chain
 
 use std::io;
 use tokio_timer::{TimeoutError, TimerError};

@@ -26,12 +26,10 @@ use side_contract::SideContract;
 use side_to_main_sign;
 use side_to_main_signatures;
 
-/// Bridge `Stream`.
-/// creates and polls a `RelayStream` for each of the 3 relays.
+/// bridge `Stream`. toplevel entity created and repeatedly polled by the `parity-bridge` executable.
+/// internally creates and polls a `RelayStream` for each of the 3 relays.
 /// a relay in this context is a specific event on chain 1 that should
 /// be followed by execution of a a specific on chain 2.
-/// (relay streams have no knowledge of the database.)
-/// wraps the relay streams.
 /// if polled polls all relay streams which causes them fetch
 /// all pending relays and relay them
 /// updates the database with results returned from relay streams.

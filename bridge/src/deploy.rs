@@ -13,6 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning deployment of the bridge contracts
+
 use config::Config;
 use contracts;
 use error::{self, ResultExt};
