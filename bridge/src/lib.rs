@@ -39,8 +39,8 @@
 //! - a tokio `event_loop` is created.
 //! - `main_transport` and `side_transport` which are web3 http transports
 //!   are created and each use an `event_loop` handle
-//! - the initial `state` is read from the database
-//! - the `config` is read from the database
+//! - the initial `state` is read from the database file
+//! - the `config` is read from the config file
 //! - `main_contract` (`side_contract`) which is for interaction with the main (side) bridge contract
 //!   is created from `main_transport` (`side_transport`), `config` and `state`
 //! - the `Bridge` instance is created from the two contracts and `state`
@@ -54,6 +54,11 @@
 //! stream
 //! - if the log stream yields a log the relay stream creates the corresponding relay future
 //! - the relay future is responsible for the entire relay operation
+//! - currently relay futures check whether the specific relay has already happened,
+//!   ignore if it has and execute the corresponding transaction otherwise
+//! - relay futures should (currently don't) and easily could observe whether
+//!   the transaction succeeds, log it to help with troubleshooting and
+//!   retry if the condition can be recovered from
 
 #[macro_use]
 extern crate error_chain;
