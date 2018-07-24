@@ -13,6 +13,27 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! the `parity-bridge` executable in `cli/src/main.rs` creates a
+//! `Bridge` instance, which is a `Stream`, and then endlessly polls it,
+//! thereby running the bridge.
+//!
+//! the `Bridge` instance internally polls three `RelayStream`s.
+//! these correspond to the three relay operations a bridge node is responsible for:
+//!
+//! 1. `MainToSideSign`: signing off on messages from `main` to `side`. currently that means executing `sideContract.deposit` for every `mainContract.Deposit` event.
+//! 2. `SideToMainSign`: signing off on messages from `side` to `main`. currently that means executing `sideContract.submitSignature` for every `sideContract.Withdraw` event.
+//! 3. `SideToMainSignatures`: submitting the bundle of signatures collected on `side` through `SideToMainSign` to `main`. currently that means executing `mainContract.withdraw` for every `sideContract.CollectedSignatures` event.
+//!
+//! a `RelayStream` is logic that's common to the three relay operations.
+//! it takes a `Stream` of logs and a `LogToFuture` that maps logs to `Futures`.
+//! those futures are supposed to each do one single complete relay
+//! (1. `MainToSideSign`, 2. `SideToMainSign`, 3. `SideToMainSignatures`).
+//! `RelayStream` polls the log stream, calls `LogToFuture.log_to_future` for each log,
+//! and yields the numbers of those blocks for which all such created futures
+//! have completed. these block numbers are then persisted
+//! so the bridge doesn't have to check logs up to them again next time it's started.
+
 #[macro_use]
 extern crate error_chain;
 extern crate ethabi;
