@@ -28,7 +28,7 @@ enum State<T: Transport> {
     AwaitTxSent(AsyncTransaction<T>),
 }
 
-/// `Future` that is responsible for calling `side_contract::deposit`
+/// `Future` that is responsible for calling `sideContract.deposit`
 /// for a single `mainContract.Deposit` event.
 /// these get created by the `main_to_side_sign` `RelayStream` that's part
 /// of the `Bridge`.

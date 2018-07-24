@@ -33,6 +33,27 @@
 //! and yields the numbers of those blocks for which all such created futures
 //! have completed. these block numbers are then persisted
 //! so the bridge doesn't have to check logs up to them again next time it's started.
+//!
+//! a `Bridge` instance is constructed as follows (how the parts fit together):
+//!
+//! - a tokio `event_loop` is created.
+//! - `main_transport` and `side_transport` which are web3 http transports
+//!   are created and each use an `event_loop` handle
+//! - the initial `state` is read from the database
+//! - the `config` is read from the database
+//! - `main_contract` (`side_contract`) which is for interaction with the main (side) bridge contract
+//!   is created from `main_transport` (`side_transport`), `config` and `state`
+//! - the `Bridge` instance is created from the two contracts and `state`
+//!   - retrieves log streams for the three events to watch
+//!   - creates the three `RelayStream`s described above
+//!
+//! when the `Bridge` instance is polled:
+//!
+//! - it polls the three `RelayStream`s
+//! - each `RelayStream` polls all relay futures that are currently running as well as the log
+//! stream
+//! - if the log stream yields a log the relay stream creates the corresponding relay future
+//! - the relay future is responsible for the entire relay operation
 
 #[macro_use]
 extern crate error_chain;
