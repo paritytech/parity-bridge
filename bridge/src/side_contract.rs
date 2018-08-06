@@ -48,7 +48,7 @@ impl<T: Transport> SideContract<T> {
     pub fn new(transport: T, config: &Config, state: &State) -> Self {
         Self {
             transport,
-            contract_address: state.main_contract_address,
+            contract_address: state.side_contract_address,
             authority_address: config.address,
             required_signatures: config.authorities.required_signatures,
             request_timeout: config.side.request_timeout,
