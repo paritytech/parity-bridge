@@ -219,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ordered_stream_7_insertions() {
+    fn test_ordered_stream_7_insertions_with_some_duplicate_orders() {
         let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
 
         let timer = tokio_timer::Timer::default();
