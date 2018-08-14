@@ -45,7 +45,7 @@ pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>,
     /// rather than the order they complete.
     /// this is required because relay futures are not guaranteed to
     /// complete in block order.
-    ordered_stream: OrderedStream<u64, JoinAll<Vec<F::Future>>>,
+    ordered_stream: OrderedStream<u64, F::Future>
 }
 
 impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> RelayStream<S, F> {
@@ -81,34 +81,29 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
                 // where all logs have been relayed
                 // and yield that number if it has changed
 
-                // borrow checker
-                let log_to_future = &self.log_to_future;
-
                 // only after all Logs in the LogsInBlockRange have
                 // been relayed can we safely mark the number
                 // as done
-                let futures: Vec<_> = logs_in_block_range
-                    .logs
-                    .iter()
-                    .map(|log| log_to_future.log_to_future(log))
-                    .collect();
-                let joined_futures = join_all(futures);
-                self.ordered_stream
-                    .insert(logs_in_block_range.to, joined_futures);
+                for log in &logs_in_block_range.logs {
+                    let relay_future = self.log_to_future.log_to_future(log);
+                    self.ordered_stream
+                        .insert(logs_in_block_range.to, relay_future);
+                }
             }
 
-            let maybe_block_range_fully_relayed = try_maybe_stream!(
+            let maybe_fully_relayed_until_block = try_maybe_stream!(
                 self.ordered_stream
                     .poll()
                     .chain_err(|| "RelayStream: relaying logs failed")
             );
 
-            if let Some((last_block, _)) = maybe_block_range_fully_relayed {
-                return Ok(Async::Ready(Some(last_block)));
+            if let Some((fully_relayed_until_block, _)) = maybe_fully_relayed_until_block {
+                return Ok(Async::Ready(Some(fully_relayed_until_block)));
             }
 
-            if maybe_logs_in_block_range.is_none() && maybe_block_range_fully_relayed.is_none() {
-                // there are neither new logs nor any block range has been fully relayed
+            if maybe_logs_in_block_range.is_none() && maybe_fully_relayed_until_block.is_none() {
+                // there are neither new logs nor is there a new block number
+                // until which all relays have completed
                 return Ok(Async::NotReady);
             }
         }
