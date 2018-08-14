@@ -65,11 +65,9 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        // on each poll we loop until neither any logs or relays are ready
+        // on each poll we loop until there are neither new logs
+        // nor newly completed relays
         loop {
-            // if there are logs
-            // fetch them and add them all to the
-            // map
             let maybe_logs_in_block_range = try_maybe_stream!(
                 self.stream_of_logs
                     .poll()
@@ -77,13 +75,9 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
             );
 
             if let Some(ref logs_in_block_range) = maybe_logs_in_block_range {
-                // keep track of the min number of block
-                // where all logs have been relayed
-                // and yield that number if it has changed
-
-                // only after all Logs in the LogsInBlockRange have
-                // been relayed can we safely mark the number
-                // as done
+                // if there are new logs, create futures from them
+                // which are responsible for the relay and add them to the
+                // ordered stream
                 for log in &logs_in_block_range.logs {
                     let relay_future = self.log_to_future.log_to_future(log);
                     self.ordered_stream
@@ -98,6 +92,9 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
             );
 
             if let Some((fully_relayed_until_block, _)) = maybe_fully_relayed_until_block {
+                // all relay futures for this block or before have completed
+                // we can yield the block number which can be safely
+                // persisted since it doesn't need to get checked again
                 return Ok(Async::Ready(Some(fully_relayed_until_block)));
             }
 
