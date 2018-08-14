@@ -124,88 +124,92 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use rustc_hex::FromHex;
-//     use web3::types::{Bytes, Log};
-//     use super::*;
-//     use tokio_core::reactor::Core;
-//     use contracts;
-//     use ethabi;
-//     use rustc_hex::ToHex;
-//
-//     #[test]
-//     fn test_deposit_relay_future() {
-//         let deposit_topic = MainBridge::default()
-//             .events()
-//             .deposit()
-//             .create_filter()
-//             .topic0;
-//
-//         let log = contracts::main::logs::Deposit {
-//             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
-//             value: 1000.into(),
-//         };
-//
-//         // TODO [snd] would be great if there were a way to automate this
-//         let log_data = ethabi::encode(&[
-//             ethabi::Token::Address(log.recipient),
-//             ethabi::Token::Uint(log.value),
-//         ]);
-//
-//         let log_tx_hash =
-//             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
-//
-//         let raw_log = Log {
-//             address: "0000000000000000000000000000000000000001".into(),
-//             topics: deposit_topic.into(),
-//             data: Bytes(log_data),
-//             transaction_hash: Some(log_tx_hash),
-//             ..Default::default()
-//         };
-//
-//         let authority_address = "0000000000000000000000000000000000000001".into();
-//
-//         let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-//         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
-//
-//         let tx_data = SideBridge::default().functions().deposit().input(
-//             log.recipient,
-//             log.value,
-//             log_tx_hash,
-//         );
-//
-//         let transport = mock_transport!(
-//             "eth_sendTransaction" =>
-//                 req => json!([{
-//                     "data": format!("0x{}", tx_data.to_hex()),
-//                     "from": "0x0000000000000000000000000000000000000001",
-//                     "gas": "0xfd",
-//                     "gasPrice": "0xa0",
-//                     "to": side_contract_address,
-//                 }]),
-//             res => json!(tx_hash);
-//         );
-//
-//         let connection = ContractConnection::new(
-//             authority_address,
-//             side_contract_address,
-//             transport.clone(),
-//             ::std::time::Duration::from_secs(1),
-//         );
-//
-//         let options = Options {
-//             side: connection,
-//             gas: 0xfd.into(),
-//             gas_price: 0xa0.into(),
-//         };
-//
-//         let future = MainToSideSign::new(raw_log, options);
-//
-//         let mut event_loop = Core::new().unwrap();
-//         let result = event_loop.run(future).unwrap();
-//         assert_eq!(result, tx_hash.into());
-//
-//         assert_eq!(transport.actual_requests(), transport.expected_requests());
-//     }
-// }
+#[cfg(test)]
+mod tests {
+    use rustc_hex::FromHex;
+    use web3::types::{Bytes, Log};
+    use super::*;
+    use tokio_core::reactor::Core;
+    use contracts;
+    use ethabi;
+    use ethabi::ContractFunction;
+    use rustc_hex::ToHex;
+
+    #[test]
+    fn test_main_to_side_sign_relay_future() {
+        let deposit_topic = contracts::main::events::deposit().filter().topic0;
+
+        let log = contracts::main::logs::Deposit {
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            value: 1000.into(),
+        };
+
+        // TODO [snd] would be great if there were a way to automate this
+        let log_data = ethabi::encode(&[
+            ethabi::Token::Address(log.recipient),
+            ethabi::Token::Uint(log.value),
+        ]);
+
+        let log_tx_hash =
+            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+
+        let raw_log = Log {
+            address: "0000000000000000000000000000000000000001".into(),
+            topics: deposit_topic.into(),
+            data: Bytes(log_data),
+            transaction_hash: Some(log_tx_hash),
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            log_index: None,
+            transaction_log_index: None,
+            log_type: None,
+            removed: None
+        };
+
+        let authority_address = "0000000000000000000000000000000000000001".into();
+
+        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+        let side_contract_address = "0000000000000000000000000000000000000dd1".into();
+
+        let tx_data = contracts::side::functions::deposit(
+            log.recipient,
+            log.value,
+            log_tx_hash,
+        );
+
+        let transport = mock_transport!(
+            "eth_sendTransaction" =>
+                req => json!([{
+                    "data": format!("0x{}", tx_data.encoded().to_hex()),
+                    "from": "0x0000000000000000000000000000000000000001",
+                    "gas": "0xfd",
+                    "gasPrice": "0xa0",
+                    "to": side_contract_address,
+                }]),
+            res => json!(tx_hash);
+        );
+
+        let side_contract = SideContract {
+            transport: transport.clone(),
+            contract_address: side_contract_address,
+            authority_address,
+            required_signatures: 1,
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+            sign_main_to_side_gas: 0xfd.into(),
+            sign_main_to_side_gas_price: 0xa0.into(),
+            sign_side_to_main_gas: 0.into(),
+            sign_side_to_main_gas_price: 0.into()
+        };
+
+        let future = MainToSideSign::new(&raw_log, side_contract);
+
+        let mut event_loop = Core::new().unwrap();
+        let result = event_loop.run(future).unwrap();
+        assert_eq!(result, Some(tx_hash.into()));
+
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
+    }
+}
