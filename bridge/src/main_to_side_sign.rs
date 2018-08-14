@@ -172,6 +172,13 @@ mod tests {
         let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
+        let call_data = contracts::side::functions::has_authority_signed_main_to_side(
+            authority_address,
+            log.recipient,
+            log.value,
+            log_tx_hash
+        );
+
         let tx_data = contracts::side::functions::deposit(
             log.recipient,
             log.value,
@@ -179,6 +186,12 @@ mod tests {
         );
 
         let transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "to": side_contract_address,
+                }, "latest"]),
+                res => json!("0x0000000000000000000000000000000000000000000000000000000000000000");
             "eth_sendTransaction" =>
                 req => json!([{
                     "data": format!("0x{}", tx_data.encoded().to_hex()),
@@ -187,7 +200,7 @@ mod tests {
                     "gasPrice": "0xa0",
                     "to": side_contract_address,
                 }]),
-            res => json!(tx_hash);
+                res => json!(tx_hash);
         );
 
         let side_contract = SideContract {
