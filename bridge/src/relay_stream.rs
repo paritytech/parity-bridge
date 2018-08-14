@@ -32,15 +32,19 @@ pub trait LogToFuture {
     fn log_to_future(&self, log: &Log) -> Self::Future;
 }
 
-/// a tokio `Stream` that when polled fetches all new logs from `logs`
-/// waits for that future to complete and yields the block numbers
-/// for which there are no pending
-/// these are then written into the database.
+/// a tokio `Stream` that when polled fetches all new logs from `stream_of_logs`
+/// calls `log_to_future` for each to obtain relay futures, waits for those
+/// futures to complete and yields the block numbers for which all relay
+/// futures have completed.
+/// those block numbers can then be persisted since they'll never need to be
+/// checked again.
 pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> {
     stream_of_logs: S,
     log_to_future: F,
-    /// maps the last block
-    /// if all relays for this a block have finished yield that block
+    /// reorders relay futures so they are yielded in block order
+    /// rather than the order they complete.
+    /// this is required because relay futures are not guaranteed to
+    /// complete in block order.
     ordered_stream: OrderedStream<u64, JoinAll<Vec<F::Future>>>,
 }
 
