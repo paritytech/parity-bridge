@@ -190,6 +190,35 @@ mod tests {
     }
 
     #[test]
+    fn test_single_insert() {
+        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+
+        assert_eq!(ordered_stream.poll(), Ok(Async::NotReady));
+        assert_eq!(ordered_stream.ready_count(), 0);
+        assert_eq!(ordered_stream.not_ready_count(), 0);
+
+        let timer = tokio_timer::Timer::default();
+        ordered_stream.insert(10, timer.sleep(Duration::from_millis(0)).join(futures::future::ok("f")));
+
+        assert_eq!(ordered_stream.ready_count(), 0);
+        assert_eq!(ordered_stream.not_ready_count(), 1);
+
+        let mut event_loop = tokio_core::reactor::Core::new().unwrap();
+
+        let stream_future = ordered_stream.into_future();
+        let (item, ordered_stream) = if let Ok(success) = event_loop.run(stream_future) {
+            success
+        } else {
+            panic!("failed to run stream_future");
+        };
+
+        assert_eq!(item, Some((10, ((), "f"))));
+
+        assert_eq!(ordered_stream.ready_count(), 0);
+        assert_eq!(ordered_stream.not_ready_count(), 0);
+    }
+
+    #[test]
     fn test_ordered_stream_7_insertions() {
         let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
 
