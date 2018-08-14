@@ -135,25 +135,6 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 //     use rustc_hex::ToHex;
 //
 //     #[test]
-//     fn test_deposit_relay_payload() {
-//         let data = "000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap();
-//         let log = Log {
-//             data: data.into(),
-//             topics: vec![
-//                 "e1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c".into(),
-//             ],
-//             transaction_hash: Some(
-//                 "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into(),
-//             ),
-//             ..Default::default()
-//         };
-//
-//         let payload = deposit_relay_payload(log);
-//         let expected: Vec<u8> = "26b3293f000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".from_hex().unwrap();
-//         assert_eq!(expected, payload);
-//     }
-//
-//     #[test]
 //     fn test_deposit_relay_future() {
 //         let deposit_topic = MainBridge::default()
 //             .events()
