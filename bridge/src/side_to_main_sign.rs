@@ -147,3 +147,120 @@ impl<T: Transport> LogToFuture for LogToSideToMainSign<T> {
         SideToMainSign::new(log, self.side.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rustc_hex::FromHex;
+    use web3::types::{Bytes, Log, Address};
+    use super::*;
+    use tokio_core::reactor::Core;
+    use contracts;
+    use ethabi;
+    use ethabi::ContractFunction;
+    use rustc_hex::ToHex;
+
+    #[test]
+    fn test_side_to_main_sign_relay_future_not_relayed() {
+        let topic = contracts::side::events::withdraw().filter().topic0;
+
+        let log = contracts::side::logs::Withdraw {
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            value: 1000.into(),
+            main_gas_price: 100.into()
+        };
+
+        // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
+        let log_data = ethabi::encode(&[
+            ethabi::Token::Address(log.recipient),
+            ethabi::Token::Uint(log.value),
+            ethabi::Token::Uint(log.main_gas_price),
+        ]);
+
+        let log_tx_hash =
+            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+
+        let raw_log = Log {
+            address: "0000000000000000000000000000000000000001".into(),
+            topics: topic.into(),
+            data: Bytes(log_data),
+            transaction_hash: Some(log_tx_hash),
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            log_index: None,
+            transaction_log_index: None,
+            log_type: None,
+            removed: None
+        };
+
+        let authority_address: Address = "0000000000000000000000000000000000000001".into();
+
+        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+        let side_contract_address = "0000000000000000000000000000000000000dd1".into();
+
+        let message = MessageToMain {
+            recipient: log.recipient,
+            value: log.value,
+            side_tx_hash: log_tx_hash,
+            main_gas_price: log.main_gas_price
+        };
+
+        let call_data = contracts::side::functions::has_authority_signed_side_to_main(
+            authority_address,
+            message.to_bytes()
+        );
+
+        let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
+
+        let tx_data = contracts::side::functions::submit_signature(
+            signature.from_hex().unwrap(),
+            message.to_bytes()
+        );
+
+        let transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "to": side_contract_address,
+                }, "latest"]),
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
+            "eth_sign" =>
+                req => json!([
+                    authority_address,
+                    format!("0x{}", message.to_bytes().to_hex())
+                ]),
+                res => json!(format!("0x{}", signature));
+            "eth_sendTransaction" =>
+                req => json!([{
+                    "data": format!("0x{}", tx_data.encoded().to_hex()),
+                    "from": format!("0x{}", authority_address.to_hex()),
+                    "gas": "0xfd",
+                    "gasPrice": "0xa0",
+                    "to": side_contract_address,
+                }]),
+                res => json!(tx_hash);
+        );
+
+        let side_contract = SideContract {
+            transport: transport.clone(),
+            contract_address: side_contract_address,
+            authority_address,
+            required_signatures: 1,
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+            sign_main_to_side_gas: 0.into(),
+            sign_main_to_side_gas_price: 0.into(),
+            sign_side_to_main_gas: 0xfd.into(),
+            sign_side_to_main_gas_price: 0xa0.into(),
+        };
+
+        let future = SideToMainSign::new(&raw_log, side_contract);
+
+        let mut event_loop = Core::new().unwrap();
+        let result = event_loop.run(future).unwrap();
+        assert_eq!(result, Some(tx_hash.into()));
+
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
+    }
+}
