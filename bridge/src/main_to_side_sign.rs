@@ -190,7 +190,7 @@ mod tests {
                     "data": format!("0x{}", call_data.encoded().to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
-                res => json!("0x0000000000000000000000000000000000000000000000000000000000000000");
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
             "eth_sendTransaction" =>
                 req => json!([{
                     "data": format!("0x{}", tx_data.encoded().to_hex()),
@@ -274,7 +274,7 @@ mod tests {
                     "data": format!("0x{}", call_data.encoded().to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
-                res => json!("0x0000000000000000000000000000000000000000000000000000000000000001");
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
         );
 
         let side_contract = SideContract {
