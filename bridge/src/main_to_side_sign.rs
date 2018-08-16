@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_main_to_side_sign_relay_future_not_relayed() {
-        let deposit_topic = contracts::main::events::deposit().filter().topic0;
+        let topic = contracts::main::events::deposit().filter().topic0;
 
         let log = contracts::main::logs::Deposit {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -154,7 +154,7 @@ mod tests {
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: deposit_topic.into(),
+            topics: topic.into(),
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_main_to_side_sign_relay_future_already_relayed() {
-        let deposit_topic = contracts::main::events::deposit().filter().topic0;
+        let topic = contracts::main::events::deposit().filter().topic0;
 
         let log = contracts::main::logs::Deposit {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -244,7 +244,7 @@ mod tests {
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: deposit_topic.into(),
+            topics: topic.into(),
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
