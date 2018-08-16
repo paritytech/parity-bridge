@@ -66,6 +66,12 @@ impl Transport for MockTransport {
         params: Vec<jsonrpc_core::Value>,
     ) -> (usize, jsonrpc_core::Call) {
         let current_request_index = { self.actual_requests.as_ref().borrow().len() };
+        assert!(
+            current_request_index < self.expected_requests.len(),
+            "{} requests expected but at least one more request is being executed",
+            self.expected_requests.len()
+        );
+
         assert_eq!(
             self.expected_requests[current_request_index]
                 .method
