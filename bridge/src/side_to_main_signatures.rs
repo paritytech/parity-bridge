@@ -410,4 +410,112 @@ mod tests {
             side_transport.expected_requests()
         );
     }
+
+    #[test]
+    fn test_side_to_main_sign_relay_future_already_relayed_authority_responsible() {
+        let topic = contracts::side::events::collected_signatures()
+            .filter()
+            .topic0;
+
+        let authority_address: Address = "0000000000000000000000000000000000000001".into();
+
+        let authority_responsible_for_relay = authority_address;
+
+        let message = MessageToMain {
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            value: 1000.into(),
+            main_gas_price: 100.into(),
+            side_tx_hash: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+                .into(),
+        };
+
+        let log = contracts::side::logs::CollectedSignatures {
+            authority_responsible_for_relay,
+            message_hash: message.keccak256(),
+        };
+
+        // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
+        let log_data = ethabi::encode(&[
+            ethabi::Token::Address(log.authority_responsible_for_relay),
+            ethabi::Token::FixedBytes(log.message_hash.to_vec()),
+        ]);
+
+        let log_tx_hash: H256 =
+            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+
+        let raw_log = Log {
+            address: "0000000000000000000000000000000000000001".into(),
+            topics: topic.into(),
+            data: Bytes(log_data),
+            transaction_hash: Some(log_tx_hash),
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            log_index: None,
+            transaction_log_index: None,
+            log_type: None,
+            removed: None,
+        };
+
+        let side_contract_address: Address = "0000000000000000000000000000000000000dd1".into();
+        let main_contract_address: Address = "0000000000000000000000000000000000000fff".into();
+
+        let signature = Signature::from_bytes("8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".from_hex().unwrap().as_slice()).unwrap();
+
+        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+
+        let main_transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", contracts::main::functions::withdraws(log_tx_hash).encoded().to_hex()),
+                    "to": main_contract_address,
+                }, "latest"]),
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
+        );
+
+        let side_transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", contracts::side::functions::message(log.message_hash).encoded().to_hex()),
+                    "to": side_contract_address,
+                }, "latest"]),
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex()));
+        );
+
+        let main_contract = MainContract {
+            transport: main_transport.clone(),
+            contract_address: main_contract_address,
+            authority_address,
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+            submit_collected_signatures_gas: 0xfd.into(),
+        };
+
+        let side_contract = SideContract {
+            transport: side_transport.clone(),
+            contract_address: side_contract_address,
+            authority_address,
+            required_signatures: 1,
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+            sign_main_to_side_gas: 0.into(),
+            sign_main_to_side_gas_price: 0.into(),
+            sign_side_to_main_gas: 0xfd.into(),
+            sign_side_to_main_gas_price: 0xa0.into(),
+        };
+
+        let future = SideToMainSignatures::new(&raw_log, main_contract, side_contract);
+
+        let mut event_loop = Core::new().unwrap();
+        let result = event_loop.run(future).unwrap();
+        assert_eq!(result, None);
+
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
+        assert_eq!(
+            side_transport.actual_requests(),
+            side_transport.expected_requests()
+        );
+    }
 }
