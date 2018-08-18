@@ -54,8 +54,8 @@ use futures::{Async, Future, Poll, Stream};
 /// example in the context of the bridge:
 /// a `RelayStream` polls a Stream of logs
 /// calls a ... for every log and yields the block number for
-/// every block number 
-/// by using the block number as `order`, 
+/// every block number
+/// by using the block number as `order`,
 /// and yielding the previous block number each time it changes
 /// this is easily accomplished.
 /// TODO
@@ -86,12 +86,18 @@ impl<O: Ord, F: Future> OrderedStream<O, F> {
     /// returns the count of futures that have completed but can't be
     /// yielded since there are futures which are not ready
     pub fn ready_count(&self) -> usize {
-        self.entries.iter().filter(|x| x.item_if_ready.is_some()).count()
+        self.entries
+            .iter()
+            .filter(|x| x.item_if_ready.is_some())
+            .count()
     }
 
     /// returns the count of futures that have not yet completed
     pub fn not_ready_count(&self) -> usize {
-        self.entries.iter().filter(|x| x.item_if_ready.is_none()).count()
+        self.entries
+            .iter()
+            .filter(|x| x.item_if_ready.is_none())
+            .count()
     }
 }
 
@@ -169,12 +175,12 @@ struct Entry<O, F: Future> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate futures;
     extern crate tokio_core;
     extern crate tokio_timer;
-    extern crate futures;
-    use std::time::Duration;
     use futures::stream::Stream;
     use futures::Future;
+    use std::time::Duration;
 
     // TODO test multiple ready at same time
     //
@@ -182,7 +188,13 @@ mod tests {
 
     #[test]
     fn test_empty_ordered_stream_is_not_ready() {
-        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+        let mut ordered_stream: OrderedStream<
+            u32,
+            futures::future::Join<
+                tokio_timer::Sleep,
+                futures::future::FutureResult<&str, tokio_timer::TimerError>,
+            >,
+        > = OrderedStream::new();
 
         assert_eq!(ordered_stream.poll(), Ok(Async::NotReady));
         assert_eq!(ordered_stream.ready_count(), 0);
@@ -191,14 +203,25 @@ mod tests {
 
     #[test]
     fn test_single_insert() {
-        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+        let mut ordered_stream: OrderedStream<
+            u32,
+            futures::future::Join<
+                tokio_timer::Sleep,
+                futures::future::FutureResult<&str, tokio_timer::TimerError>,
+            >,
+        > = OrderedStream::new();
 
         assert_eq!(ordered_stream.poll(), Ok(Async::NotReady));
         assert_eq!(ordered_stream.ready_count(), 0);
         assert_eq!(ordered_stream.not_ready_count(), 0);
 
         let timer = tokio_timer::Timer::default();
-        ordered_stream.insert(10, timer.sleep(Duration::from_millis(0)).join(futures::future::ok("f")));
+        ordered_stream.insert(
+            10,
+            timer
+                .sleep(Duration::from_millis(0))
+                .join(futures::future::ok("f")),
+        );
 
         assert_eq!(ordered_stream.ready_count(), 0);
         assert_eq!(ordered_stream.not_ready_count(), 1);
@@ -220,17 +243,58 @@ mod tests {
 
     #[test]
     fn test_ordered_stream_7_insertions_with_some_duplicate_orders() {
-        let mut ordered_stream: OrderedStream<u32, futures::future::Join<tokio_timer::Sleep, futures::future::FutureResult<&str, tokio_timer::TimerError>>> = OrderedStream::new();
+        let mut ordered_stream: OrderedStream<
+            u32,
+            futures::future::Join<
+                tokio_timer::Sleep,
+                futures::future::FutureResult<&str, tokio_timer::TimerError>,
+            >,
+        > = OrderedStream::new();
 
         let timer = tokio_timer::Timer::default();
 
-        ordered_stream.insert(10, timer.sleep(Duration::from_millis(0)).join(futures::future::ok("f")));
-        ordered_stream.insert(4, timer.sleep(Duration::from_millis(1)).join(futures::future::ok("e")));
-        ordered_stream.insert(3, timer.sleep(Duration::from_millis(65)).join(futures::future::ok("d")));
-        ordered_stream.insert(0, timer.sleep(Duration::from_millis(500)).join(futures::future::ok("a")));
-        ordered_stream.insert(2, timer.sleep(Duration::from_millis(50)).join(futures::future::ok("b")));
-        ordered_stream.insert(2, timer.sleep(Duration::from_millis(10)).join(futures::future::ok("c")));
-        ordered_stream.insert(10, timer.sleep(Duration::from_millis(338)).join(futures::future::ok("g")));
+        ordered_stream.insert(
+            10,
+            timer
+                .sleep(Duration::from_millis(0))
+                .join(futures::future::ok("f")),
+        );
+        ordered_stream.insert(
+            4,
+            timer
+                .sleep(Duration::from_millis(1))
+                .join(futures::future::ok("e")),
+        );
+        ordered_stream.insert(
+            3,
+            timer
+                .sleep(Duration::from_millis(65))
+                .join(futures::future::ok("d")),
+        );
+        ordered_stream.insert(
+            0,
+            timer
+                .sleep(Duration::from_millis(500))
+                .join(futures::future::ok("a")),
+        );
+        ordered_stream.insert(
+            2,
+            timer
+                .sleep(Duration::from_millis(50))
+                .join(futures::future::ok("b")),
+        );
+        ordered_stream.insert(
+            2,
+            timer
+                .sleep(Duration::from_millis(10))
+                .join(futures::future::ok("c")),
+        );
+        ordered_stream.insert(
+            10,
+            timer
+                .sleep(Duration::from_millis(338))
+                .join(futures::future::ok("g")),
+        );
 
         assert_eq!(ordered_stream.ready_count(), 0);
         assert_eq!(ordered_stream.not_ready_count(), 7);
@@ -238,14 +302,17 @@ mod tests {
         let mut event_loop = tokio_core::reactor::Core::new().unwrap();
 
         let results = event_loop.run(ordered_stream.take(7).collect()).unwrap();
-        assert_eq!(results, vec![
-            (0, ((), "a")),
-            (2, ((), "b")),
-            (2, ((), "c")),
-            (3, ((), "d")),
-            (4, ((), "e")),
-            (10, ((), "f")),
-            (10, ((), "g")),
-        ]);
+        assert_eq!(
+            results,
+            vec![
+                (0, ((), "a")),
+                (2, ((), "b")),
+                (2, ((), "c")),
+                (3, ((), "d")),
+                (4, ((), "e")),
+                (10, ((), "f")),
+                (10, ((), "g")),
+            ]
+        );
     }
 }

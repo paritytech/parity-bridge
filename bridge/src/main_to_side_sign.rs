@@ -126,14 +126,14 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 
 #[cfg(test)]
 mod tests {
-    use rustc_hex::FromHex;
-    use web3::types::{Bytes, Log};
     use super::*;
-    use tokio_core::reactor::Core;
     use contracts;
     use ethabi;
     use ethabi::ContractFunction;
+    use rustc_hex::FromHex;
     use rustc_hex::ToHex;
+    use tokio_core::reactor::Core;
+    use web3::types::{Bytes, Log};
 
     #[test]
     fn test_main_to_side_sign_relay_future_not_relayed() {
@@ -163,7 +163,7 @@ mod tests {
             log_index: None,
             transaction_log_index: None,
             log_type: None,
-            removed: None
+            removed: None,
         };
 
         let authority_address = "0000000000000000000000000000000000000001".into();
@@ -175,14 +175,10 @@ mod tests {
             authority_address,
             log.recipient,
             log.value,
-            log_tx_hash
-        );
-
-        let tx_data = contracts::side::functions::deposit(
-            log.recipient,
-            log.value,
             log_tx_hash,
         );
+
+        let tx_data = contracts::side::functions::deposit(log.recipient, log.value, log_tx_hash);
 
         let transport = mock_transport!(
             "eth_call" =>
@@ -213,7 +209,7 @@ mod tests {
             sign_main_to_side_gas: 0xfd.into(),
             sign_main_to_side_gas_price: 0xa0.into(),
             sign_side_to_main_gas: 0.into(),
-            sign_side_to_main_gas_price: 0.into()
+            sign_side_to_main_gas_price: 0.into(),
         };
 
         let future = MainToSideSign::new(&raw_log, side_contract);
@@ -253,7 +249,7 @@ mod tests {
             log_index: None,
             transaction_log_index: None,
             log_type: None,
-            removed: None
+            removed: None,
         };
 
         let authority_address = "0000000000000000000000000000000000000001".into();
@@ -265,7 +261,7 @@ mod tests {
             authority_address,
             log.recipient,
             log.value,
-            log_tx_hash
+            log_tx_hash,
         );
 
         let transport = mock_transport!(
@@ -288,7 +284,7 @@ mod tests {
             sign_main_to_side_gas: 0xfd.into(),
             sign_main_to_side_gas_price: 0xa0.into(),
             sign_side_to_main_gas: 0.into(),
-            sign_side_to_main_gas_price: 0.into()
+            sign_side_to_main_gas_price: 0.into(),
         };
 
         let future = MainToSideSign::new(&raw_log, side_contract);

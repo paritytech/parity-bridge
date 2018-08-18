@@ -150,14 +150,14 @@ impl<T: Transport> LogToFuture for LogToSideToMainSign<T> {
 
 #[cfg(test)]
 mod tests {
-    use rustc_hex::FromHex;
-    use web3::types::{Bytes, Log, Address};
     use super::*;
-    use tokio_core::reactor::Core;
     use contracts;
     use ethabi;
     use ethabi::ContractFunction;
+    use rustc_hex::FromHex;
     use rustc_hex::ToHex;
+    use tokio_core::reactor::Core;
+    use web3::types::{Address, Bytes, Log};
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed() {
@@ -166,7 +166,7 @@ mod tests {
         let log = contracts::side::logs::Withdraw {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
             value: 1000.into(),
-            main_gas_price: 100.into()
+            main_gas_price: 100.into(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
@@ -190,7 +190,7 @@ mod tests {
             log_index: None,
             transaction_log_index: None,
             log_type: None,
-            removed: None
+            removed: None,
         };
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
@@ -202,19 +202,19 @@ mod tests {
             recipient: log.recipient,
             value: log.value,
             side_tx_hash: log_tx_hash,
-            main_gas_price: log.main_gas_price
+            main_gas_price: log.main_gas_price,
         };
 
         let call_data = contracts::side::functions::has_authority_signed_side_to_main(
             authority_address,
-            message.to_bytes()
+            message.to_bytes(),
         );
 
         let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
         let tx_data = contracts::side::functions::submit_signature(
             signature.from_hex().unwrap(),
-            message.to_bytes()
+            message.to_bytes(),
         );
 
         let transport = mock_transport!(
@@ -271,7 +271,7 @@ mod tests {
         let log = contracts::side::logs::Withdraw {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
             value: 1000.into(),
-            main_gas_price: 100.into()
+            main_gas_price: 100.into(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
@@ -295,7 +295,7 @@ mod tests {
             log_index: None,
             transaction_log_index: None,
             log_type: None,
-            removed: None
+            removed: None,
         };
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
@@ -307,19 +307,19 @@ mod tests {
             recipient: log.recipient,
             value: log.value,
             side_tx_hash: log_tx_hash,
-            main_gas_price: log.main_gas_price
+            main_gas_price: log.main_gas_price,
         };
 
         let call_data = contracts::side::functions::has_authority_signed_side_to_main(
             authority_address,
-            message.to_bytes()
+            message.to_bytes(),
         );
 
         let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
         let tx_data = contracts::side::functions::submit_signature(
             signature.from_hex().unwrap(),
-            message.to_bytes()
+            message.to_bytes(),
         );
 
         let transport = mock_transport!(

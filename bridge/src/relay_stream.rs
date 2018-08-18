@@ -45,7 +45,7 @@ pub struct RelayStream<S: Stream<Item = LogsInBlockRange, Error = error::Error>,
     /// rather than the order they complete.
     /// this is required because relay futures are not guaranteed to
     /// complete in block order.
-    ordered_stream: OrderedStream<u64, F::Future>
+    ordered_stream: OrderedStream<u64, F::Future>,
 }
 
 impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> RelayStream<S, F> {
