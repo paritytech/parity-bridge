@@ -5,6 +5,9 @@ branches:
 matrix:
   include:
     - language: rust
+      # using `rust: stable` below would be preferable but it randomly
+      # breaks the rustfmt check on travis (`cargo fmt --all -- --write-mode=diff`)
+      # sometimes when the rustfmt rules have changed
       rust: stable-2018-06-21
       sudo: required
       dist: trusty
