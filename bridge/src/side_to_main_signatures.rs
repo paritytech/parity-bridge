@@ -16,7 +16,7 @@
 use contracts;
 use error::{self, ResultExt};
 use futures::future::JoinAll;
-use futures::{Async, Future, Poll, Stream};
+use futures::{Async, Future, Poll};
 use helpers;
 use helpers::{AsyncCall, AsyncTransaction};
 use main_contract::MainContract;
