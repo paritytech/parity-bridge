@@ -53,19 +53,18 @@ error_chain! {
     }
 }
 
-// `CallResult` is a future whose associated type `Error` is a `web3::Error`
-
-// `Timeout<F>` is a future whose associated type `Error` is `From<TimeoutError<F>>`
-
-// so for `TimeoutError<CallResult<T, F>` the `Error` of CallResult (web::Error)
-// must implement From<TimeoutError.
-// that's pretty ridiculous
-// so you need to wrap it
-
-// the timeout has the same error type as the wrapped future.
-// that's why the error type of the wrapped future must impl from TimeoutError
-
-// you cant implement from TimeoutError for web3::Error
+// tokio timer `Timeout<F>` can only wrap futures `F` whose assocaited `Error` type
+// satisfies `From<TimeoutError<F>>`
+//
+// `web3::CallResult`'s associated error type `Error` which is `web3::Error`
+// does not satisfy `From<TimeoutError<F>>`.
+// thus we can't use `Timeout<web3::CallResult>`.
+// we also can't implement `From<TimeoutError<F>` for `web3::Error` since
+// we control neither of the types.
+//
+// instead we implement `TimeoutError<F>` for `Error` and `From<web3::Error>`
+// for `Error` so we can convert `web3::Error` into `Error` and then use that
+// with `Timeout`.
 
 impl<F> From<TimeoutError<F>> for Error {
     fn from(err: TimeoutError<F>) -> Self {
