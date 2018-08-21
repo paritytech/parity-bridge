@@ -24,7 +24,6 @@ use message_to_main::MessageToMain;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
 use signature::Signature;
-use web3::api::Namespace;
 use web3::types::{H256, Log};
 use web3::Transport;
 
