@@ -207,7 +207,6 @@ impl<T: Transport> Stream for LogStream<T> {
 mod tests {
     use super::*;
     use contracts;
-    use helpers::StreamExt;
     use rustc_hex::FromHex;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};

@@ -15,11 +15,10 @@
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 use contracts;
 use error::{self, ResultExt};
-use futures::{Async, Future, Poll, Stream};
+use futures::{Async, Future, Poll};
 use helpers::{self, AsyncCall, AsyncTransaction};
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
-use web3::api::Namespace;
 use web3::types::{Address, H256, Log, U256};
 use web3::Transport;
 
@@ -130,7 +129,6 @@ mod tests {
     use contracts;
     use ethabi;
     use ethabi::ContractFunction;
-    use rustc_hex::FromHex;
     use rustc_hex::ToHex;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};

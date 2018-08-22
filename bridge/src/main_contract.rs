@@ -18,7 +18,6 @@ use contracts;
 use database::State;
 use ethabi::ContractFunction;
 use ethereum_types::{Address, U256};
-use futures::Future;
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;

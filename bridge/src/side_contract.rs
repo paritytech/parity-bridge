@@ -18,7 +18,6 @@ use contracts;
 use database::State;
 use ethabi::ContractFunction;
 use futures::future::{join_all, JoinAll};
-use futures::{Future, Stream};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;

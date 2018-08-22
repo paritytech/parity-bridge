@@ -16,7 +16,7 @@
 use contracts;
 use error::{self, ResultExt};
 use futures::future::FromErr;
-use futures::{Async, Future, Poll, Stream};
+use futures::{Async, Future, Poll};
 use helpers::{AsyncCall, AsyncTransaction};
 use message_to_main::{MessageToMain, MESSAGE_LENGTH};
 use relay_stream::LogToFuture;
@@ -26,7 +26,7 @@ use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallResult;
-use web3::types::{Address, Bytes, H256, H520, Log, U256};
+use web3::types::{Bytes, H256, H520, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
