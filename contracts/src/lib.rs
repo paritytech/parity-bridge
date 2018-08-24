@@ -13,15 +13,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-use std::process::Command;
+extern crate ethabi;
+#[macro_use]
+extern crate ethabi_derive;
+#[macro_use]
+extern crate ethabi_contract;
 
-fn main() {
-    // make last git commit hash (`git rev-parse HEAD`)
-    // available via `env!("GIT_HASH")` in sources
-    let output = Command::new("git")
-        .args(&["rev-parse", "HEAD"])
-        .output()
-        .unwrap();
-    let git_hash = String::from_utf8(output.stdout).unwrap();
-    println!("cargo:rustc-env=GIT_HASH={}", git_hash);
-}
+use_contract!(main, "../compiled_contracts/MainBridge.abi");
+use_contract!(side, "../compiled_contracts/SideBridge.abi");

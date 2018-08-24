@@ -1,7 +1,7 @@
-var ForeignBridge = artifacts.require("ForeignBridge");
+var SideBridge = artifacts.require("SideBridge");
 var helpers = require("./helpers/helpers");
 
-contract('ForeignBridge', function(accounts) {
+contract('SideBridge', function(accounts) {
   it("totalSupply", function() {
     var contract;
     var requiredSignatures = 1;
@@ -11,7 +11,7 @@ contract('ForeignBridge', function(accounts) {
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
     var value = web3.toWei(3, "ether");
 
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       contract = instance;
 
       return contract.totalSupply();
@@ -27,7 +27,7 @@ contract('ForeignBridge', function(accounts) {
       assert(result.equals(value), "deposit should increase supply");
 
       var homeGasPrice = 1000;
-      return contract.transferHomeViaRelay(owner, value, homeGasPrice, {from: owner});
+      return contract.transferToMainViaRelay(owner, value, homeGasPrice, {from: owner});
     }).then(function() {
 
       return contract.totalSupply();
@@ -46,7 +46,7 @@ contract('ForeignBridge', function(accounts) {
     var receiver = accounts[4];
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
 
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       contract = instance;
 
       // deposit something so we can transfer it
@@ -145,7 +145,7 @@ contract('ForeignBridge', function(accounts) {
     var user1InitialValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(1, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       // top up balance so we can transfer
       return meta.deposit(userAccount, user1InitialValue, hash, { from: authorities[0] });
@@ -177,7 +177,7 @@ contract('ForeignBridge', function(accounts) {
     var userValue = web3.toWei(3, "ether");
     var transferedValue = web3.toWei(4, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -197,7 +197,7 @@ contract('ForeignBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var userValue = web3.toWei(3, "ether");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(userAccount, userValue, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -227,7 +227,7 @@ contract('ForeignBridge', function(accounts) {
     var recipientAccount = accounts[3];
     var maxValue = web3.toWei("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "wei");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(recipientAccount, maxValue, hash, { from: authorities[0] });
     }).then(function(result) {
@@ -250,7 +250,7 @@ contract('ForeignBridge', function(accounts) {
     var recipientAccount = accounts[4];
     var maxValue = web3.toWei("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "wei");
     var hash = "0xe55bb43c36cdf79e23b4adc149cdded921f0d482e613c50c6540977c213bc408";
-    return ForeignBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
+    return SideBridge.new(requiredSignatures, authorities, estimatedGasCostOfWithdraw).then(function(instance) {
       meta = instance;
       return meta.deposit(recipientAccount, maxValue, hash, { from: authorities[0] });
     }).then(function(result) {

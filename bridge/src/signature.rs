@@ -1,9 +1,23 @@
+// Copyright 2017 Parity Technologies (UK) Ltd.
+// This file is part of Parity-Bridge.
+
+// Parity-Bridge is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Parity-Bridge is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+use ethabi;
 /// ECDSA signatures:
 /// conversion from/to byte vectors.
 /// from/to v, r, s components.
-
 use ethereum_types::H256;
-use ethabi;
 
 use error::Error;
 
@@ -45,8 +59,8 @@ impl Signature {
 
 #[cfg(test)]
 mod test {
-    use quickcheck::TestResult;
     use super::*;
+    use quickcheck::TestResult;
 
     quickcheck! {
         fn quickcheck_signature_roundtrips(v: u8, r_raw: Vec<u8>, s_raw: Vec<u8>) -> TestResult {

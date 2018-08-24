@@ -1,26 +1,46 @@
-use std::path::{Path, PathBuf};
+// Copyright 2017 Parity Technologies (UK) Ltd.
+// This file is part of Parity-Bridge.
+
+// Parity-Bridge is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Parity-Bridge is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning reading configuration from toml files
+
+use error::{Error, ResultExt};
+use ethereum_types::U256;
+use rustc_hex::FromHex;
 use std::fs;
 use std::io::Read;
+use std::path::Path;
 use std::time::Duration;
-use rustc_hex::FromHex;
-use web3::types::{Address, Bytes};
-use ethereum_types::U256;
-use error::{Error, ResultExt};
 use toml;
+use web3::types::{Address, Bytes};
 
 const DEFAULT_POLL_INTERVAL: u64 = 1;
-const DEFAULT_CONFIRMATIONS: usize = 12;
 const DEFAULT_TIMEOUT: u64 = 5;
+
+const DEFAULT_CONFIRMATIONS: u32 = 12;
 
 /// Application config.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
-    pub home: Node,
-    pub foreign: Node,
+    pub address: Address,
+    pub main: NodeConfig,
+    pub side: NodeConfig,
     pub authorities: Authorities,
     pub txs: Transactions,
     pub estimated_gas_cost_of_withdraw: U256,
-    pub max_total_home_contract_balance: U256,
+    pub max_total_main_contract_balance: U256,
     pub max_single_deposit_value: U256,
 }
 
@@ -39,8 +59,9 @@ impl Config {
 
     fn from_load_struct(config: load::Config) -> Result<Config, Error> {
         let result = Config {
-            home: Node::from_load_struct(config.home)?,
-            foreign: Node::from_load_struct(config.foreign)?,
+            address: config.address,
+            main: NodeConfig::from_load_struct(config.main)?,
+            side: NodeConfig::from_load_struct(config.side)?,
             authorities: Authorities {
                 accounts: config.authorities.accounts,
                 required_signatures: config.authorities.required_signatures,
@@ -50,7 +71,7 @@ impl Config {
                 .map(Transactions::from_load_struct)
                 .unwrap_or_default(),
             estimated_gas_cost_of_withdraw: config.estimated_gas_cost_of_withdraw,
-            max_total_home_contract_balance: config.max_total_home_contract_balance,
+            max_total_main_contract_balance: config.max_total_main_contract_balance,
             max_single_deposit_value: config.max_single_deposit_value,
         };
 
@@ -59,19 +80,17 @@ impl Config {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Node {
-    pub account: Address,
+pub struct NodeConfig {
     pub contract: ContractConfig,
-    pub ipc: PathBuf,
+    pub http: String,
     pub request_timeout: Duration,
     pub poll_interval: Duration,
-    pub required_confirmations: usize,
+    pub required_confirmations: u32,
 }
 
-impl Node {
-    fn from_load_struct(node: load::Node) -> Result<Node, Error> {
-        let result = Node {
-            account: node.account,
+impl NodeConfig {
+    fn from_load_struct(node: load::NodeConfig) -> Result<NodeConfig, Error> {
+        let result = Self {
             contract: ContractConfig {
                 bin: {
                     let mut read = String::new();
@@ -85,7 +104,7 @@ impl Node {
                     Bytes(read.from_hex()?)
                 },
             },
-            ipc: node.ipc,
+            http: node.http,
             request_timeout: Duration::from_secs(node.request_timeout.unwrap_or(DEFAULT_TIMEOUT)),
             poll_interval: Duration::from_secs(node.poll_interval.unwrap_or(DEFAULT_POLL_INTERVAL)),
             required_confirmations: node.required_confirmations.unwrap_or(DEFAULT_CONFIRMATIONS),
@@ -97,8 +116,8 @@ impl Node {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct Transactions {
-    pub home_deploy: TransactionConfig,
-    pub foreign_deploy: TransactionConfig,
+    pub main_deploy: TransactionConfig,
+    pub side_deploy: TransactionConfig,
     pub deposit_relay: TransactionConfig,
     pub withdraw_confirm: TransactionConfig,
     pub withdraw_relay: TransactionConfig,
@@ -107,10 +126,10 @@ pub struct Transactions {
 impl Transactions {
     fn from_load_struct(cfg: load::Transactions) -> Self {
         Transactions {
-            home_deploy: cfg.home_deploy
+            main_deploy: cfg.main_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            foreign_deploy: cfg.foreign_deploy
+            side_deploy: cfg.side_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
             deposit_relay: cfg.deposit_relay
@@ -128,15 +147,15 @@ impl Transactions {
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub struct TransactionConfig {
-    pub gas: u64,
-    pub gas_price: u64,
+    pub gas: U256,
+    pub gas_price: U256,
 }
 
 impl TransactionConfig {
     fn from_load_struct(cfg: load::TransactionConfig) -> Self {
         TransactionConfig {
-            gas: cfg.gas.unwrap_or_default(),
-            gas_price: cfg.gas_price.unwrap_or_default(),
+            gas: cfg.gas,
+            gas_price: cfg.gas_price,
         }
     }
 }
@@ -156,56 +175,42 @@ pub struct Authorities {
 /// `load` module separates `Config` representation in file with optional from the one used
 /// in application.
 mod load {
+    use ethereum_types::U256;
+    use helpers::deserialize_u256;
     use std::path::PathBuf;
     use web3::types::Address;
-    use ethereum_types::U256;
-    use serde::{Deserialize, Deserializer};
-    use serde::de::Error;
-
-    /// the toml crate parses integer literals as `i64`.
-    /// certain config options (example: `max_total_home_contract_balance`)
-    /// frequently don't fit into `i64`.
-    /// workaround: put them in string literals, use this custom
-    /// deserializer and parse them as U256.
-    fn deserialize_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s: &str = Deserialize::deserialize(deserializer)?;
-        U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
-    }
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct Config {
-        pub home: Node,
-        pub foreign: Node,
+        pub address: Address,
+        pub main: NodeConfig,
+        pub side: NodeConfig,
         pub authorities: Authorities,
         pub transactions: Option<Transactions>,
         #[serde(deserialize_with = "deserialize_u256")]
         pub estimated_gas_cost_of_withdraw: U256,
         #[serde(deserialize_with = "deserialize_u256")]
-        pub max_total_home_contract_balance: U256,
+        pub max_total_main_contract_balance: U256,
         #[serde(deserialize_with = "deserialize_u256")]
         pub max_single_deposit_value: U256,
     }
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
-    pub struct Node {
-        pub account: Address,
+    pub struct NodeConfig {
         pub contract: ContractConfig,
-        pub ipc: PathBuf,
+        pub http: String,
         pub request_timeout: Option<u64>,
         pub poll_interval: Option<u64>,
-        pub required_confirmations: Option<usize>,
+        pub required_confirmations: Option<u32>,
     }
 
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct Transactions {
-        pub home_deploy: Option<TransactionConfig>,
-        pub foreign_deploy: Option<TransactionConfig>,
+        pub main_deploy: Option<TransactionConfig>,
+        pub side_deploy: Option<TransactionConfig>,
         pub deposit_relay: Option<TransactionConfig>,
         pub withdraw_confirm: Option<TransactionConfig>,
         pub withdraw_relay: Option<TransactionConfig>,
@@ -214,8 +219,10 @@ mod load {
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     pub struct TransactionConfig {
-        pub gas: Option<u64>,
-        pub gas_price: Option<u64>,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub gas: U256,
+        #[serde(deserialize_with = "deserialize_u256")]
+        pub gas_price: U256,
     }
 
     #[derive(Deserialize)]
@@ -234,33 +241,32 @@ mod load {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
-    use rustc_hex::FromHex;
-    use super::{Authorities, Config, ContractConfig, Node, TransactionConfig, Transactions};
+    use super::{Authorities, Config, ContractConfig, NodeConfig, TransactionConfig, Transactions};
     use ethereum_types::U256;
+    use rustc_hex::FromHex;
+    use std::time::Duration;
 
     #[test]
     fn load_full_setup_from_str() {
         let toml = r#"
+address = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
 estimated_gas_cost_of_withdraw = "100000"
-max_total_home_contract_balance = "10000000000000000000"
+max_total_main_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
-[home]
-account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
-ipc = "/home.ipc"
+[main]
+http = "http://localhost:8545"
 poll_interval = 2
 required_confirmations = 100
 
-[home.contract]
-bin = "../compiled_contracts/HomeBridge.bin"
+[main.contract]
+bin = "../compiled_contracts/MainBridge.bin"
 
-[foreign]
-account = "0x0000000000000000000000000000000000000001"
-ipc = "/foreign.ipc"
+[side]
+http = "http://localhost:8546"
 
-[foreign.contract]
-bin = "../compiled_contracts/ForeignBridge.bin"
+[side.contract]
+bin = "../compiled_contracts/SideBridge.bin"
 
 [authorities]
 accounts = [
@@ -271,16 +277,16 @@ accounts = [
 required_signatures = 2
 
 [transactions]
-home_deploy = { gas = 20 }
+main_deploy = { gas = "20", gas_price = "0" }
 "#;
 
         let mut expected = Config {
+            address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
             txs: Transactions::default(),
-            home: Node {
-                account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
-                ipc: "/home.ipc".into(),
+            main: NodeConfig {
+                http: "http://localhost:8545".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/HomeBridge.bin")
+                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -289,15 +295,14 @@ home_deploy = { gas = 20 }
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 100,
             },
-            foreign: Node {
-                account: "0000000000000000000000000000000000000001".into(),
+            side: NodeConfig {
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
+                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
                 },
-                ipc: "/foreign.ipc".into(),
+                http: "http://localhost:8546".into(),
                 poll_interval: Duration::from_secs(1),
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 12,
@@ -311,13 +316,13 @@ home_deploy = { gas = 20 }
                 required_signatures: 2,
             },
             estimated_gas_cost_of_withdraw: U256::from_dec_str("100000").unwrap(),
-            max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+            max_total_main_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
             max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
         };
 
-        expected.txs.home_deploy = TransactionConfig {
-            gas: 20,
-            gas_price: 0,
+        expected.txs.main_deploy = TransactionConfig {
+            gas: 20.into(),
+            gas_price: 0.into(),
         };
 
         let config = Config::load_from_str(toml).unwrap();
@@ -327,23 +332,22 @@ home_deploy = { gas = 20 }
     #[test]
     fn load_minimal_setup_from_str() {
         let toml = r#"
+address = "0x0000000000000000000000000000000000000001"
 estimated_gas_cost_of_withdraw = "200000000"
-max_total_home_contract_balance = "10000000000000000000"
+max_total_main_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
-[home]
-account = "0x1B68Cb0B50181FC4006Ce572cF346e596E51818b"
-ipc = ""
+[main]
+http = ""
 
-[home.contract]
-bin = "../compiled_contracts/HomeBridge.bin"
+[main.contract]
+bin = "../compiled_contracts/MainBridge.bin"
 
-[foreign]
-account = "0x0000000000000000000000000000000000000001"
-ipc = ""
+[side]
+http = ""
 
-[foreign.contract]
-bin = "../compiled_contracts/ForeignBridge.bin"
+[side.contract]
+bin = "../compiled_contracts/SideBridge.bin"
 
 [authorities]
 accounts = [
@@ -354,12 +358,12 @@ accounts = [
 required_signatures = 2
 "#;
         let expected = Config {
+            address: "0000000000000000000000000000000000000001".into(),
             txs: Transactions::default(),
-            home: Node {
-                account: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
-                ipc: "".into(),
+            main: NodeConfig {
+                http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/HomeBridge.bin")
+                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -368,11 +372,10 @@ required_signatures = 2
                 request_timeout: Duration::from_secs(5),
                 required_confirmations: 12,
             },
-            foreign: Node {
-                account: "0000000000000000000000000000000000000001".into(),
-                ipc: "".into(),
+            side: NodeConfig {
+                http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/ForeignBridge.bin")
+                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -390,7 +393,7 @@ required_signatures = 2
                 required_signatures: 2,
             },
             estimated_gas_cost_of_withdraw: U256::from_dec_str("200000000").unwrap(),
-            max_total_home_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
+            max_total_main_contract_balance: U256::from_dec_str("10000000000000000000").unwrap(),
             max_single_deposit_value: U256::from_dec_str("1000000000000000000").unwrap(),
         };
 

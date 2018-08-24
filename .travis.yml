@@ -5,7 +5,10 @@ branches:
 matrix:
   include:
     - language: rust
-      rust: stable
+      # using `rust: stable` below would be preferable but it randomly
+      # breaks the rustfmt check on travis (`cargo fmt --all -- --write-mode=diff`)
+      # sometimes when the rustfmt rules have changed
+      rust: stable-2018-06-21
       sudo: required
       dist: trusty
       cache: cargo
@@ -18,6 +21,8 @@ matrix:
       before_script:
         - export PATH=/snap/bin:${PATH}
         - rustup component add rustfmt-preview
+        # useful for troubleshooting
+        - rustfmt --version
       script:
         # using --write-mode=diff instructs rustfmt to exit with an error code if the input is not formatted correctly
         - cargo fmt --all -- --write-mode=diff

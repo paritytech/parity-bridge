@@ -1,111 +1,138 @@
-use std::path::Path;
-use std::{fmt, fs, io, str};
-use std::io::{Read, Write};
-use web3::types::{Address, TransactionReceipt};
-use toml;
-use error::{Error, ErrorKind, ResultExt};
+// Copyright 2017 Parity Technologies (UK) Ltd.
+// This file is part of Parity-Bridge.
 
-/// Application "database".
+// Parity-Bridge is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Parity-Bridge is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning reading/writing `State` from/to toml file
+
+use error::{Error, ErrorKind, ResultExt};
+use std::io::{Read, Write};
+/// the state of a bridge node process and ways to persist it
+use std::path::{Path, PathBuf};
+use std::{fmt, fs, io, str};
+use toml;
+use web3::types::{Address, TransactionReceipt};
+
+/// bridge process state
 #[derive(Debug, PartialEq, Deserialize, Serialize, Default, Clone)]
-pub struct Database {
+pub struct State {
     /// Address of home contract.
-    pub home_contract_address: Address,
+    pub main_contract_address: Address,
     /// Address of foreign contract.
-    pub foreign_contract_address: Address,
+    pub side_contract_address: Address,
     /// Number of block at which home contract has been deployed.
-    pub home_deploy: u64,
+    pub main_deployed_at_block: u64,
     /// Number of block at which foreign contract has been deployed.
-    pub foreign_deploy: u64,
+    pub side_deployed_at_block: u64,
     /// Number of last block which has been checked for deposit relays.
-    pub checked_deposit_relay: u64,
+    pub last_main_to_side_sign_at_block: u64,
     /// Number of last block which has been checked for withdraw relays.
-    pub checked_withdraw_relay: u64,
+    pub last_side_to_main_signatures_at_block: u64,
     /// Number of last block which has been checked for withdraw confirms.
-    pub checked_withdraw_confirm: u64,
+    pub last_side_to_main_sign_at_block: u64,
 }
 
-impl str::FromStr for Database {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        toml::from_str(s).chain_err(|| "Cannot parse database")
+impl State {
+    /// creates initial state for the bridge processes
+    /// from transaction receipts of contract deployments
+    pub fn from_transaction_receipts(
+        main_contract_deployment_receipt: &TransactionReceipt,
+        side_contract_deployment_receipt: &TransactionReceipt,
+    ) -> Self {
+        Self {
+            main_contract_address: main_contract_deployment_receipt
+                .contract_address
+                .expect("main contract creation receipt must have an address; qed"),
+            side_contract_address: side_contract_deployment_receipt
+                .contract_address
+                .expect("side contract creation receipt must have an address; qed"),
+            main_deployed_at_block: main_contract_deployment_receipt.block_number.as_u64(),
+            side_deployed_at_block: side_contract_deployment_receipt.block_number.as_u64(),
+            last_main_to_side_sign_at_block: main_contract_deployment_receipt.block_number.as_u64(),
+            last_side_to_main_sign_at_block: side_contract_deployment_receipt.block_number.as_u64(),
+            last_side_to_main_signatures_at_block: side_contract_deployment_receipt
+                .block_number
+                .as_u64(),
+        }
     }
 }
 
-impl fmt::Display for Database {
+impl State {
+    /// write state to a `std::io::write`
+    pub fn write<W: Write>(&self, mut write: W) -> Result<(), Error> {
+        let serialized = toml::to_string(self).expect("serialization can't fail. q.e.d.");
+        write.write_all(serialized.as_bytes())?;
+        Ok(())
+    }
+}
+
+impl fmt::Display for State {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(&toml::to_string(self).expect("serialization can't fail; qed"))
     }
 }
 
-impl Database {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let mut file = match fs::File::open(&path) {
+/// persistence for a `State`
+pub trait Database {
+    fn read(&self) -> State;
+    /// persist `state` to the database
+    fn write(&mut self, state: &State) -> Result<(), Error>;
+}
+
+/// `State` stored in a TOML file
+pub struct TomlFileDatabase {
+    filepath: PathBuf,
+    state: State,
+}
+
+impl TomlFileDatabase {
+    /// create `TomlFileDatabase` backed by file at `filepath`
+    pub fn from_path<P: AsRef<Path>>(filepath: P) -> Result<Self, Error> {
+        let mut file = match fs::File::open(&filepath) {
             Ok(file) => file,
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
-                return Err(ErrorKind::MissingFile(format!("{:?}", path.as_ref())).into())
+                return Err(ErrorKind::MissingFile(format!("{:?}", filepath.as_ref())).into())
             }
             Err(err) => return Err(err).chain_err(|| "Cannot open database"),
         };
 
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
-        buffer.parse()
-    }
-
-    pub fn save<W: Write>(&self, mut write: W) -> Result<(), Error> {
-        write.write_all(self.to_string().as_bytes())?;
-        Ok(())
-    }
-
-    pub fn from_receipts(
-        home_receipt: &TransactionReceipt,
-        foreign_receipt: &TransactionReceipt,
-    ) -> Self {
-        Self {
-            home_contract_address: home_receipt
-                .contract_address
-                .expect("contract creation receipt must have an address; qed"),
-            foreign_contract_address: foreign_receipt
-                .contract_address
-                .expect("contract creation receipt must have an address; qed"),
-            home_deploy: home_receipt.block_number.low_u64(),
-            foreign_deploy: foreign_receipt.block_number.low_u64(),
-            checked_deposit_relay: home_receipt.block_number.low_u64(),
-            checked_withdraw_relay: foreign_receipt.block_number.low_u64(),
-            checked_withdraw_confirm: foreign_receipt.block_number.low_u64(),
-        }
+        let state: State = toml::from_str(&buffer).chain_err(|| "Cannot parse database")?;
+        Ok(Self {
+            filepath: filepath.as_ref().to_path_buf(),
+            state,
+        })
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Database;
+impl Database for TomlFileDatabase {
+    fn read(&self) -> State {
+        self.state.clone()
+    }
 
-    #[test]
-    fn database_to_and_from_str() {
-        let toml = r#"home_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db7"
-foreign_contract_address = "0x49edf201c1e139282643d5e7c6fb0c7219ad1db8"
-home_deploy = 100
-foreign_deploy = 101
-checked_deposit_relay = 120
-checked_withdraw_relay = 121
-checked_withdraw_confirm = 121
-"#;
+    fn write(&mut self, state: &State) -> Result<(), Error> {
+        if self.state != *state {
+            self.state = state.clone();
 
-        let expected = Database {
-            home_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db7".into(),
-            foreign_contract_address: "49edf201c1e139282643d5e7c6fb0c7219ad1db8".into(),
-            home_deploy: 100,
-            foreign_deploy: 101,
-            checked_deposit_relay: 120,
-            checked_withdraw_relay: 121,
-            checked_withdraw_confirm: 121,
-        };
+            let file = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(&self.filepath)?;
 
-        let database = toml.parse().unwrap();
-        assert_eq!(expected, database);
-        let s = database.to_string();
-        assert_eq!(s, toml);
+            self.state.write(file)?;
+        }
+        Ok(())
     }
 }

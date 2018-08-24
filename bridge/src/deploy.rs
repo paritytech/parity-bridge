@@ -1,16 +1,34 @@
-use std::sync::Arc;
+// Copyright 2017 Parity Technologies (UK) Ltd.
+// This file is part of Parity-Bridge.
+
+// Parity-Bridge is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Parity-Bridge is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! concerning deployment of the bridge contracts
+
+use config::Config;
+use contracts;
+use error::{self, ResultExt};
+use ethabi::ContractFunction;
 use futures::{Future, Poll};
-use web3::Transport;
-use web3::confirm::SendTransactionWithConfirmation;
-use web3::types::{TransactionReceipt, TransactionRequest};
-use app::App;
-use std::path::Path;
+use rustc_hex::ToHex;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use error::{Error, ErrorKind};
-use rustc_hex::ToHex;
-use api;
+use std::path::Path;
+use web3::confirm::{send_transaction_with_confirmation, SendTransactionWithConfirmation};
+use web3::types::{TransactionReceipt, TransactionRequest};
+use web3::Transport;
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
@@ -23,60 +41,62 @@ pub enum DeployState<T: Transport + Clone> {
     },
 }
 
-pub struct DeployHome<T: Transport + Clone> {
-    app: Arc<App<T>>,
+pub struct DeployMain<T: Transport + Clone> {
+    config: Config,
+    main_transport: T,
     state: DeployState<T>,
 }
 
-impl<T: Transport + Clone> DeployHome<T> {
-    pub fn new(app: Arc<App<T>>) -> Self {
+impl<T: Transport + Clone> DeployMain<T> {
+    pub fn new(config: Config, main_transport: T) -> Self {
         Self {
-            app,
+            config,
+            main_transport,
             state: DeployState::NotDeployed,
         }
     }
 }
 
-impl<T: Transport + Clone> Future for DeployHome<T> {
+impl<T: Transport + Clone> Future for DeployMain<T> {
     type Item = DeployedContract;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = self.app.home_bridge.constructor(
-                        self.app.config.home.contract.bin.clone().0,
-                        self.app.config.authorities.required_signatures,
-                        self.app.config.authorities.accounts.clone(),
-                        self.app.config.estimated_gas_cost_of_withdraw,
-                        self.app.config.max_total_home_contract_balance,
-                        self.app.config.max_single_deposit_value,
+                    let data = contracts::main::constructor(
+                        self.config.main.contract.bin.clone().0,
+                        self.config.authorities.required_signatures,
+                        self.config.authorities.accounts.clone(),
+                        self.config.estimated_gas_cost_of_withdraw,
+                        self.config.max_total_main_contract_balance,
+                        self.config.max_single_deposit_value,
                     );
 
                     let tx_request = TransactionRequest {
-                        from: self.app.config.home.account,
+                        from: self.config.address,
                         to: None,
-                        gas: Some(self.app.config.txs.home_deploy.gas.into()),
-                        gas_price: Some(self.app.config.txs.home_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.main_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.main_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.clone().into()),
+                        data: Some(data.encoded().into()),
                         nonce: None,
                         condition: None,
                     };
 
-                    let future = api::send_transaction_with_confirmation(
-                        self.app.connections.home.clone(),
+                    let future = send_transaction_with_confirmation(
+                        self.main_transport.clone(),
                         tx_request,
-                        self.app.config.home.poll_interval,
-                        self.app.config.home.required_confirmations,
+                        self.config.main.poll_interval,
+                        self.config.main.required_confirmations as usize,
                     );
 
-                    info!("sending HomeBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.home.required_confirmations);
+                    info!("sending MainBridge contract deployment transaction and waiting for {} confirmations...", self.config.main.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data,
+                        data: data.encoded(),
                         future: future,
                     }
                 }
@@ -84,18 +104,22 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll().map_err(ErrorKind::Web3));
+                    let receipt = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "DeployMain: deployment transaction failed")
+                    );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
-                    info!("HomeBridge deployment completed to {:?}", address);
+                    info!("MainBridge deployment completed to {:?}", address);
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "HomeBridge".into(),
-                            include_str!("../../../contracts/bridge.sol").into(),
-                            include_str!("../../../compiled_contracts/HomeBridge.abi").into(),
-                            include_str!("../../../compiled_contracts/HomeBridge.bin").into(),
+                            "MainBridge".into(),
+                            include_str!("../../contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/MainBridge.abi").into(),
+                            include_str!("../../compiled_contracts/MainBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -108,58 +132,60 @@ impl<T: Transport + Clone> Future for DeployHome<T> {
     }
 }
 
-pub struct DeployForeign<T: Transport + Clone> {
-    app: Arc<App<T>>,
+pub struct DeploySide<T: Transport + Clone> {
+    config: Config,
+    side_transport: T,
     state: DeployState<T>,
 }
 
-impl<T: Transport + Clone> DeployForeign<T> {
-    pub fn new(app: Arc<App<T>>) -> Self {
+impl<T: Transport + Clone> DeploySide<T> {
+    pub fn new(config: Config, side_transport: T) -> Self {
         Self {
-            app,
+            config,
+            side_transport,
             state: DeployState::NotDeployed,
         }
     }
 }
 
-impl<T: Transport + Clone> Future for DeployForeign<T> {
+impl<T: Transport + Clone> Future for DeploySide<T> {
     type Item = DeployedContract;
-    type Error = Error;
+    type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
                 DeployState::Deployed { ref contract } => return Ok(contract.clone().into()),
                 DeployState::NotDeployed => {
-                    let data = self.app.foreign_bridge.constructor(
-                        self.app.config.foreign.contract.bin.clone().0,
-                        self.app.config.authorities.required_signatures,
-                        self.app.config.authorities.accounts.clone(),
-                        self.app.config.estimated_gas_cost_of_withdraw,
+                    let data = contracts::side::constructor(
+                        self.config.side.contract.bin.clone().0,
+                        self.config.authorities.required_signatures,
+                        self.config.authorities.accounts.clone(),
+                        self.config.estimated_gas_cost_of_withdraw,
                     );
 
                     let tx_request = TransactionRequest {
-                        from: self.app.config.foreign.account,
+                        from: self.config.address,
                         to: None,
-                        gas: Some(self.app.config.txs.foreign_deploy.gas.into()),
-                        gas_price: Some(self.app.config.txs.foreign_deploy.gas_price.into()),
+                        gas: Some(self.config.txs.side_deploy.gas.into()),
+                        gas_price: Some(self.config.txs.side_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.clone().into()),
+                        data: Some(data.encoded().into()),
                         nonce: None,
                         condition: None,
                     };
 
-                    let future = api::send_transaction_with_confirmation(
-                        self.app.connections.foreign.clone(),
+                    let future = send_transaction_with_confirmation(
+                        self.side_transport.clone(),
                         tx_request,
-                        self.app.config.foreign.poll_interval,
-                        self.app.config.foreign.required_confirmations,
+                        self.config.side.poll_interval,
+                        self.config.side.required_confirmations as usize,
                     );
 
-                    info!("sending ForeignBridge contract deployment transaction and waiting for {} confirmations...", self.app.config.foreign.required_confirmations);
+                    info!("sending SideBridge contract deployment transaction and waiting for {} confirmations...", self.config.side.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data,
+                        data: data.encoded(),
                         future: future,
                     }
                 }
@@ -167,18 +193,22 @@ impl<T: Transport + Clone> Future for DeployForeign<T> {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(future.poll().map_err(ErrorKind::Web3));
+                    let receipt = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "DeploySide: deployment transaction failed")
+                    );
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
-                    info!("ForeignBridge deployment completed to {:?}", address);
+                    info!("SideBridge deployment completed to {:?}", address);
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "ForeignBridge".into(),
-                            include_str!("../../../contracts/bridge.sol").into(),
-                            include_str!("../../../compiled_contracts/ForeignBridge.abi").into(),
-                            include_str!("../../../compiled_contracts/ForeignBridge.bin").into(),
+                            "SideBridge".into(),
+                            include_str!("../../contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/SideBridge.abi").into(),
+                            include_str!("../../compiled_contracts/SideBridge.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -244,7 +274,7 @@ impl DeployedContract {
     /// - contract byte code
     /// - input data for contract creation transaction
     /// - ...
-    pub fn dump_info<P: AsRef<Path>>(&self, dir: P) -> Result<(), Error> {
+    pub fn dump_info<P: AsRef<Path>>(&self, dir: P) -> Result<(), error::Error> {
         let dir = dir.as_ref();
 
         if Path::new(dir).exists() {
