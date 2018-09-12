@@ -19,7 +19,6 @@
 use config::Config;
 use contracts;
 use error::{self, ResultExt};
-use ethabi::ContractFunction;
 use futures::{Future, Poll};
 use rustc_hex::ToHex;
 use std::fs;
@@ -81,7 +80,7 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
                         gas: Some(self.config.txs.main_deploy.gas.into()),
                         gas_price: Some(self.config.txs.main_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.encoded().into()),
+                        data: Some(data.clone().into()),
                         nonce: None,
                         condition: None,
                     };
@@ -96,8 +95,8 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
                     info!("sending MainBridge contract deployment transaction and waiting for {} confirmations...", self.config.main.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data.encoded(),
-                        future: future,
+                        data,
+                        future,
                     }
                 }
                 DeployState::Deploying {
@@ -170,7 +169,7 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                         gas: Some(self.config.txs.side_deploy.gas.into()),
                         gas_price: Some(self.config.txs.side_deploy.gas_price.into()),
                         value: None,
-                        data: Some(data.encoded().into()),
+                        data: Some(data.clone().into()),
                         nonce: None,
                         condition: None,
                     };
@@ -185,8 +184,8 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                     info!("sending SideBridge contract deployment transaction and waiting for {} confirmations...", self.config.side.required_confirmations);
 
                     DeployState::Deploying {
-                        data: data.encoded(),
-                        future: future,
+                        data,
+                        future,
                     }
                 }
                 DeployState::Deploying {

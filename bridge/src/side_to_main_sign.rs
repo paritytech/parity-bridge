@@ -25,13 +25,13 @@ use signature::Signature;
 use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::helpers::CallResult;
+use web3::helpers::CallFuture;
 use web3::types::{Bytes, H256, H520, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput>),
-    AwaitSignature(Timeout<FromErr<CallResult<H520, T::Out>, error::Error>>),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_side_to_main::Decoder>),
+    AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
 
@@ -153,7 +153,6 @@ mod tests {
     use super::*;
     use contracts;
     use ethabi;
-    use ethabi::ContractFunction;
     use rustc_hex::FromHex;
     use rustc_hex::ToHex;
     use tokio_core::reactor::Core;
@@ -161,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed() {
-        let topic = contracts::side::events::withdraw().filter().topic0;
+        let topic = contracts::side::events::withdraw::filter().topic0;
 
         let log = contracts::side::logs::Withdraw {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -205,14 +204,14 @@ mod tests {
             main_gas_price: log.main_gas_price,
         };
 
-        let call_data = contracts::side::functions::has_authority_signed_side_to_main(
+        let call_data = contracts::side::functions::has_authority_signed_side_to_main::encode_input(
             authority_address,
             message.to_bytes(),
         );
 
         let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
-        let tx_data = contracts::side::functions::submit_signature(
+        let tx_data = contracts::side::functions::submit_signature::encode_input(
             signature.from_hex().unwrap(),
             message.to_bytes(),
         );
@@ -220,7 +219,7 @@ mod tests {
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "data": format!("0x{}", call_data.to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
@@ -232,7 +231,7 @@ mod tests {
                 res => json!(format!("0x{}", signature));
             "eth_sendTransaction" =>
                 req => json!([{
-                    "data": format!("0x{}", tx_data.encoded().to_hex()),
+                    "data": format!("0x{}", tx_data.to_hex()),
                     "from": format!("0x{}", authority_address.to_hex()),
                     "gas": "0xfd",
                     "gasPrice": "0xa0",
@@ -266,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_already_relayed() {
-        let topic = contracts::side::events::withdraw().filter().topic0;
+        let topic = contracts::side::events::withdraw::filter().topic0;
 
         let log = contracts::side::logs::Withdraw {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -300,7 +299,6 @@ mod tests {
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
 
-        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
         let message = MessageToMain {
@@ -310,22 +308,15 @@ mod tests {
             main_gas_price: log.main_gas_price,
         };
 
-        let call_data = contracts::side::functions::has_authority_signed_side_to_main(
+        let call_data = contracts::side::functions::has_authority_signed_side_to_main::encode_input(
             authority_address,
-            message.to_bytes(),
-        );
-
-        let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
-
-        let tx_data = contracts::side::functions::submit_signature(
-            signature.from_hex().unwrap(),
             message.to_bytes(),
         );
 
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "data": format!("0x{}", call_data.to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));

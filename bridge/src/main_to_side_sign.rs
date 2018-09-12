@@ -23,7 +23,7 @@ use web3::types::{Address, H256, Log, U256};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitAlreadySigned(AsyncCall<T, contracts::side::HasAuthoritySignedMainToSideWithInput>),
+    AwaitAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_main_to_side::Decoder>),
     AwaitTxSent(AsyncTransaction<T>),
 }
 
@@ -49,7 +49,7 @@ impl<T: Transport> MainToSideSign<T> {
             main_tx_hash
         );
 
-        let log = helpers::parse_log(&contracts::main::events::deposit(), raw_log)
+        let log = helpers::parse_log(contracts::main::events::deposit::parse_log, raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
 
         let recipient = log.recipient;
@@ -128,14 +128,13 @@ mod tests {
     use super::*;
     use contracts;
     use ethabi;
-    use ethabi::ContractFunction;
     use rustc_hex::ToHex;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};
 
     #[test]
     fn test_main_to_side_sign_relay_future_not_relayed() {
-        let topic = contracts::main::events::deposit().filter().topic0;
+        let topic = contracts::main::events::deposit::filter().topic0;
 
         let log = contracts::main::logs::Deposit {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -169,25 +168,25 @@ mod tests {
         let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
-        let call_data = contracts::side::functions::has_authority_signed_main_to_side(
+        let call_data = contracts::side::functions::has_authority_signed_main_to_side::encode_input(
             authority_address,
             log.recipient,
             log.value,
             log_tx_hash,
         );
 
-        let tx_data = contracts::side::functions::deposit(log.recipient, log.value, log_tx_hash);
+        let tx_data = contracts::side::functions::deposit::encode_input(log.recipient, log.value, log_tx_hash);
 
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "data": format!("0x{}", call_data.to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
             "eth_sendTransaction" =>
                 req => json!([{
-                    "data": format!("0x{}", tx_data.encoded().to_hex()),
+                    "data": format!("0x{}", tx_data.to_hex()),
                     "from": "0x0000000000000000000000000000000000000001",
                     "gas": "0xfd",
                     "gasPrice": "0xa0",
@@ -221,7 +220,7 @@ mod tests {
 
     #[test]
     fn test_main_to_side_sign_relay_future_already_relayed() {
-        let topic = contracts::main::events::deposit().filter().topic0;
+        let topic = contracts::main::events::deposit::filter().topic0;
 
         let log = contracts::main::logs::Deposit {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -252,10 +251,9 @@ mod tests {
 
         let authority_address = "0000000000000000000000000000000000000001".into();
 
-        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
-        let call_data = contracts::side::functions::has_authority_signed_main_to_side(
+        let call_data = contracts::side::functions::has_authority_signed_main_to_side::encode_input(
             authority_address,
             log.recipient,
             log.value,
@@ -265,7 +263,7 @@ mod tests {
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.encoded().to_hex()),
+                    "data": format!("0x{}", call_data.to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));

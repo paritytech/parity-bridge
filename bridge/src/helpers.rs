@@ -17,7 +17,7 @@
 //! various helper functions
 
 use error::{self, ResultExt};
-use ethabi::{self, ContractFunction, ParseLog, RawLog};
+use ethabi::{self, RawLog, FunctionOutputDecoder};
 use futures::future::FromErr;
 use futures::{Async, Future, Poll, Stream};
 use serde::de::Error;
@@ -25,32 +25,31 @@ use serde::{Deserialize, Deserializer, Serializer};
 use std::time::Duration;
 use tokio_timer::{Timeout, Timer};
 use web3::api::Namespace;
-use web3::helpers::CallResult;
+use web3::helpers::CallFuture;
 use web3::types::{Address, Bytes, CallRequest, H256, TransactionRequest, U256};
 use web3::{self, Transport};
 
 /// attempts to convert a raw `web3_log` into the ethabi log type of a specific `event`
-pub fn parse_log<T: ParseLog>(event: &T, web3_log: &web3::types::Log) -> ethabi::Result<T::Log> {
+pub fn parse_log<T: Fn(RawLog) -> ethabi::Result<L>, L>(parse: T, web3_log: &web3::types::Log) -> ethabi::Result<L> {
     let ethabi_log = RawLog {
         topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
         data: web3_log.data.0.clone(),
     };
-    event.parse_log(ethabi_log)
+    parse(ethabi_log)
 }
 
 /// use `AsyncCall::new(transport, contract_address, timeout, function)` to
 /// get a `Future` that resolves with the decoded output from calling `function`
 /// on `contract_address`.
-pub struct AsyncCall<T: Transport, F: ContractFunction> {
-    future: Timeout<FromErr<CallResult<Bytes, T::Out>, error::Error>>,
+pub struct AsyncCall<T: Transport, F: FunctionOutputDecoder> {
+    future: Timeout<FromErr<CallFuture<Bytes, T::Out>, error::Error>>,
     function: F,
 }
 
-impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
+impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
     /// call `function` at `contract_address`.
     /// returns a `Future` that resolves with the decoded output of `function`.
-    pub fn new(transport: &T, contract_address: Address, timeout: Duration, function: F) -> Self {
-        let payload = function.encoded();
+    pub fn new(transport: &T, contract_address: Address, timeout: Duration, payload: Vec<u8>, function: F) -> Self {
         let request = CallRequest {
             from: None,
             to: contract_address,
@@ -67,7 +66,7 @@ impl<T: Transport, F: ContractFunction> AsyncCall<T, F> {
     }
 }
 
-impl<T: Transport, F: ContractFunction> Future for AsyncCall<T, F> {
+impl<T: Transport, F: FunctionOutputDecoder> Future for AsyncCall<T, F> {
     type Item = F::Output;
     type Error = error::Error;
 
@@ -75,28 +74,27 @@ impl<T: Transport, F: ContractFunction> Future for AsyncCall<T, F> {
         let encoded = try_ready!(
             self.future
                 .poll()
-                .chain_err(|| "failed to poll inner web3 CallResult future")
+                .chain_err(|| "failed to poll inner web3 CallFuture future")
         );
-        let decoded = self.function
-            .output(encoded.0.clone())
+        let decoded = self.function.decode(&encoded.0)
             .chain_err(|| format!("failed to decode response {:?}", encoded))?;
         Ok(Async::Ready(decoded))
     }
 }
 
 pub struct AsyncTransaction<T: Transport> {
-    future: Timeout<FromErr<CallResult<H256, T::Out>, error::Error>>,
+    future: Timeout<FromErr<CallFuture<H256, T::Out>, error::Error>>,
 }
 
 impl<T: Transport> AsyncTransaction<T> {
-    pub fn new<F: ContractFunction>(
+    pub fn new(
         transport: &T,
         contract_address: Address,
         authority_address: Address,
         gas: U256,
         gas_price: U256,
         timeout: Duration,
-        f: F,
+        payload: Vec<u8>,
     ) -> Self {
         let request = TransactionRequest {
             from: authority_address,
@@ -104,7 +102,7 @@ impl<T: Transport> AsyncTransaction<T> {
             gas: Some(gas),
             gas_price: Some(gas_price),
             value: None,
-            data: Some(Bytes(f.encoded())),
+            data: Some(Bytes(payload)),
             nonce: None,
             condition: None,
         };

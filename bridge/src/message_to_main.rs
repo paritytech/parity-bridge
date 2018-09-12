@@ -13,7 +13,8 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-use contracts::side::events::Withdraw;
+//use contracts::side::events::Withdraw;
+use contracts;
 use error::Error;
 use ethabi;
 use ethereum_types::{Address, H256, U256};
@@ -60,7 +61,7 @@ impl MessageToMain {
         let hash = raw_log
             .transaction_hash
             .ok_or_else(|| "`log` must be mined and contain `transaction_hash`")?;
-        let log = helpers::parse_log(&Withdraw::default(), raw_log)?;
+        let log = helpers::parse_log(contracts::side::events::withdraw::parse_log, raw_log)?;
         Ok(Self {
             recipient: log.recipient,
             value: log.value,
