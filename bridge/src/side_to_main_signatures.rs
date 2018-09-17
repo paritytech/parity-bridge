@@ -13,6 +13,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
 use contracts;
 use error::{self, ResultExt};
 use futures::future::JoinAll;
@@ -28,15 +29,15 @@ use web3::types::{H256, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitMessage(AsyncCall<T, contracts::side::MessageWithInput>),
+    AwaitMessage(AsyncCall<T, contracts::side::functions::message::Decoder>),
     /// authority is not responsible for relaying this. noop
     NotResponsible,
     AwaitIsRelayed {
-        future: AsyncCall<T, contracts::main::WithdrawsWithInput>,
+        future: AsyncCall<T, contracts::main::functions::withdraws::Decoder>,
         message: MessageToMain,
     },
     AwaitSignatures {
-        future: JoinAll<Vec<AsyncCall<T, contracts::side::SignatureWithInput>>>,
+        future: JoinAll<Vec<AsyncCall<T, contracts::side::functions::signature::Decoder>>>,
         message: MessageToMain,
     },
     AwaitTxSent(AsyncTransaction<T>),
@@ -59,7 +60,7 @@ impl<T: Transport> SideToMainSignatures<T> {
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let log = helpers::parse_log(&contracts::side::events::collected_signatures(), raw_log)
+        let log = helpers::parse_log(contracts::side::events::collected_signatures::parse_log, raw_log)
             .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
         let state = if log.authority_responsible_for_relay != main.authority_address {
@@ -72,7 +73,8 @@ impl<T: Transport> SideToMainSignatures<T> {
             State::NotResponsible
         } else {
             info!("{:?} - step 1/3 - about to fetch message", side_tx_hash,);
-            State::AwaitMessage(side.call(contracts::side::functions::message(log.message_hash)))
+            let (payload, decoder) = contracts::side::functions::message::call(log.message_hash);
+            State::AwaitMessage(side.call(payload, decoder))
         };
 
         Self {
@@ -101,9 +103,9 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                             .chain_err(|| "SubmitSignature: fetching message failed")
                     );
                     let message = MessageToMain::from_bytes(&message_bytes)?;
+                    let (payload, decoder) = contracts::main::functions::withdraws::call(message.side_tx_hash);
                     State::AwaitIsRelayed {
-                        future: self.main
-                            .call(contracts::main::functions::withdraws(message.side_tx_hash)),
+                        future: self.main.call(payload, decoder),
                         message,
                     }
                 }
@@ -180,7 +182,6 @@ mod tests {
     use super::*;
     use contracts;
     use ethabi;
-    use ethabi::ContractFunction;
     use rustc_hex::FromHex;
     use rustc_hex::ToHex;
     use tokio_core::reactor::Core;
@@ -188,9 +189,7 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed_authority_responsible() {
-        let topic = contracts::side::events::collected_signatures()
-            .filter()
-            .topic0;
+        let topic = contracts::side::events::collected_signatures::filter().topic0;
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
 
@@ -242,23 +241,22 @@ mod tests {
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::main::functions::withdraws(log_tx_hash).encoded().to_hex()),
+                    "data": format!("0x{}", contracts::main::functions::withdraws::encode_input(log_tx_hash).to_hex()),
                     "to": main_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
             "eth_sendTransaction" =>
                 req => json!([{
                     "data": format!("0x{}",
-                                    contracts::main::functions::withdraw(
+                                    contracts::main::functions::withdraw::encode_input(
                                         vec![signature.v],
                                         vec![signature.r.clone()],
                                         vec![signature.s.clone()],
                                         message.to_bytes()
-                                        )
-                                    .encoded().to_hex()),
+                                    ).to_hex()),
                                     "from": format!("0x{}", authority_address.to_hex()),
                     "gas": "0xfd",
-                    "gasPrice": format!("0x{}", message.main_gas_price.to_hex()),
+                    "gasPrice": format!("0x{:x}", message.main_gas_price),
                     "to": main_contract_address,
                 }]),
                 res => json!(tx_hash);
@@ -267,13 +265,13 @@ mod tests {
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::message(log.message_hash).encoded().to_hex()),
+                    "data": format!("0x{}", contracts::side::functions::message::encode_input(log.message_hash).to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex()));
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::signature(log.message_hash, 0).encoded().to_hex()),
+                    "data": format!("0x{}", contracts::side::functions::signature::encode_input(log.message_hash, 0).to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(signature.to_bytes())]).to_hex()));
@@ -318,9 +316,7 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_responsible() {
-        let topic = contracts::side::events::collected_signatures()
-            .filter()
-            .topic0;
+        let topic = contracts::side::events::collected_signatures::filter().topic0;
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
 
@@ -365,10 +361,6 @@ mod tests {
         let side_contract_address: Address = "0000000000000000000000000000000000000dd1".into();
         let main_contract_address: Address = "0000000000000000000000000000000000000fff".into();
 
-        let signature = Signature::from_bytes("8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".from_hex().unwrap().as_slice()).unwrap();
-
-        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-
         let main_transport = mock_transport!();
 
         let side_transport = mock_transport!();
@@ -412,9 +404,7 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_already_relayed_authority_responsible() {
-        let topic = contracts::side::events::collected_signatures()
-            .filter()
-            .topic0;
+        let topic = contracts::side::events::collected_signatures::filter().topic0;
 
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
 
@@ -459,14 +449,10 @@ mod tests {
         let side_contract_address: Address = "0000000000000000000000000000000000000dd1".into();
         let main_contract_address: Address = "0000000000000000000000000000000000000fff".into();
 
-        let signature = Signature::from_bytes("8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".from_hex().unwrap().as_slice()).unwrap();
-
-        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::main::functions::withdraws(log_tx_hash).encoded().to_hex()),
+                    "data": format!("0x{}", contracts::main::functions::withdraws::encode_input(log_tx_hash).to_hex()),
                     "to": main_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
@@ -475,7 +461,7 @@ mod tests {
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::message(log.message_hash).encoded().to_hex()),
+                    "data": format!("0x{}", contracts::side::functions::message::encode_input(log.message_hash).to_hex()),
                     "to": side_contract_address,
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex()));

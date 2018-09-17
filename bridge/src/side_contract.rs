@@ -16,7 +16,7 @@
 use config::Config;
 use contracts;
 use database::State;
-use ethabi::ContractFunction;
+use ethabi::FunctionOutputDecoder;
 use futures::future::{join_all, JoinAll};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
@@ -60,17 +60,19 @@ impl<T: Transport> SideContract<T> {
         }
     }
 
-    pub fn call<F: ContractFunction>(&self, f: F) -> AsyncCall<T, F> {
+    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, output_decoder: F) -> AsyncCall<T, F> {
         AsyncCall::new(
             &self.transport,
             self.contract_address,
             self.request_timeout,
-            f,
+            payload,
+            output_decoder,
         )
     }
 
-    pub fn is_side_contract(&self) -> AsyncCall<T, contracts::side::IsSideBridgeContractWithInput> {
-        self.call(contracts::side::functions::is_side_bridge_contract())
+    pub fn is_side_contract(&self) -> AsyncCall<T, contracts::side::functions::is_side_bridge_contract::Decoder> {
+        let (payload, decoder) = contracts::side::functions::is_side_bridge_contract::call();
+        self.call(payload, decoder)
     }
 
     /// returns `Future` that resolves with `bool` whether `authority`
@@ -78,13 +80,13 @@ impl<T: Transport> SideContract<T> {
     pub fn is_side_to_main_signed_on_side(
         &self,
         message: &MessageToMain,
-    ) -> AsyncCall<T, contracts::side::HasAuthoritySignedSideToMainWithInput> {
-        self.call(
-            contracts::side::functions::has_authority_signed_side_to_main(
-                self.authority_address,
-                message.to_bytes(),
-            ),
-        )
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_side_to_main::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_signed_side_to_main::call(
+            self.authority_address,
+            message.to_bytes(),
+        );
+
+        self.call(payload, decoder)
     }
 
     pub fn is_main_to_side_signed_on_side(
@@ -92,15 +94,15 @@ impl<T: Transport> SideContract<T> {
         recipient: Address,
         value: U256,
         main_tx_hash: H256,
-    ) -> AsyncCall<T, contracts::side::HasAuthoritySignedMainToSideWithInput> {
-        self.call(
-            contracts::side::functions::has_authority_signed_main_to_side(
-                self.authority_address,
-                recipient,
-                value,
-                main_tx_hash,
-            ),
-        )
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_main_to_side::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_signed_main_to_side::call(
+            self.authority_address,
+            recipient,
+            value,
+            main_tx_hash,
+        );
+
+        self.call(payload, decoder)
     }
 
     pub fn sign_main_to_side(
@@ -109,6 +111,8 @@ impl<T: Transport> SideContract<T> {
         value: U256,
         breakout_tx_hash: H256,
     ) -> AsyncTransaction<T> {
+        let payload = contracts::side::functions::deposit::encode_input(recipient, value, breakout_tx_hash);
+
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
@@ -116,13 +120,13 @@ impl<T: Transport> SideContract<T> {
             self.sign_main_to_side_gas,
             self.sign_main_to_side_gas_price,
             self.request_timeout,
-            contracts::side::functions::deposit(recipient, value, breakout_tx_hash),
+            payload,
         )
     }
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::withdraw().filter(),
+            filter: contracts::side::events::withdraw::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -134,7 +138,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_signatures_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::collected_signatures().filter(),
+            filter: contracts::side::events::collected_signatures::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -149,6 +153,7 @@ impl<T: Transport> SideContract<T> {
         message: &MessageToMain,
         signature: &Signature,
     ) -> AsyncTransaction<T> {
+        let payload = contracts::side::functions::submit_signature::encode_input(signature.to_bytes(), message.to_bytes());
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
@@ -156,17 +161,20 @@ impl<T: Transport> SideContract<T> {
             self.sign_side_to_main_gas,
             self.sign_side_to_main_gas_price,
             self.request_timeout,
-            contracts::side::functions::submit_signature(signature.to_bytes(), message.to_bytes()),
+            payload,
         )
     }
 
     pub fn get_signatures(
         &self,
         message_hash: H256,
-    ) -> JoinAll<Vec<AsyncCall<T, contracts::side::SignatureWithInput>>> {
+    ) -> JoinAll<Vec<AsyncCall<T, contracts::side::functions::signature::Decoder>>> {
         let futures = (0..self.required_signatures)
             .into_iter()
-            .map(|index| self.call(contracts::side::functions::signature(message_hash, index)))
+            .map(|index| {
+                let (payload, decoder) = contracts::side::functions::signature::call(message_hash, index);
+                self.call(payload, decoder)
+            })
             .collect::<Vec<_>>();
         join_all(futures)
     }

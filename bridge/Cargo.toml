@@ -14,10 +14,10 @@ tokio-timer = "0.1.2"
 toml = "0.4.2"
 web3 = { git = "https://github.com/tomusdrw/rust-web3" }
 error-chain = "0.12"
-ethabi = { git = "https://github.com/paritytech/ethabi" }
+ethabi = "6.0"
 rustc-hex = "1.0"
 log = "0.3"
-ethereum-types = "0.3"
+ethereum-types = "0.4"
 pretty_assertions = "0.2.1"
 tiny-keccak = "1.3"
 

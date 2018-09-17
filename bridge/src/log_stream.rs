@@ -21,7 +21,7 @@ use std::time::Duration;
 use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::helpers::CallResult;
+use web3::helpers::CallFuture;
 use web3::types::{Address, FilterBuilder, H256, Log, U256};
 use web3::Transport;
 
@@ -67,12 +67,12 @@ enum State<T: Transport> {
     /// Log Stream is waiting for timer to poll.
     AwaitInterval,
     /// Fetching best block number.
-    AwaitBlockNumber(Timeout<FromErr<CallResult<U256, T::Out>, error::Error>>),
+    AwaitBlockNumber(Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>),
     /// Fetching logs for new best block.
     AwaitLogs {
         from: u64,
         to: u64,
-        future: Timeout<FromErr<CallResult<Vec<Log>, T::Out>, error::Error>>,
+        future: Timeout<FromErr<CallFuture<Vec<Log>, T::Out>, error::Error>>,
     },
 }
 
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_twice_no_logs() {
-        let deposit_topic = contracts::main::events::deposit().filter().topic0;
+        let deposit_topic = contracts::main::events::deposit::filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
@@ -247,7 +247,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: contracts::main::events::deposit().filter(),
+            filter: contracts::main::events::deposit::filter(),
         });
 
         let mut event_loop = Core::new().unwrap();
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_once_one_log() {
-        let deposit_topic = contracts::main::events::deposit().filter().topic0;
+        let deposit_topic = contracts::main::events::deposit::filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
@@ -302,7 +302,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: contracts::main::events::deposit().filter(),
+            filter: contracts::main::events::deposit::filter(),
         });
 
         let mut event_loop = Core::new().unwrap();

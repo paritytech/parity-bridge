@@ -16,7 +16,7 @@
 use config::Config;
 use contracts;
 use database::State;
-use ethabi::ContractFunction;
+use ethabi::FunctionOutputDecoder;
 use ethereum_types::{Address, U256};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
@@ -50,23 +50,25 @@ impl<T: Transport> MainContract<T> {
         }
     }
 
-    pub fn call<F: ContractFunction>(&self, f: F) -> AsyncCall<T, F> {
+    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, output_decoder: F) -> AsyncCall<T, F> {
         AsyncCall::new(
             &self.transport,
             self.contract_address,
             self.request_timeout,
-            f,
+            payload,
+            output_decoder,
         )
     }
 
-    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::main::IsMainBridgeContractWithInput> {
-        self.call(contracts::main::functions::is_main_bridge_contract())
+    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::main::functions::is_main_bridge_contract::Decoder> {
+        let (payload, decoder) = contracts::main::functions::is_main_bridge_contract::call();
+        self.call(payload, decoder)
     }
 
     /// `Stream` of all txs on main that need to be relayed to side
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::main::events::deposit().filter(),
+            filter: contracts::main::events::deposit::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -82,6 +84,13 @@ impl<T: Transport> MainContract<T> {
         message: &MessageToMain,
         signatures: &Vec<Signature>,
     ) -> AsyncTransaction<T> {
+        let payload = contracts::main::functions::withdraw::encode_input(
+            signatures.iter().map(|x| x.v),
+            signatures.iter().map(|x| x.r),
+            signatures.iter().map(|x| x.s),
+            message.to_bytes(),
+        );
+
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
@@ -89,12 +98,7 @@ impl<T: Transport> MainContract<T> {
             self.submit_collected_signatures_gas,
             message.main_gas_price,
             self.request_timeout,
-            contracts::main::functions::withdraw(
-                signatures.iter().map(|x| x.v),
-                signatures.iter().map(|x| x.r),
-                signatures.iter().map(|x| x.s),
-                message.to_bytes(),
-            ),
+            payload,
         )
     }
 }

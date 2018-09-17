@@ -77,7 +77,7 @@ extern crate rustc_hex;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate serde_json;
 extern crate bridge_contracts as contracts;
 extern crate tiny_keccak;

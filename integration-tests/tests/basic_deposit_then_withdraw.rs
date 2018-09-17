@@ -35,7 +35,6 @@ use std::time::Duration;
 use tokio_core::reactor::Core;
 
 use bridge::helpers::AsyncCall;
-use ethabi::ContractFunction;
 use ethereum_types::{Address, U256};
 use web3::api::Namespace;
 use web3::transports::http::Http;
@@ -254,12 +253,14 @@ fn test_basic_deposit_then_withdraw() {
         MAX_PARALLEL_REQUESTS,
     ).expect("failed to connect to side at http://localhost:8551");
 
+    let (payload, decoder) = bridge_contracts::main::functions::estimated_gas_cost_of_withdraw::call();
     let response = event_loop
         .run(AsyncCall::new(
             &main_transport,
             main_contract_address.into(),
             TIMEOUT,
-            bridge_contracts::main::functions::estimated_gas_cost_of_withdraw(),
+            payload,
+            decoder,
         ))
         .unwrap();
 
@@ -338,12 +339,14 @@ fn test_basic_deposit_then_withdraw() {
     println!("\ndeposit into main complete. give it plenty of time to get mined and relayed\n");
     thread::sleep(Duration::from_millis(10000));
 
+    let (payload, decoder) = bridge_contracts::side::functions::total_supply::call();
     let response = event_loop
         .run(AsyncCall::new(
             &side_transport,
             side_contract_address.into(),
             TIMEOUT,
-            bridge_contracts::side::functions::total_supply(),
+            payload,
+            decoder,
         ))
         .unwrap();
 
@@ -353,12 +356,14 @@ fn test_basic_deposit_then_withdraw() {
         "totalSupply on SideBridge should have increased"
     );
 
+    let (payload, decoder) = bridge_contracts::side::functions::balance_of::call(Address::from(user_address));
     let response = event_loop
         .run(AsyncCall::new(
             &side_transport,
             side_contract_address.into(),
             TIMEOUT,
-            bridge_contracts::side::functions::balance_of(Address::from(user_address)),
+            payload,
+            decoder,
         ))
         .unwrap();
 
@@ -371,11 +376,11 @@ fn test_basic_deposit_then_withdraw() {
     println!("\nconfirmed that deposit reached side\n");
 
     println!("\nuser executes SideBridge.transferToMainViaRelay\n");
-    let transfer_payload = bridge_contracts::side::functions::transfer_to_main_via_relay(
+    let transfer_payload = bridge_contracts::side::functions::transfer_to_main_via_relay::encode_input(
         Address::from(receiver_address),
         U256::from(1000000000),
         U256::from(1000),
-    ).encoded();
+    );
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
