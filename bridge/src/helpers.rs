@@ -38,18 +38,18 @@ pub fn parse_log<T: Fn(RawLog) -> ethabi::Result<L>, L>(parse: T, web3_log: &web
     parse(ethabi_log)
 }
 
-/// use `AsyncCall::new(transport, contract_address, timeout, function)` to
+/// use `AsyncCall::new(transport, contract_address, timeout, output_decoder)` to
 /// get a `Future` that resolves with the decoded output from calling `function`
 /// on `contract_address`.
 pub struct AsyncCall<T: Transport, F: FunctionOutputDecoder> {
     future: Timeout<FromErr<CallFuture<Bytes, T::Out>, error::Error>>,
-    function: F,
+    output_decoder: F,
 }
 
 impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
     /// call `function` at `contract_address`.
     /// returns a `Future` that resolves with the decoded output of `function`.
-    pub fn new(transport: &T, contract_address: Address, timeout: Duration, payload: Vec<u8>, function: F) -> Self {
+    pub fn new(transport: &T, contract_address: Address, timeout: Duration, payload: Vec<u8>, output_decoder: F) -> Self {
         let request = CallRequest {
             from: None,
             to: contract_address,
@@ -62,7 +62,7 @@ impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
             .call(request, None)
             .from_err();
         let future = Timer::default().timeout(inner_future, timeout);
-        Self { future, function }
+        Self { future, output_decoder }
     }
 }
 
@@ -76,7 +76,7 @@ impl<T: Transport, F: FunctionOutputDecoder> Future for AsyncCall<T, F> {
                 .poll()
                 .chain_err(|| "failed to poll inner web3 CallFuture future")
         );
-        let decoded = self.function.decode(&encoded.0)
+        let decoded = self.output_decoder.decode(&encoded.0)
             .chain_err(|| format!("failed to decode response {:?}", encoded))?;
         Ok(Async::Ready(decoded))
     }

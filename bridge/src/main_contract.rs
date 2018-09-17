@@ -50,13 +50,13 @@ impl<T: Transport> MainContract<T> {
         }
     }
 
-    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, f: F) -> AsyncCall<T, F> {
+    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, output_decoder: F) -> AsyncCall<T, F> {
         AsyncCall::new(
             &self.transport,
             self.contract_address,
             self.request_timeout,
             payload,
-            f,
+            output_decoder,
         )
     }
 
