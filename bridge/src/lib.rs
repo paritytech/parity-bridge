@@ -93,6 +93,7 @@ mod macros;
 #[macro_use]
 mod test;
 
+mod block_number_stream;
 mod bridge;
 pub use bridge::Bridge;
 pub mod config;
