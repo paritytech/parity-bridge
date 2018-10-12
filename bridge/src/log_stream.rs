@@ -19,12 +19,13 @@ use ethabi;
 use futures::future::FromErr;
 use futures::{Async, Future, Poll, Stream};
 use std::time::Duration;
-use tokio_timer::{Interval, Timeout, Timer};
+use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Address, FilterBuilder, H256, Log, U256};
+use web3::types::{Address, FilterBuilder, H256, Log};
 use web3::Transport;
+use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
 
 fn ethabi_topic_to_web3(topic: &ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
     match topic {
@@ -65,10 +66,8 @@ pub struct LogsInBlockRange {
 
 /// Log Stream state.
 enum State<T: Transport> {
-    /// Log Stream is waiting for timer to poll.
-    AwaitInterval,
     /// Fetching best block number.
-    AwaitBlockNumber(Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>),
+    AwaitBlockNumber,
     /// Fetching logs for new best block.
     AwaitLogs {
         from: u64,
@@ -81,12 +80,11 @@ enum State<T: Transport> {
 /// with adjustable `poll_interval` and `request_timeout`.
 /// yields new logs that are `confirmations` blocks deep.
 pub struct LogStream<T: Transport> {
+    block_number_stream: BlockNumberStream<T>,
     request_timeout: Duration,
-    confirmations: u32,
     transport: T,
     last_checked_block: u64,
     timer: Timer,
-    poll_interval: Interval,
     state: State<T>,
     filter_builder: FilterBuilder,
     topic: Vec<H256>,
@@ -99,14 +97,22 @@ impl<T: Transport> LogStream<T> {
         let topic = ethabi_topic_to_web3(&options.filter.topic0)
             .expect("filter must have at least 1 topic. q.e.d.");
         let filter_builder = filter_to_builder(&options.filter, options.contract_address);
-        LogStream {
+
+        let block_number_stream_options = BlockNumberStreamOptions {
             request_timeout: options.request_timeout,
+            poll_interval: options.poll_interval,
             confirmations: options.confirmations,
-            poll_interval: timer.interval(options.poll_interval),
+            transport: options.transport.clone(),
+            after: options.after,
+        };
+
+        LogStream {
+            block_number_stream: BlockNumberStream::new(block_number_stream_options),
+            request_timeout: options.request_timeout,
             transport: options.transport,
             last_checked_block: options.after,
-            timer: timer,
-            state: State::AwaitInterval,
+            timer,
+            state: State::AwaitBlockNumber,
             filter_builder,
             topic,
         }
@@ -120,53 +126,31 @@ impl<T: Transport> Stream for LogStream<T> {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let (next_state, value_to_yield) = match self.state {
-                State::AwaitInterval => {
-                    // wait until `interval` has passed
-                    let _ = try_stream!(self.poll_interval.poll().chain_err(|| format!(
-                        "LogStream (topic: #{:?}): polling interval failed",
-                        self.topic
-                    )));
-                    info!(
-                        "LogStream (topic: #{:?}): polling last block number",
-                        self.topic
-                    );
-                    let future = web3::api::Eth::new(&self.transport).block_number();
-                    let next_state = State::AwaitBlockNumber(
-                        self.timer.timeout(future.from_err(), self.request_timeout),
-                    );
-                    (next_state, None)
-                }
-                State::AwaitBlockNumber(ref mut future) => {
-                    let last_block = try_ready!(
-                        future
+                State::AwaitBlockNumber => {
+                    let last_block = try_stream!(
+                        self.block_number_stream
                             .poll()
-                            .chain_err(|| "LogStream: fetching of last block number failed")
-                    ).as_u64();
-                    info!("LogStream: fetched last block number {}", last_block);
-                    // subtraction that saturates at zero
-                    let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
+                            .chain_err(|| "LogStream: fetching of last confirmed block number failed")
+                    );
+                    info!("LogStream: fetched confirmed block number {}", last_block);
 
-                    let next_state = if self.last_checked_block < last_confirmed_block {
-                        let from = self.last_checked_block + 1;
-                        let filter = self.filter_builder
-                            .clone()
-                            .from_block(from.into())
-                            .to_block(last_confirmed_block.into())
-                            .build();
-                        let future = web3::api::Eth::new(&self.transport).logs(filter);
+                    let from = self.last_checked_block + 1;
+                    let filter = self.filter_builder
+                        .clone()
+                        .from_block(from.into())
+                        .to_block(last_block.into())
+                        .build();
+                    let future = web3::api::Eth::new(&self.transport).logs(filter);
 
-                        info!(
-                            "LogStream: fetching logs in blocks {} to {}",
-                            from, last_confirmed_block
-                        );
-                        State::AwaitLogs {
-                            from: from,
-                            to: last_confirmed_block,
-                            future: self.timer.timeout(future.from_err(), self.request_timeout),
-                        }
-                    } else {
-                        info!("LogStream: no blocks confirmed since we last checked. waiting some more");
-                        State::AwaitInterval
+                    info!(
+                        "LogStream: fetching logs in blocks {} to {}",
+                        from, last_block
+                    );
+
+                    let next_state = State::AwaitLogs {
+                        from: from,
+                        to: last_block,
+                        future: self.timer.timeout(future.from_err(), self.request_timeout),
                     };
 
                     (next_state, None)
@@ -191,7 +175,7 @@ impl<T: Transport> Stream for LogStream<T> {
                     let log_range_to_yield = LogsInBlockRange { from, to, logs };
 
                     self.last_checked_block = to;
-                    (State::AwaitInterval, Some(log_range_to_yield))
+                    (State::AwaitBlockNumber, Some(log_range_to_yield))
                 }
             };
 

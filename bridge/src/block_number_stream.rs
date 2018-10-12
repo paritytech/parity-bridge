@@ -96,7 +96,8 @@ impl<T: Transport> Stream for BlockNumberStream<T> {
                     let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 
                     if self.last_checked_block < last_confirmed_block {
-                        (State::AwaitInterval, Some(last_block))
+                        self.last_checked_block = last_confirmed_block;
+                        (State::AwaitInterval, Some(last_confirmed_block))
                     } else {
                         info!("BlockNumberStream: no blocks confirmed since we last checked. waiting some more");
                         (State::AwaitInterval, None)
@@ -115,5 +116,41 @@ impl<T: Transport> Stream for BlockNumberStream<T> {
 
 #[cfg(test)]
 mod tests {
+    use tokio_core::reactor::Core;
     use super::*;
+
+    #[test]
+    fn test_block_number_stream() {
+        let transport = mock_transport!(
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1011");
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1011");
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1012");
+            "eth_blockNumber" =>
+                req => json!([]),
+                res => json!("0x1015");
+        );
+
+        let block_number_stream = BlockNumberStream::new(BlockNumberStreamOptions {
+            request_timeout: Duration::from_secs(1),
+            poll_interval: Duration::from_secs(1),
+            confirmations: 12,
+            transport: transport.clone(),
+            after: 3,
+        });
+
+        let mut event_loop = Core::new().unwrap();
+        let block_numbers = event_loop.run(block_number_stream.take(3).collect()).unwrap();
+
+        assert_eq!(
+            block_numbers,
+            vec![0x1011 - 12, 0x1012 - 12, 0x1015 - 12]
+        );
+        assert_eq!(transport.actual_requests(), transport.expected_requests());
+    }
 }
