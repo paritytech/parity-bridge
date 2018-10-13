@@ -138,7 +138,7 @@ mod tests {
 
         let block_number_stream = BlockNumberStream::new(BlockNumberStreamOptions {
             request_timeout: Duration::from_secs(1),
-            poll_interval: Duration::from_secs(1),
+            poll_interval: Duration::from_secs(0),
             confirmations: 12,
             transport: transport.clone(),
             after: 3,

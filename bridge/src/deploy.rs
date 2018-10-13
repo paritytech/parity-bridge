@@ -25,15 +25,15 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use web3::confirm::{send_transaction_with_confirmation, SendTransactionWithConfirmation};
 use web3::types::{TransactionReceipt, TransactionRequest};
 use web3::Transport;
+use send_tx_with_receipt::{SendTransactionWithReceipt, SendTransactionWithReceiptOptions};
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
     Deploying {
         data: Vec<u8>,
-        future: SendTransactionWithConfirmation<T>,
+        future: SendTransactionWithReceipt<T>,
     },
     Deployed {
         contract: DeployedContract,
@@ -85,12 +85,13 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
                         condition: None,
                     };
 
-                    let future = send_transaction_with_confirmation(
-                        self.main_transport.clone(),
-                        tx_request,
-                        self.config.main.poll_interval,
-                        self.config.main.required_confirmations as usize,
-                    );
+                    let future = SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
+                        transport: self.main_transport.clone(),
+                        request_timeout: self.config.main.request_timeout,
+                        poll_interval: self.config.main.poll_interval,
+                        confirmations: self.config.main.required_confirmations,
+                        transaction: tx_request,
+                    });
 
                     info!("sending MainBridge contract deployment transaction and waiting for {} confirmations...", self.config.main.required_confirmations);
 
@@ -174,12 +175,13 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                         condition: None,
                     };
 
-                    let future = send_transaction_with_confirmation(
-                        self.side_transport.clone(),
-                        tx_request,
-                        self.config.side.poll_interval,
-                        self.config.side.required_confirmations as usize,
-                    );
+                    let future = SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
+                        transport: self.side_transport.clone(),
+                        request_timeout: self.config.side.request_timeout,
+                        poll_interval: self.config.side.poll_interval,
+                        confirmations: self.config.side.required_confirmations,
+                        transaction: tx_request,
+                    });
 
                     info!("sending SideBridge contract deployment transaction and waiting for {} confirmations...", self.config.side.required_confirmations);
 
