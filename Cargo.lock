@@ -1440,7 +1440,7 @@ dependencies = [
 [[package]]
 name = "web3"
 version = "0.4.0"
-source = "git+https://github.com/tomusdrw/rust-web3#37d0cb422edeae7f64184346854e5b7587ae85b1"
+source = "git+https://github.com/tomusdrw/rust-web3#6958c6107246b0fa6cfcb8356e099622889b7802"
 dependencies = [
  "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",

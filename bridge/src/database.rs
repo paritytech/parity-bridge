@@ -50,6 +50,14 @@ impl State {
         main_contract_deployment_receipt: &TransactionReceipt,
         side_contract_deployment_receipt: &TransactionReceipt,
     ) -> Self {
+        let main_block_number = main_contract_deployment_receipt.block_number
+            .expect("main contract creation receipt must have a block number; qed")
+            .as_u64();
+
+        let side_block_number = side_contract_deployment_receipt.block_number
+            .expect("main contract creation receipt must have a block number; qed")
+            .as_u64();
+
         Self {
             main_contract_address: main_contract_deployment_receipt
                 .contract_address
@@ -57,13 +65,11 @@ impl State {
             side_contract_address: side_contract_deployment_receipt
                 .contract_address
                 .expect("side contract creation receipt must have an address; qed"),
-            main_deployed_at_block: main_contract_deployment_receipt.block_number.as_u64(),
-            side_deployed_at_block: side_contract_deployment_receipt.block_number.as_u64(),
-            last_main_to_side_sign_at_block: main_contract_deployment_receipt.block_number.as_u64(),
-            last_side_to_main_sign_at_block: side_contract_deployment_receipt.block_number.as_u64(),
-            last_side_to_main_signatures_at_block: side_contract_deployment_receipt
-                .block_number
-                .as_u64(),
+            main_deployed_at_block: main_block_number,
+            side_deployed_at_block: side_block_number,
+            last_main_to_side_sign_at_block: main_block_number,
+            last_side_to_main_sign_at_block: side_block_number,
+            last_side_to_main_signatures_at_block: side_block_number,
         }
     }
 }

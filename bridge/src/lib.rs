@@ -93,6 +93,7 @@ mod macros;
 #[macro_use]
 mod test;
 
+mod block_number_stream;
 mod bridge;
 pub use bridge::Bridge;
 pub mod config;
@@ -108,6 +109,7 @@ mod main_to_side_sign;
 pub use main_to_side_sign::MainToSideSign;
 mod relay_stream;
 pub use relay_stream::RelayStream;
+mod send_tx_with_receipt;
 mod side_contract;
 pub use side_contract::SideContract;
 mod side_to_main_sign;
