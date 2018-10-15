@@ -105,12 +105,13 @@ mod inner {
                         State::AwaitBlockNumber(hash)
                     },
                     State::AwaitBlockNumber(transaction_hash) => {
-                        let last_block = match self.block_number_stream.poll() {
-                            Ok(Async::NotReady) => return Ok(Async::NotReady),
-                            Err(err) => return Err(err)
-                                .chain_err(|| "SendTransactionWithReceipt: fetching of last confirmed block failed"),
-                            Ok(Async::Ready(Some(last_block))) => last_block,
-                            Ok(Async::Ready(None)) => bail!("SendTransactionWithReceipt: fetching of last confirmed block failed"),
+                        let last_block = match try_ready!(
+                            self.block_number_stream
+                                .poll()
+                                .chain_err(|| "SendTransactionWithReceipt: fetching of last confirmed block failed")
+                            ) {
+                            Some(last_block) => last_block,
+                            None => bail!("SendTransactionWithReceipt: fetching of last confirmed block failed"),
                         };
 
                         info!("SendTransactionWithReceipt: fetched confirmed block number {}", last_block);
@@ -216,7 +217,12 @@ impl<T: Transport> Future for SendTransactionWithReceipt<T> {
                             .chain_err(|| "SendTransactionWithReceipt: fetching last block number failed")
                     );
                     info!("SendTransactionWithReceipt: got last block number {}", block_number);
-                    let transaction = transaction.take().expect("transaction should always be set");
+                    let transaction = transaction
+                        .take()
+                        .expect(
+                            "SendTransactionWithReceipt is always created with
+                             State::AwaitBlockNumber with transaction set to Some; qed"
+                        );
 
                     let inner_options = inner::SendTransactionWithReceiptOptions {
                         transport: self.transport.clone(),

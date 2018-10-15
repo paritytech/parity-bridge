@@ -39,7 +39,7 @@ pub struct BlockNumberStreamOptions<T> {
     pub after: u64,
 }
 
-/// `Stream` that repeately polls `eth_blockNumber` and yields new block numbers.
+/// `Stream` that repeatedly polls `eth_blockNumber` and yields new block numbers.
 pub struct BlockNumberStream<T: Transport> {
     request_timeout: Duration,
     confirmations: u32,
