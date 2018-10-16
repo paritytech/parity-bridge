@@ -126,6 +126,7 @@ all fields are required unless marked with *optional*.
 
 #### options
 
+- `address` - address of this bridge authority on `main` and `side` chain
 - `estimated_gas_cost_of_withdraw` - an upper bound on the gas a transaction to `MainBridge.withdraw` consumes
   - currently recommended value: `"200000"`
   - must be a string because the `toml` crate can't parse numbers greater max i64
@@ -148,7 +149,6 @@ all fields are required unless marked with *optional*.
 
 #### main options
 
-- `main.account` - address of this bridge authority on `main` chain
 - `main.http` - path to the http socket of a parity node that has `main.account` unlocked
 - `main.contract.bin` - path to the compiled `MainBridge` contract
     - required for initial deployment
@@ -163,8 +163,6 @@ all fields are required unless marked with *optional*.
 
 #### side options
 
-- `side.account` - address of this bridge authority on `side` chain
-  - usually the same as `main.account`
 - `side.http` - path to the http socket of a parity node that has `side.account` unlocked
 - `side.contract.bin` - path to the compiled `SideBridge` contract
     - required for initial deployment
