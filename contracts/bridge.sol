@@ -438,7 +438,7 @@ contract SideBridge {
     event WithdrawSignatureSubmitted(bytes32 messageHash);
 
     /// Collected signatures which should be relayed to main chain.
-    event CollectedSignatures(address authorityResponsibleForRelay, bytes32 messageHash);
+    event CollectedSignatures(address indexed authorityResponsibleForRelay, bytes32 messageHash);
 
     function SideBridge(
         uint256 _requiredSignatures,

@@ -66,6 +66,7 @@ impl<T: Transport> Bridge<T> {
         let side_to_main_signatures = RelayStream::new(
             side_contract.side_to_main_signatures_log_stream(
                 initial_state.last_side_to_main_signatures_at_block,
+                main_contract.authority_address,
             ),
             side_to_main_signatures::LogToSideToMainSignatures {
                 main: main_contract.clone(),
