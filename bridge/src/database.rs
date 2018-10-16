@@ -79,6 +79,7 @@ impl State {
     pub fn write<W: Write>(&self, mut write: W) -> Result<(), Error> {
         let serialized = toml::to_string(self).expect("serialization can't fail. q.e.d.");
         write.write_all(serialized.as_bytes())?;
+        write.flush()?;
         Ok(())
     }
 }
