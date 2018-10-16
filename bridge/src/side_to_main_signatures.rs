@@ -30,8 +30,6 @@ use web3::Transport;
 
 enum State<T: Transport> {
     AwaitMessage(AsyncCall<T, contracts::side::functions::message::Decoder>),
-    /// authority is not responsible for relaying this. noop
-    NotResponsible,
     AwaitIsRelayed {
         future: AsyncCall<T, contracts::main::functions::withdraws::Decoder>,
         message: MessageToMain,
@@ -63,19 +61,17 @@ impl<T: Transport> SideToMainSignatures<T> {
         let log = helpers::parse_log(contracts::side::events::collected_signatures::parse_log, raw_log)
             .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
-        let state = if log.authority_responsible_for_relay != main.authority_address {
-            info!(
-                "{:?} - this bridge node is not responsible for relaying transaction to main",
-                side_tx_hash
-            );
-            // this bridge node is not responsible for relaying this transaction.
-            // someone else will relay this transaction to main.
-            State::NotResponsible
-        } else {
-            info!("{:?} - step 1/3 - about to fetch message", side_tx_hash,);
-            let (payload, decoder) = contracts::side::functions::message::call(log.message_hash);
-            State::AwaitMessage(side.call(payload, decoder))
-        };
+        // authority_responsible_for_relay is an indexed topic and it should be
+        // always set up when creating the filter, so we receive only logs that
+        // we should relay
+        assert_eq!(
+            log.authority_responsible_for_relay, main.authority_address,
+            "incorrectly set up collected_signatures filter, we should only received logs where authority_responsible_for_relay == main.authority_address; qed"
+        );
+
+        info!("{:?} - step 1/3 - about to fetch message", side_tx_hash,);
+        let (payload, decoder) = contracts::side::functions::message::call(log.message_hash);
+        let state = State::AwaitMessage(side.call(payload, decoder));
 
         Self {
             side_tx_hash,
@@ -93,9 +89,6 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
-                State::NotResponsible => {
-                    return Ok(Async::Ready(None));
-                }
                 State::AwaitMessage(ref mut future) => {
                     let message_bytes = try_ready!(
                         future
@@ -189,11 +182,9 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed_authority_responsible() {
-        let topic = contracts::side::events::collected_signatures::filter().topic0;
-
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
-
         let authority_responsible_for_relay = authority_address;
+        let topic = contracts::side::events::collected_signatures::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -210,16 +201,25 @@ mod tests {
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
-            ethabi::Token::Address(log.authority_responsible_for_relay),
             ethabi::Token::FixedBytes(log.message_hash.to_vec()),
         ]);
 
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
+        let topic0 = {
+            let topics: Vec<_> = topic.topic0.into();
+            topics[0]
+        };
+
+        let topic1 = {
+            let topics: Vec<_> = topic.topic1.into();
+            topics[0]
+        };
+
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: topic.into(),
+            topics: vec![topic0, topic1],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
@@ -315,12 +315,11 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "incorrectly set up collected_signatures filter, we should only received logs where authority_responsible_for_relay == main.authority_address; qed")]
     fn test_side_to_main_sign_relay_future_not_responsible() {
-        let topic = contracts::side::events::collected_signatures::filter().topic0;
-
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
-
         let authority_responsible_for_relay = "0000000000000000000000000000000000000002".into();
+        let topic = contracts::side::events::collected_signatures::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -337,16 +336,25 @@ mod tests {
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
-            ethabi::Token::Address(log.authority_responsible_for_relay),
             ethabi::Token::FixedBytes(log.message_hash.to_vec()),
         ]);
 
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
+        let topic0 = {
+            let topics: Vec<_> = topic.topic0.into();
+            topics[0]
+        };
+
+        let topic1 = {
+            let topics: Vec<_> = topic.topic1.into();
+            topics[0]
+        };
+
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: topic.into(),
+            topics: vec![topic0, topic1],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
@@ -389,26 +397,14 @@ mod tests {
             sign_side_to_main_gas_price: 0xa0.into(),
         };
 
-        let future = SideToMainSignatures::new(&raw_log, main_contract, side_contract);
-
-        let mut event_loop = Core::new().unwrap();
-        let result = event_loop.run(future).unwrap();
-        assert_eq!(result, None);
-
-        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
-        assert_eq!(
-            side_transport.actual_requests(),
-            side_transport.expected_requests()
-        );
+        let _ = SideToMainSignatures::new(&raw_log, main_contract, side_contract);
     }
 
     #[test]
     fn test_side_to_main_sign_relay_future_already_relayed_authority_responsible() {
-        let topic = contracts::side::events::collected_signatures::filter().topic0;
-
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
-
         let authority_responsible_for_relay = authority_address;
+        let topic = contracts::side::events::collected_signatures::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -425,16 +421,25 @@ mod tests {
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
-            ethabi::Token::Address(log.authority_responsible_for_relay),
             ethabi::Token::FixedBytes(log.message_hash.to_vec()),
         ]);
 
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
+        let topic0 = {
+            let topics: Vec<_> = topic.topic0.into();
+            topics[0]
+        };
+
+        let topic1 = {
+            let topics: Vec<_> = topic.topic1.into();
+            topics[0]
+        };
+
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: topic.into(),
+            topics: vec![topic0, topic1],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,

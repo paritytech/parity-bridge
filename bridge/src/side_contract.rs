@@ -136,9 +136,9 @@ impl<T: Transport> SideContract<T> {
         })
     }
 
-    pub fn side_to_main_signatures_log_stream(&self, after: u64) -> LogStream<T> {
+    pub fn side_to_main_signatures_log_stream(&self, after: u64, address: Address) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::collected_signatures::filter(),
+            filter: contracts::side::events::collected_signatures::filter(address),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
