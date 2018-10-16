@@ -1,14 +1,14 @@
-# deployment guide
+# deployment and run guide
 
 [paritytech/parity-bridge](https://github.com/paritytech/parity-bridge)
 
 this guide assumes that you are one of the authorities of
-a PoA chain `foreign` and want to use the bridge to connect
-`foreign` to another chain `home`.
-this will create an ERC20 token on `foreign` that is backed by
-ether on `home`.
+a PoA chain `side` and want to use the bridge to connect
+`side` to another chain `main`.
+this will create an ERC20 token on `side` that is backed by
+ether on `main`.
 
-since all bridge authorities use the same contracts on `foreign` and `home`
+since all bridge authorities use the same contracts on `side` and `main`
 one authority has to go ahead and deploy them.
 
 let's call this the **deploying authority**.
@@ -26,15 +26,15 @@ assuming you are authority with `authority_address`.
 [build and install the bridge](https://github.com/paritytech/parity-bridge/#build)
 
 install parity.
-we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10)
-though it should work with the latest stable release.
+we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10) with Byzantium fork
+enabled, though it should work with the latest stable release.
 
-start a parity node that connects to `home` chain, has `authority_address` unlocked
-and ipc enabled at `home.ipc`. TODO add instructions. please refer to
+start a parity node that connects to `main` chain, has `authority_address` unlocked
+and http enabled at `main.http`. TODO add instructions. please refer to
 the parity documentation for now.
 
-start a parity node that connects to `foreign` chain, has `authority_address` unlocked
-and ipc enabled at `foreign.ipc`. TODO add instructions. please refer to
+start a parity node that connects to `side` chain, has `authority_address` unlocked
+and http enabled at `side.http`. TODO add instructions. please refer to
 the parity documentation for now.
 
 ### configure the bridge
@@ -49,14 +49,14 @@ or [![Join the chat at https://gitter.im/paritytech/parity-bridge](https://badge
 
 [if you're the deploying authority continue here](#further-deployment-steps-for-deploying-authority)
 
-[if you're a non-deploying authority continue here](#further-deployment-steps-for-non-deploying-authorities)
+[if you're a non-deploying authority continue here](#further-run-steps)
 
 ## further deployment steps for deploying authority
 
-start the bridge by executing:
+start the bridge-deploy by executing:
 
 ```
-env RUST_LOG=info parity-bridge --config bridge_config.toml --database bridge.db
+env RUST_LOG=info parity-bridge-deploy --config bridge_config.toml --database bridge.db
 ```
 
 it should eventually print something like this:
@@ -64,10 +64,10 @@ it should eventually print something like this:
 ```
 INFO:bridge: Deployed new bridge contracts
 INFO:bridge:
-home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-home_deploy = 1
-foreign_deploy = 1
+main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+main_deploy = 1
+side_deploy = 1
 checked_deposit_relay = 1
 checked_withdraw_relay = 1
 checked_withdraw_confirm = 1
@@ -78,17 +78,17 @@ checked_withdraw_confirm = 1
 `bridge.db` should now look similar to this:
 
 ```
-home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-home_deploy = 1
-foreign_deploy = 1
+main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+main_deploy = 1
+side_deploy = 1
 checked_deposit_relay = 3
 checked_withdraw_relay = 4
 checked_withdraw_confirm = 4
 ```
 
-(verify the contracts deployed to `home_contract_address` and
-`foreign_contract_address` using
+(verify the contracts deployed to `main_contract_address` and
+`side_contract_address` using
 [https://etherscan.io/verifyContract](https://etherscan.io/verifyContract) so the other authorities
 can verify that you did an honest deploy without having to trust you.)
 
@@ -98,27 +98,26 @@ the database file doesn't contain any sensitive information.
 
 ask the other authorities to follow **this guide you're reading**.
 
-ensure the process keeps running. else the bridge won't function.
-(outside the scope of this guide, your devops team knows what to do).
+proceed to the next step to run the bridge.
 
-## further deployment steps for non-deploying authorities
+## further run steps
 
 you MUST receive a `bridge.db` from the deploying authority.
 
 it should look similar to this:
 
 ```
-home_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-foreign_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-home_deploy = 1
-foreign_deploy = 1
+main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
+main_deploy = 1
+side_deploy = 1
 checked_deposit_relay = 3
 checked_withdraw_relay = 4
 checked_withdraw_confirm = 4
 ```
 
 (check that the contracts deployed to
-`home_contract_address` and `foreign_contract_address` are
+`main_contract_address` and `side_contract_address` are
 verified on [https://etherscan.io](https://etherscan.io) and that the source code matches
 the code in the repo.)
 
