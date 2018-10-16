@@ -207,19 +207,9 @@ mod tests {
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
-        let topic0 = {
-            let topics: Vec<_> = topic.topic0.into();
-            topics[0]
-        };
-
-        let topic1 = {
-            let topics: Vec<_> = topic.topic1.into();
-            topics[0]
-        };
-
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: vec![topic0, topic1],
+            topics: vec![topic.topic0[0], topic.topic1[0]],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
@@ -342,19 +332,9 @@ mod tests {
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
-        let topic0 = {
-            let topics: Vec<_> = topic.topic0.into();
-            topics[0]
-        };
-
-        let topic1 = {
-            let topics: Vec<_> = topic.topic1.into();
-            topics[0]
-        };
-
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: vec![topic0, topic1],
+            topics: vec![topic.topic0[0], topic.topic1[0]],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
@@ -427,19 +407,9 @@ mod tests {
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
 
-        let topic0 = {
-            let topics: Vec<_> = topic.topic0.into();
-            topics[0]
-        };
-
-        let topic1 = {
-            let topics: Vec<_> = topic.topic1.into();
-            topics[0]
-        };
-
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".into(),
-            topics: vec![topic0, topic1],
+            topics: vec![topic.topic0[0], topic.topic1[0]],
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
             block_hash: None,
