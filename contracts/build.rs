@@ -22,6 +22,7 @@ fn main() {
     // without this cargo doesn't since the bridge contract
     // is outside the crate directories
     println!("cargo:rerun-if-changed=../contracts/bridge.sol");
+    println!("cargo:rerun-if-changed=../arbitrary/contracts/bridge.sol");
 
     // make last git commit hash (`git rev-parse HEAD`)
     // available via `env!("GIT_HASH")` in sources
@@ -42,5 +43,6 @@ fn main() {
     println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
 
     // compile contracts for inclusion with ethabis `use_contract!`
-    solc::compile_dir("../contracts", "../compiled_contracts").unwrap();
+    solc::solc_compile("../contracts/bridge.sol", "../compiled_contracts/old").unwrap();
+    solc::solc_compile("../arbitrary/contracts/bridge.sol", "../compiled_contracts/arbitrary").unwrap();
 }

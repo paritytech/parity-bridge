@@ -105,6 +105,49 @@ impl<T: Transport> SideContract<T> {
         self.call(payload, decoder)
     }
 
+    pub fn arbitrary_is_message_accepted_from_main(
+        &self,
+        transaction_hash: H256,
+        data: Vec<u8>,
+        sender: Address,
+        recipient: Address,
+    ) -> AsyncCall<T, contracts::new_side::functions::has_authority_accepted_message_from_main::Decoder> {
+        let (payload, decoder) = contracts::new_side::functions::has_authority_accepted_message_from_main::call(
+            transaction_hash,
+            data,
+            sender,
+            recipient,
+            self.authority_address
+        );
+
+        self.call(payload, decoder)
+    }
+
+    pub fn arbitrary_accept_message_from_main(
+        &self,
+        transaction_hash: H256,
+        data: Vec<u8>,
+        sender: Address,
+        recipient: Address,
+    ) -> AsyncTransaction<T> {
+        let payload = contracts::new_side::functions::accept_message::encode_input(
+            transaction_hash,
+            data,
+            sender,
+            recipient
+        );
+
+        AsyncTransaction::new(
+            &self.transport,
+            self.contract_address,
+            self.authority_address,
+            self.sign_main_to_side_gas,
+            self.sign_main_to_side_gas_price,
+            self.request_timeout,
+            payload,
+        )
+    }
+
     pub fn sign_main_to_side(
         &self,
         recipient: Address,

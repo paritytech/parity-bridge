@@ -13,12 +13,14 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
 use contracts;
 use error::{self, ResultExt};
 use futures::{Async, Future, Poll};
 use helpers::{self, AsyncCall, AsyncTransaction};
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
+use main_contract::MainContract;
 use web3::types::{Address, H256, Log, U256};
 use web3::Transport;
 
@@ -44,10 +46,8 @@ impl<T: Transport> MainToSideSign<T> {
         let main_tx_hash = raw_log
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
-        info!(
-            "{:?} - step 1/3 - about to check whether already signed",
-            main_tx_hash
-        );
+
+        info!("{:?} - step 1/3 - about to check whether already signed", main_tx_hash);
 
         let log = helpers::parse_log(contracts::main::events::deposit::parse_log, raw_log)
             .expect("`log` must be for a deposit event. q.e.d.");
@@ -120,6 +120,118 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 
     fn log_to_future(&self, log: &Log) -> Self::Future {
         MainToSideSign::new(log, self.side.clone())
+    }
+}
+
+// arbitrary bridge below
+// TODO: get rid of arbitrary prefix
+
+enum ArbitraryState<T: Transport> {
+    AwaitMessage(AsyncCall<T, contracts::new_main::functions::messages::Decoder>),
+    AwaitAlreadyAccepted {
+        message: Vec<u8>,
+        future: AsyncCall<T, contracts::new_side::functions::has_authority_accepted_message_from_main::Decoder>
+    },
+    AwaitTxSent(AsyncTransaction<T>),
+}
+
+pub struct ArbitraryAcceptMessageFromMain<T: Transport> {
+    state: ArbitraryState<T>,
+    main_tx_hash: H256,
+    message_id: H256,
+    sender: Address,
+    recipient: Address,
+    side: SideContract<T>,
+}
+
+impl<T: Transport> ArbitraryAcceptMessageFromMain<T> {
+    pub fn new(raw_log: &Log, side: SideContract<T>, main: MainContract<T>) -> Self {
+        let main_tx_hash = raw_log
+            .transaction_hash
+            .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
+
+
+        let log = helpers::parse_log(contracts::new_main::events::relay_message::parse_log, raw_log)
+            .expect("`log` must be for a relay message. q.e.d.");
+
+        let sender = log.sender;
+        let recipient = log.recipient;
+
+        info!("{:?} - step 1/4 - fetch message using message_id", main_tx_hash);
+        let future = main.arbitrary_message_by_id(log.message_id);
+        let state = ArbitraryState::AwaitMessage(future);
+
+        ArbitraryAcceptMessageFromMain {
+            state,
+            main_tx_hash,
+            message_id: log.message_id,
+            sender,
+            recipient,
+            side,
+        }
+    }
+}
+
+impl<T: Transport> Future for ArbitraryAcceptMessageFromMain<T> {
+    type Item = Option<H256>;
+    type Error = error::Error;
+
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        loop {
+            let next_state = match self.state {
+                ArbitraryState::AwaitMessage(ref mut future) => {
+                    let message = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "AcceptMessageFromMain: failed to fetch the message")
+                    );
+
+                    info!("{:?} - 2/4 - checking if the message is already signed", self.main_tx_hash);
+                    ArbitraryState::AwaitAlreadyAccepted {
+                        message: message.clone(),
+                        future: self.side.arbitrary_is_message_accepted_from_main(
+                            self.main_tx_hash,
+                            message,
+                            self.sender,
+                            self.recipient,
+                        )
+                    }
+                },
+                ArbitraryState::AwaitAlreadyAccepted { ref message, ref mut future } => {
+                    let has_already_accepted = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "AcceptMessageFromMain: failed to check if already accepted")
+                    );
+                    if has_already_accepted {
+                        info!("{:?} - DONE - already accepted", self.main_tx_hash);
+                        return Ok(Async::Ready(None));
+                    }
+
+                    info!("{:?} - 3/4 - accepting the meessage", self.main_tx_hash);
+                    ArbitraryState::AwaitTxSent(self.side.arbitrary_accept_message_from_main(
+                        self.main_tx_hash,
+                        message.clone(),
+                        self.sender,
+                        self.recipient,
+                    ))
+                },
+                ArbitraryState::AwaitTxSent(ref mut future) => {
+                    let main_tx_hash = self.main_tx_hash;
+                    let side_tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| format!(
+                                "AcceptMessageFromMain: checking whether {} already was relayed failed",
+                                main_tx_hash
+                            ))
+                    );
+                    info!("{:?} - DONE - accepted", self.main_tx_hash);
+                    return Ok(Async::Ready(Some(side_tx_hash)));
+                },
+            };
+            self.state = next_state;
+        }
     }
 }
 

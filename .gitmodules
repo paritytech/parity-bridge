@@ -1,0 +1,3 @@
+[submodule "arbitrary"]
+	path = arbitrary
+	url = git@github.com:parity-contracts/bridge.git

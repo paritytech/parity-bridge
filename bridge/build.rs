@@ -13,7 +13,6 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-extern crate solc;
 
 use std::process::Command;
 
@@ -22,6 +21,7 @@ fn main() {
     // without this cargo doesn't since the bridge contract
     // is outside the crate directories
     println!("cargo:rerun-if-changed=../contracts/bridge.sol");
+    println!("cargo:rerun-if-changed=../arbitrary/contracts/bridge.sol");
 
     // make last git commit hash (`git rev-parse HEAD`)
     // available via `env!("GIT_HASH")` in sources
@@ -40,7 +40,4 @@ fn main() {
     let output_string = String::from_utf8(output.stdout).unwrap();
     let solc_version = output_string.lines().last().unwrap();
     println!("cargo:rustc-env=SOLC_VERSION={}", solc_version);
-
-    // compile contracts for inclusion with ethabis `use_contract!`
-    solc::compile_dir("../contracts", "../compiled_contracts").unwrap();
 }

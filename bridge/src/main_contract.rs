@@ -17,7 +17,7 @@ use config::Config;
 use contracts;
 use database::State;
 use ethabi::FunctionOutputDecoder;
-use ethereum_types::{Address, U256};
+use ethereum_types::{Address, U256, H256};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;
@@ -100,5 +100,22 @@ impl<T: Transport> MainContract<T> {
             self.request_timeout,
             payload,
         )
+    }
+
+    pub fn arbitrary_main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
+        LogStream::new(LogStreamOptions {
+            filter: contracts::new_main::events::relay_message::filter(),
+            request_timeout: self.request_timeout,
+            poll_interval: self.logs_poll_interval,
+            confirmations: self.required_log_confirmations,
+            transport: self.transport.clone(),
+            contract_address: self.contract_address,
+            after,
+        })
+    }
+
+    pub fn arbitrary_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::messages::Decoder> {
+        let (payload, decoder) = contracts::new_main::functions::messages::call(id);
+        self.call(payload, decoder)
     }
 }
