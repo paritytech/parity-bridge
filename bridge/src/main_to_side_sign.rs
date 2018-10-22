@@ -126,6 +126,20 @@ impl<T: Transport> LogToFuture for LogToMainToSideSign<T> {
 // arbitrary bridge below
 // TODO: get rid of arbitrary prefix
 
+#[derive(Clone)]
+pub struct LogToArbitraryAcceptMessageFromMain<T> {
+    pub main: MainContract<T>,
+    pub side: SideContract<T>,
+}
+
+impl<T: Transport> LogToFuture for LogToArbitraryAcceptMessageFromMain<T> {
+    type Future = ArbitraryAcceptMessageFromMain<T>;
+
+    fn log_to_future(&self, log: &Log) -> Self::Future {
+        ArbitraryAcceptMessageFromMain::new(log, self.side.clone(), self.main.clone())
+    }
+}
+
 enum ArbitraryState<T: Transport> {
     AwaitMessage(AsyncCall<T, contracts::new_main::functions::messages::Decoder>),
     AwaitAlreadyAccepted {
@@ -243,6 +257,122 @@ mod tests {
     use rustc_hex::ToHex;
     use tokio_core::reactor::Core;
     use web3::types::{Bytes, Log};
+
+    #[test]
+    fn test_arbitrary_accept_message_from_main() {
+        let topic = contracts::new_main::events::relay_message::filter().topic0;
+
+        let log = contracts::new_main::logs::RelayMessage {
+            message_id: "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b".into(),
+            sender: "aff3454fce5edbc8cca8697c15331677e6ebdddd".into(),
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+        };
+
+        let log_data = ethabi::encode(&[
+            ethabi::Token::FixedBytes(log.message_id.to_vec()),
+            ethabi::Token::Address(log.sender),
+            ethabi::Token::Address(log.recipient),
+        ]);
+
+        let log_tx_hash =
+            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+
+        let raw_log = Log {
+            address: "0000000000000000000000000000000000000001".into(),
+            topics: topic.into(),
+            data: Bytes(log_data),
+            transaction_hash: Some(log_tx_hash),
+            block_hash: None,
+            block_number: None,
+            transaction_index: None,
+            log_index: None,
+            transaction_log_index: None,
+            log_type: None,
+            removed: None,
+        };
+
+        let authority_address = "0000000000000000000000000000000000000001".into();
+
+        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+        let side_contract_address = "0000000000000000000000000000000000000dd1".into();
+        let main_contract_address = "0000000000000000000000000000000000000dd2".into();
+
+        let data: Vec<u8> = vec![0x12, 0x34];
+
+        let encoded_message = ethabi::encode(&[ethabi::Token::Bytes(data.clone())]);
+
+        let get_message_call_data = contracts::new_main::functions::messages::encode_input(log.message_id);
+
+        let has_accepted_call_data = contracts::new_side::functions::has_authority_accepted_message_from_main::encode_input(
+            log_tx_hash,
+            data.clone(),
+            log.sender,
+            log.recipient,
+            authority_address,
+        );
+
+        let accept_message_call_data = contracts::new_side::functions::accept_message::encode_input(log_tx_hash, data, log.sender, log.recipient);
+
+        let main_transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", get_message_call_data.to_hex()),
+                    "to": main_contract_address,
+                }, "latest"]),
+                res => json!(format!("0x{}", encoded_message.to_hex()));
+        );
+
+        let side_transport = mock_transport!(
+            "eth_call" =>
+                req => json!([{
+                    "data": format!("0x{}", has_accepted_call_data.to_hex()),
+                    "to": side_contract_address,
+                }, "latest"]),
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
+            "eth_sendTransaction" =>
+                req => json!([{
+                    "data": format!("0x{}", accept_message_call_data.to_hex()),
+                    "from": "0x0000000000000000000000000000000000000001",
+                    "gas": "0xfd",
+                    "gasPrice": "0xa0",
+                    "to": side_contract_address,
+                }]),
+                res => json!(tx_hash);
+        );
+
+        let main_contract = MainContract {
+            transport: main_transport.clone(),
+            contract_address: main_contract_address,
+            authority_address,
+            submit_collected_signatures_gas: 0.into(),
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+        };
+
+        let side_contract = SideContract {
+            transport: side_transport.clone(),
+            contract_address: side_contract_address,
+            authority_address,
+            required_signatures: 1,
+            request_timeout: ::std::time::Duration::from_millis(0),
+            logs_poll_interval: ::std::time::Duration::from_millis(0),
+            required_log_confirmations: 0,
+            sign_main_to_side_gas: 0xfd.into(),
+            sign_main_to_side_gas_price: 0xa0.into(),
+            sign_side_to_main_gas: 0.into(),
+            sign_side_to_main_gas_price: 0.into(),
+        };
+
+        let future = ArbitraryAcceptMessageFromMain::new(&raw_log, side_contract, main_contract);
+
+        let mut event_loop = Core::new().unwrap();
+        let result = event_loop.run(future).unwrap();
+        assert_eq!(result, Some(tx_hash.into()));
+
+        assert_eq!(side_transport.actual_requests(), side_transport.expected_requests());
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
+    }
 
     #[test]
     fn test_main_to_side_sign_relay_future_not_relayed() {

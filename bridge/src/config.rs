@@ -286,7 +286,7 @@ main_deploy = { gas = "20", gas_price = "0" }
             main: NodeConfig {
                 http: "http://localhost:8545".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
+                    bin: include_str!("../../compiled_contracts/old/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -297,7 +297,7 @@ main_deploy = { gas = "20", gas_price = "0" }
             },
             side: NodeConfig {
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
+                    bin: include_str!("../../compiled_contracts/old/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -363,7 +363,7 @@ required_signatures = 2
             main: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
+                    bin: include_str!("../../compiled_contracts/old/MainBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -375,7 +375,7 @@ required_signatures = 2
             side: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
+                    bin: include_str!("../../compiled_contracts/old/SideBridge.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
