@@ -113,10 +113,10 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "MainBridge".into(),
-                            include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/old/MainBridge.abi").into(),
-                            include_str!("../../compiled_contracts/old/MainBridge.bin").into(),
+                            "Main".into(),
+                            include_str!("../../arbitrary/contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/Main.abi").into(),
+                            include_str!("../../compiled_contracts/Main.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -203,9 +203,9 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                     DeployState::Deployed {
                         contract: DeployedContract::new(
                             "SideBridge".into(),
-                            include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/old/SideBridge.abi").into(),
-                            include_str!("../../compiled_contracts/old/SideBridge.bin").into(),
+                            include_str!("../../arbitrary/contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/Side.abi").into(),
+                            include_str!("../../compiled_contracts/Side.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),

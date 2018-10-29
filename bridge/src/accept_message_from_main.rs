@@ -39,10 +39,10 @@ impl<T: Transport> LogToFuture for LogToAcceptMessageFromMain<T> {
 }
 
 enum State<T: Transport> {
-    AwaitMessage(AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder>),
+    AwaitMessage(AsyncCall<T, contracts::main::functions::relayed_messages::Decoder>),
     AwaitAlreadyAccepted {
         message: Vec<u8>,
-        future: AsyncCall<T, contracts::new_side::functions::has_authority_accepted_message_from_main::Decoder>
+        future: AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder>
     },
     AwaitTxSent(AsyncTransaction<T>),
 }
@@ -63,7 +63,7 @@ impl<T: Transport> AcceptMessageFromMain<T> {
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
 
-        let log = helpers::parse_log(contracts::new_main::events::relay_message::parse_log, raw_log)
+        let log = helpers::parse_log(contracts::main::events::relay_message::parse_log, raw_log)
             .expect("`log` must be for a relay message. q.e.d.");
 
         let sender = log.sender;
@@ -158,9 +158,9 @@ mod tests {
 
     #[test]
     fn test_accept_message_from_main() {
-        let topic = contracts::new_main::events::relay_message::filter().topic0;
+        let topic = contracts::main::events::relay_message::filter().topic0;
 
-        let log = contracts::new_main::logs::RelayMessage {
+        let log = contracts::main::logs::RelayMessage {
             message_id: "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b".into(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebdddd".into(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -199,9 +199,9 @@ mod tests {
 
         let encoded_message = ethabi::encode(&[ethabi::Token::Bytes(data.clone())]);
 
-        let get_message_call_data = contracts::new_main::functions::messages::encode_input(log.message_id);
+        let get_message_call_data = contracts::main::functions::messages::encode_input(log.message_id);
 
-        let has_accepted_call_data = contracts::new_side::functions::has_authority_accepted_message_from_main::encode_input(
+        let has_accepted_call_data = contracts::side::functions::has_authority_accepted_message_from_main::encode_input(
             log_tx_hash,
             data.clone(),
             log.sender,
@@ -209,7 +209,7 @@ mod tests {
             authority_address,
         );
 
-        let accept_message_call_data = contracts::new_side::functions::accept_message::encode_input(log_tx_hash, data, log.sender, log.recipient);
+        let accept_message_call_data = contracts::side::functions::accept_message::encode_input(log_tx_hash, data, log.sender, log.recipient);
 
         let main_transport = mock_transport!(
             "eth_call" =>

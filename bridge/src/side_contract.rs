@@ -95,8 +95,8 @@ impl<T: Transport> SideContract<T> {
         data: Vec<u8>,
         sender: Address,
         recipient: Address,
-    ) -> AsyncCall<T, contracts::new_side::functions::has_authority_accepted_message_from_main::Decoder> {
-        let (payload, decoder) = contracts::new_side::functions::has_authority_accepted_message_from_main::call(
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_accepted_message_from_main::call(
             transaction_hash,
             data,
             sender,
@@ -114,7 +114,7 @@ impl<T: Transport> SideContract<T> {
         sender: Address,
         recipient: Address,
     ) -> AsyncTransaction<T> {
-        let payload = contracts::new_side::functions::accept_message::encode_input(
+        let payload = contracts::side::functions::accept_message::encode_input(
             transaction_hash,
             data,
             sender,

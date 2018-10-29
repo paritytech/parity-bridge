@@ -97,7 +97,7 @@ impl<T: Transport> MainContract<T> {
 
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::new_main::events::relay_message::filter(),
+            filter: contracts::main::events::relay_message::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -107,8 +107,8 @@ impl<T: Transport> MainContract<T> {
         })
     }
 
-    pub fn relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder> {
-        let (payload, decoder) = contracts::new_main::functions::relayed_messages::call(id);
+    pub fn relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::main::functions::relayed_messages::Decoder> {
+        let (payload, decoder) = contracts::main::functions::relayed_messages::call(id);
         self.call(payload, decoder)
     }
 }

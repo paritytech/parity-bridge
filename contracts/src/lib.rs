@@ -19,9 +19,5 @@ extern crate ethabi_derive;
 #[macro_use]
 extern crate ethabi_contract;
 
-//use_contract!(main, "../compiled_contracts/old/MainBridge.abi");
-//use_contract!(side, "../compiled_contracts/old/SideBridge.abi");
-use_contract!(main, "../compiled_contracts/arbitrary/Main.abi");
-use_contract!(side, "../compiled_contracts/arbitrary/Side.abi");
-use_contract!(new_main, "../compiled_contracts/arbitrary/Main.abi");
-use_contract!(new_side, "../compiled_contracts/arbitrary/Side.abi");
+use_contract!(main, "../compiled_contracts/Main.abi");
+use_contract!(side, "../compiled_contracts/Side.abi");
