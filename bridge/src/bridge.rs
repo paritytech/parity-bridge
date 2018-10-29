@@ -20,7 +20,7 @@ use database::State;
 use error::{self, ResultExt};
 use log_stream::LogStream;
 use main_contract::MainContract;
-use main_to_side_sign;
+use accept_message_from_main;
 use relay_stream::RelayStream;
 use side_contract::SideContract;
 use side_to_main_sign;
@@ -35,7 +35,7 @@ use side_to_main_signatures;
 /// updates the database with results returned from relay streams.
 /// yields new state that should be persisted
 pub struct Bridge<T: Transport> {
-    main_to_side_sign: RelayStream<LogStream<T>, main_to_side_sign::LogToMainToSideSign<T>>,
+    accept_message_from_main: RelayStream<LogStream<T>, accept_message_from_main::LogToAcceptMessageFromMain<T>>,
     side_to_main_sign: RelayStream<LogStream<T>, side_to_main_sign::LogToSideToMainSign<T>>,
     side_to_main_signatures:
         RelayStream<LogStream<T>, side_to_main_signatures::LogToSideToMainSignatures<T>>,
@@ -48,9 +48,10 @@ impl<T: Transport> Bridge<T> {
         main_contract: MainContract<T>,
         side_contract: SideContract<T>,
     ) -> Self {
-        let main_to_side_sign = RelayStream::new(
+        let accept_message_from_main = RelayStream::new(
             main_contract.main_to_side_log_stream(initial_state.last_main_to_side_sign_at_block),
-            main_to_side_sign::LogToMainToSideSign {
+            accept_message_from_main::LogToAcceptMessageFromMain {
+                main: main_contract.clone(),
                 side: side_contract.clone(),
             },
         );
@@ -75,7 +76,7 @@ impl<T: Transport> Bridge<T> {
         );
 
         Self {
-            main_to_side_sign,
+            accept_message_from_main,
             side_to_main_sign,
             side_to_main_signatures,
             state: initial_state,
@@ -90,7 +91,7 @@ impl<T: Transport> Stream for Bridge<T> {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
             let maybe_main_to_side_sign = try_maybe_stream!(
-                self.main_to_side_sign
+                self.accept_message_from_main
                     .poll()
                     .chain_err(|| "Bridge: polling main to side sign failed")
             );

@@ -31,12 +31,17 @@ use web3::Transport;
 enum State<T: Transport> {
     AwaitMessage(AsyncCall<T, contracts::side::functions::message::Decoder>),
     AwaitIsRelayed {
-        future: AsyncCall<T, contracts::main::functions::withdraws::Decoder>,
+        future: AsyncCall<T, contracts::main::functions::accepted_messages::Decoder>,
         message: MessageToMain,
     },
     AwaitSignatures {
         future: JoinAll<Vec<AsyncCall<T, contracts::side::functions::signature::Decoder>>>,
         message: MessageToMain,
+    },
+    AwaitMessageData {
+        future: AsyncCall<T, contracts::side::functions::relayed_messages::Decoder>,
+        message: MessageToMain,
+        signatures: Vec<Signature>,
     },
     AwaitTxSent(AsyncTransaction<T>),
 }
@@ -58,7 +63,7 @@ impl<T: Transport> SideToMainSignatures<T> {
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let log = helpers::parse_log(contracts::side::events::collected_signatures::parse_log, raw_log)
+        let log = helpers::parse_log(contracts::side::events::signed_message::parse_log, raw_log)
             .expect("`Log` must be a from a `CollectedSignatures` event. q.e.d.");
 
         // authority_responsible_for_relay is an indexed topic and it should be
@@ -96,16 +101,15 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                             .chain_err(|| "SubmitSignature: fetching message failed")
                     );
                     let message = MessageToMain::from_bytes(&message_bytes)?;
-                    let (payload, decoder) = contracts::main::functions::withdraws::call(message.side_tx_hash);
+
+                    let (payload, decoder) = contracts::main::functions::accepted_messages::call(message.keccak256());
                     State::AwaitIsRelayed {
                         future: self.main.call(payload, decoder),
                         message,
                     }
-                }
-                State::AwaitIsRelayed {
-                    ref mut future,
-                    ref message,
-                } => {
+
+                },
+                State::AwaitIsRelayed { ref mut future, ref message } => {
                     let is_relayed = try_ready!(
                         future
                             .poll()
@@ -120,11 +124,8 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         future: self.side.get_signatures(message.keccak256()),
                         message: message.clone(),
                     }
-                }
-                State::AwaitSignatures {
-                    ref mut future,
-                    ref message,
-                } => {
+                },
+                State::AwaitSignatures { ref mut future, ref message } => {
                     let raw_signatures = try_ready!(
                         future
                             .poll()
@@ -135,8 +136,23 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         .map(|x| Signature::from_bytes(x))
                         .collect::<Result<_, _>>()?;
                     info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.side_tx_hash, signatures.len());
-                    State::AwaitTxSent(self.main.relay_side_to_main(&message, &signatures))
-                }
+
+                    let (payload, decoder) = contracts::side::functions::relayed_messages::call(message.message_id);
+                    State::AwaitMessageData {
+                        future: self.side.call(payload, decoder),
+                        message: message.clone(),
+                        signatures,
+                    }
+                },
+                State::AwaitMessageData { ref mut future, ref message, ref signatures } => {
+                    let message_data = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "SubmitSignature: fetching message failed")
+                    );
+
+                    State::AwaitTxSent(self.main.relay_side_to_main(&message, &signatures, message_data))
+                },
                 State::AwaitTxSent(ref mut future) => {
                     let main_tx_hash = try_ready!(
                         future

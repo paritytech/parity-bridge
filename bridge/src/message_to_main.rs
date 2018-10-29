@@ -28,14 +28,14 @@ use web3::types::Log;
 /// one node submits this message and signatures in `SideToMainSignatures`.
 #[derive(PartialEq, Debug, Clone)]
 pub struct MessageToMain {
-    pub recipient: Address,
-    pub value: U256,
     pub side_tx_hash: H256,
-    pub main_gas_price: U256,
+    pub message_id: H256,
+    pub sender: Address,
+    pub recipient: Address,
 }
 
 /// length of a `MessageToMain.to_bytes()` in bytes
-pub const MESSAGE_LENGTH: usize = 116;
+pub const MESSAGE_LENGTH: usize = 32 + 32 + 20 + 20;
 
 impl MessageToMain {
     /// parses message from a byte slice
@@ -45,10 +45,10 @@ impl MessageToMain {
         }
 
         Ok(Self {
-            recipient: bytes[0..20].into(),
-            value: U256::from_big_endian(&bytes[20..52]),
-            side_tx_hash: bytes[52..84].into(),
-            main_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
+            side_tx_hash: bytes[0..32].into(),
+            message_id: bytes[32..64].into(),
+            sender: bytes[64..84].into(),
+            recipient: bytes[84..104].into(),
         })
     }
 
@@ -61,12 +61,12 @@ impl MessageToMain {
         let hash = raw_log
             .transaction_hash
             .ok_or_else(|| "`log` must be mined and contain `transaction_hash`")?;
-        let log = helpers::parse_log(contracts::side::events::withdraw::parse_log, raw_log)?;
+        let log = helpers::parse_log(contracts::side::events::relay_message::parse_log, raw_log)?;
         Ok(Self {
-            recipient: log.recipient,
-            value: log.value,
             side_tx_hash: hash,
-            main_gas_price: log.main_gas_price,
+            message_id: log.message_id,
+            sender: log.sender,
+            recipient: log.recipient,
         })
     }
 
@@ -75,11 +75,10 @@ impl MessageToMain {
     /// and passed to `SideBridge.submitSignature`
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; MESSAGE_LENGTH];
-        result[0..20].copy_from_slice(&self.recipient.0[..]);
-        self.value.to_big_endian(&mut result[20..52]);
-        result[52..84].copy_from_slice(&self.side_tx_hash.0[..]);
-        self.main_gas_price
-            .to_big_endian(&mut result[84..MESSAGE_LENGTH]);
+        result[0..32].copy_from_slice(&self.side_tx_hash.0[..]);
+        result[32..64].copy_from_slice(&self.message_id.0[..]);
+        result[64..84].copy_from_slice(&self.sender.0[..]);
+        result[84..104].copy_from_slice(&self.recipient.0[..]);
         return result;
     }
 

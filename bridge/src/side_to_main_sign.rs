@@ -30,7 +30,7 @@ use web3::types::{Bytes, H256, H520, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_side_to_main::Decoder>),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>),
     AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -51,8 +51,7 @@ impl<T: Transport> SideToMainSign<T> {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message =
-            MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
+        let message = MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
         let message_bytes = message.to_bytes();
 
         assert_eq!(
@@ -99,7 +98,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     let timeout_future =
                         Timer::default().timeout(inner_future, self.side.request_timeout);
                     State::AwaitSignature(timeout_future)
-                }
+                },
                 State::AwaitSignature(ref mut future) => {
                     let signature_bytes = try_ready!(
                         future
@@ -113,10 +112,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
 
                     let signature = Signature::from_bytes(&signature_bytes)?;
 
-                    let future = self.side
-                        .submit_side_to_main_signature(&self.message, &signature);
+                    let future = self.side.submit_signed_message(&self.message, &signature);
                     State::AwaitTransaction(future)
-                }
+                },
                 State::AwaitTransaction(ref mut future) => {
                     let tx_hash = try_ready!(
                         future

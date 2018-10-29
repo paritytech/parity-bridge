@@ -65,30 +65,21 @@ impl<T: Transport> MainContract<T> {
         self.call(payload, decoder)
     }
 
-    /// `Stream` of all txs on main that need to be relayed to side
-    pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
-        LogStream::new(LogStreamOptions {
-            filter: contracts::main::events::deposit::filter(),
-            request_timeout: self.request_timeout,
-            poll_interval: self.logs_poll_interval,
-            confirmations: self.required_log_confirmations,
-            transport: self.transport.clone(),
-            contract_address: self.contract_address,
-            after,
-        })
-    }
-
     /// relay a tx from side to main by submitting message and collected signatures
     pub fn relay_side_to_main(
         &self,
         message: &MessageToMain,
         signatures: &Vec<Signature>,
+        data: Vec<u8>,
     ) -> AsyncTransaction<T> {
-        let payload = contracts::main::functions::withdraw::encode_input(
+        let payload = contracts::main::functions::accept_message::encode_input(
             signatures.iter().map(|x| x.v),
             signatures.iter().map(|x| x.r),
             signatures.iter().map(|x| x.s),
-            message.to_bytes(),
+            message.side_tx_hash,
+            data,
+            message.sender,
+            message.recipient
         );
 
         AsyncTransaction::new(
@@ -96,13 +87,15 @@ impl<T: Transport> MainContract<T> {
             self.contract_address,
             self.authority_address,
             self.submit_collected_signatures_gas,
-            message.main_gas_price,
+            // TODO:
+            //message.main_gas_price,
+            1000.into(),
             self.request_timeout,
             payload,
         )
     }
 
-    pub fn arbitrary_main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
+    pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
             filter: contracts::new_main::events::relay_message::filter(),
             request_timeout: self.request_timeout,
@@ -114,7 +107,7 @@ impl<T: Transport> MainContract<T> {
         })
     }
 
-    pub fn arbitrary_relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder> {
+    pub fn relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder> {
         let (payload, decoder) = contracts::new_main::functions::relayed_messages::call(id);
         self.call(payload, decoder)
     }
