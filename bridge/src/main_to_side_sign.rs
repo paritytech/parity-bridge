@@ -141,7 +141,7 @@ impl<T: Transport> LogToFuture for LogToArbitraryAcceptMessageFromMain<T> {
 }
 
 enum ArbitraryState<T: Transport> {
-    AwaitMessage(AsyncCall<T, contracts::new_main::functions::messages::Decoder>),
+    AwaitMessage(AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder>),
     AwaitAlreadyAccepted {
         message: Vec<u8>,
         future: AsyncCall<T, contracts::new_side::functions::has_authority_accepted_message_from_main::Decoder>
@@ -172,7 +172,7 @@ impl<T: Transport> ArbitraryAcceptMessageFromMain<T> {
         let recipient = log.recipient;
 
         info!("{:?} - step 1/4 - fetch message using message_id", main_tx_hash);
-        let future = main.arbitrary_message_by_id(log.message_id);
+        let future = main.arbitrary_relayed_message_by_id(log.message_id);
         let state = ArbitraryState::AwaitMessage(future);
 
         ArbitraryAcceptMessageFromMain {

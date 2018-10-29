@@ -114,8 +114,8 @@ impl<T: Transport> MainContract<T> {
         })
     }
 
-    pub fn arbitrary_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::messages::Decoder> {
-        let (payload, decoder) = contracts::new_main::functions::messages::call(id);
+    pub fn arbitrary_relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::new_main::functions::relayed_messages::Decoder> {
+        let (payload, decoder) = contracts::new_main::functions::relayed_messages::call(id);
         self.call(payload, decoder)
     }
 }
