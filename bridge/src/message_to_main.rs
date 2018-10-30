@@ -96,43 +96,47 @@ mod test {
 
     #[test]
     fn test_message_to_main_to_bytes() {
-        let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0ce".into();
-        let value = U256::from_dec_str("3800000000000000").unwrap();
         let side_tx_hash: H256 =
             "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
-        let main_gas_price = U256::from_dec_str("8000000000").unwrap();
+        let message_id: H256 =
+            "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff".into();
+        let sender: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0aa".into();
+        let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0bb".into();
 
         let message = MessageToMain {
-            recipient,
-            value,
             side_tx_hash,
-            main_gas_price,
+            message_id,
+            sender,
+            recipient,
         };
 
-        assert_eq!(message.to_bytes(), "eac4a655451e159313c3641e29824e77d6fcb0ce000000000000000000000000000000000000000000000000000d80147225800075ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e200000000000000000000000000000000000000000000000000000001dcd65000".from_hex().unwrap())
+        assert_eq!(message.to_bytes(), "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e275ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ffeac4a655451e159313c3641e29824e77d6fcb0aaeac4a655451e159313c3641e29824e77d6fcb0bb".from_hex().unwrap())
     }
 
     quickcheck! {
         fn quickcheck_message_to_main_roundtrips_to_bytes(
-            recipient_raw: Vec<u8>,
-            value_raw: u64,
             side_tx_hash_raw: Vec<u8>,
-            main_gas_price_raw: u64
+            message_id_raw: Vec<u8>,
+            sender_raw: Vec<u8>,
+            recipient_raw: Vec<u8>
         ) -> TestResult {
-            if recipient_raw.len() != 20 || side_tx_hash_raw.len() != 32 {
+            if side_tx_hash_raw.len() != 32 ||
+                message_id_raw.len() != 32 ||
+                sender_raw.len() != 20 ||
+                recipient_raw.len() != 20 {
                 return TestResult::discard();
             }
 
-            let recipient: Address = recipient_raw.as_slice().into();
-            let value: U256 = value_raw.into();
             let side_tx_hash: H256 = side_tx_hash_raw.as_slice().into();
-            let main_gas_price: U256 = main_gas_price_raw.into();
+            let message_id: H256 = message_id_raw.as_slice().into();
+            let sender: Address = sender_raw.as_slice().into();
+            let recipient: Address = recipient_raw.as_slice().into();
 
             let message = MessageToMain {
-                recipient,
-                value,
                 side_tx_hash,
-                main_gas_price
+                message_id,
+                sender,
+                recipient,
             };
 
             let bytes = message.to_bytes();

@@ -260,13 +260,13 @@ poll_interval = 2
 required_confirmations = 100
 
 [main.contract]
-bin = "../compiled_contracts/MainBridge.bin"
+bin = "../compiled_contracts/Main.bin"
 
 [side]
 http = "http://localhost:8546"
 
 [side.contract]
-bin = "../compiled_contracts/SideBridge.bin"
+bin = "../compiled_contracts/Side.bin"
 
 [authorities]
 accounts = [
@@ -341,13 +341,13 @@ max_single_deposit_value = "1000000000000000000"
 http = ""
 
 [main.contract]
-bin = "../compiled_contracts/MainBridge.bin"
+bin = "../compiled_contracts/Main.bin"
 
 [side]
 http = ""
 
 [side.contract]
-bin = "../compiled_contracts/SideBridge.bin"
+bin = "../compiled_contracts/Side.bin"
 
 [authorities]
 accounts = [
