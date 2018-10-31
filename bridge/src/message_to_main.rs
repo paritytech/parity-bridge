@@ -13,11 +13,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-//use contracts::side::events::Withdraw;
+
 use contracts;
 use error::Error;
 use ethabi;
-use ethereum_types::{Address, H256, U256};
+use ethereum_types::{Address, H256};
 use helpers;
 use tiny_keccak;
 use web3::types::Log;

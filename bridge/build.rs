@@ -20,7 +20,6 @@ fn main() {
     // rerun build script if bridge contract has changed.
     // without this cargo doesn't since the bridge contract
     // is outside the crate directories
-    println!("cargo:rerun-if-changed=../contracts/bridge.sol");
     println!("cargo:rerun-if-changed=../arbitrary/contracts/bridge.sol");
 
     // make last git commit hash (`git rev-parse HEAD`)
