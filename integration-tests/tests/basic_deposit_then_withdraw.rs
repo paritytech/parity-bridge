@@ -13,19 +13,21 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
+
+//! spins up two parity nodes with the dev chain.
+//! starts one bridge authority that connects the two.
+//! does a deposit by sending ether to the MainBridge.
+//! asserts that the deposit got relayed to side chain.
+//! does a withdraw by executing SideBridge.transferToMainViaRelay.
+//! asserts that the withdraw got relayed to main chain.
 extern crate bridge;
 extern crate bridge_contracts;
 extern crate ethabi;
 extern crate ethereum_types;
-/// spins up two parity nodes with the dev chain.
-/// starts one bridge authority that connects the two.
-/// does a deposit by sending ether to the MainBridge.
-/// asserts that the deposit got relayed to side chain.
-/// does a withdraw by executing SideBridge.transferToMainViaRelay.
-/// asserts that the withdraw got relayed to main chain.
 extern crate tempdir;
 extern crate tokio_core;
 extern crate web3;
+extern crate rustc_hex;
 
 use std::path::Path;
 use std::process::Command;
@@ -34,8 +36,8 @@ use std::time::Duration;
 
 use tokio_core::reactor::Core;
 
+use rustc_hex::FromHex;
 use bridge::helpers::AsyncCall;
-use ethereum_types::{Address, U256};
 use web3::api::Namespace;
 use web3::transports::http::Http;
 
@@ -143,10 +145,15 @@ fn test_basic_deposit_then_withdraw() {
     // automatically added with a password being an empty string.
     // source: https://paritytech.github.io/wiki/Private-development-chain.html
     let user_address = "0x00a329c0648769a73afac7f9381e08fb43dbea72";
-
-    let receiver_address = "0x05b344a728ebb2219459a008271264aef16adbc1";
-
     let authority_address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e";
+
+    let main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    let side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    let main_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
+    let side_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
+
+    let data_to_relay_to_side = vec![0u8, 1, 5];
+    let data_to_relay_to_main = vec![0u8, 1, 5, 7];
 
     // create authority account on main
     // this is currently not supported in web3 crate so we have to use curl
@@ -233,9 +240,6 @@ fn test_basic_deposit_then_withdraw() {
         .spawn()
         .expect("failed to spawn bridge process");
 
-    let main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-
     let mut event_loop = Core::new().unwrap();
 
     // connect to main
@@ -244,7 +248,6 @@ fn test_basic_deposit_then_withdraw() {
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
     ).expect("failed to connect to main at http://localhost:8550");
-    let main_eth = web3::api::Eth::new(main_transport.clone());
 
     // connect to side
     let side_transport = Http::with_event_loop(
@@ -253,29 +256,8 @@ fn test_basic_deposit_then_withdraw() {
         MAX_PARALLEL_REQUESTS,
     ).expect("failed to connect to side at http://localhost:8551");
 
-    let (payload, decoder) = bridge_contracts::main::functions::estimated_gas_cost_of_withdraw::call();
-    let response = event_loop
-        .run(AsyncCall::new(
-            &main_transport,
-            main_contract_address.into(),
-            TIMEOUT,
-            payload,
-            decoder,
-        ))
-        .unwrap();
-
-    assert_eq!(
-        response,
-        U256::from(200000),
-        "estimated gas cost of withdraw must be correct"
-    );
-
     println!("\ngive authority some funds to do relay later\n");
 
-    let balance = event_loop
-        .run(main_eth.balance(authority_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(0));
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
@@ -293,31 +275,13 @@ fn test_basic_deposit_then_withdraw() {
             0,
         ))
         .unwrap();
-    let balance = event_loop
-        .run(main_eth.balance(authority_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(1000000000));
-
-    // ensure receiver has 0 balance initially
-    let balance = event_loop
-        .run(main_eth.balance(receiver_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(0));
-
-    // ensure main contract has 0 balance initially
-    let balance = event_loop
-        .run(main_eth.balance(main_contract_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(0));
-
-    println!("\nuser deposits ether into MainBridge\n");
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
-            &main_transport,
+            &side_transport,
             web3::types::TransactionRequest {
                 from: user_address.into(),
-                to: Some(main_contract_address.into()),
+                to: Some(authority_address.into()),
                 gas: None,
                 gas_price: None,
                 value: Some(1000000000.into()),
@@ -330,20 +294,75 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    // ensure main contract balance has increased
-    let balance = event_loop
-        .run(main_eth.balance(main_contract_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(1000000000));
+    println!("\ndeploy BridgeRecipient contracts\n");
 
-    println!("\ndeposit into main complete. give it plenty of time to get mined and relayed\n");
+    event_loop
+        .run(web3::confirm::send_transaction_with_confirmation(
+            &main_transport,
+            web3::types::TransactionRequest {
+                from: user_address.into(),
+                to: None,
+                gas: None,
+                gas_price: None,
+                value: None,
+                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                condition: None,
+                nonce: None,
+            },
+            Duration::from_secs(1),
+            0,
+        ))
+        .unwrap();
+
+    event_loop
+        .run(web3::confirm::send_transaction_with_confirmation(
+            &side_transport,
+            web3::types::TransactionRequest {
+                from: user_address.into(),
+                to: None,
+                gas: None,
+                gas_price: None,
+                value: None,
+                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                condition: None,
+                nonce: None,
+            },
+            Duration::from_secs(1),
+            0,
+        ))
+        .unwrap();
+
+    println!("\nSend the message to main chain and wait for the relay to side\n");
+
+    let (payload, _) = bridge_contracts::main::functions::relay_message::call(data_to_relay_to_side.clone(), main_recipient_address);
+
+    event_loop
+        .run(web3::confirm::send_transaction_with_confirmation(
+            &main_transport,
+            web3::types::TransactionRequest {
+                from: user_address.into(),
+                to: Some(main_contract_address.into()),
+                gas: None,
+                gas_price: None,
+                value: None,
+                data: Some(payload.into()),
+                condition: None,
+                nonce: None,
+            },
+            Duration::from_secs(1),
+            0,
+        ))
+        .unwrap();
+
+    println!("\nSending message to main complete. Give it plenty of time to get mined and relayed\n");
     thread::sleep(Duration::from_millis(10000));
 
-    let (payload, decoder) = bridge_contracts::side::functions::total_supply::call();
+    let (payload, decoder) = bridge_contracts::test::functions::last_data::call();
+
     let response = event_loop
         .run(AsyncCall::new(
             &side_transport,
-            side_contract_address.into(),
+            side_recipient_address.into(),
             TIMEOUT,
             payload,
             decoder,
@@ -352,35 +371,14 @@ fn test_basic_deposit_then_withdraw() {
 
     assert_eq!(
         response,
-        U256::from(1000000000),
-        "totalSupply on SideBridge should have increased"
+        data_to_relay_to_side,
+        "data was not relayed properly to the side chain"
     );
 
-    let (payload, decoder) = bridge_contracts::side::functions::balance_of::call(Address::from(user_address));
-    let response = event_loop
-        .run(AsyncCall::new(
-            &side_transport,
-            side_contract_address.into(),
-            TIMEOUT,
-            payload,
-            decoder,
-        ))
-        .unwrap();
+    println!("\nSend the message to side chain and wait for the relay to main\n");
 
-    assert_eq!(
-        response,
-        U256::from(1000000000),
-        "balance on SideBridge should have increased"
-    );
+    let (payload, _) = bridge_contracts::side::functions::relay_message::call(data_to_relay_to_main.clone(), main_recipient_address);
 
-    println!("\nconfirmed that deposit reached side\n");
-
-    println!("\nuser executes SideBridge.transferToMainViaRelay\n");
-    let transfer_payload = bridge_contracts::side::functions::transfer_to_main_via_relay::encode_input(
-        Address::from(receiver_address),
-        U256::from(1000000000),
-        U256::from(1000),
-    );
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
@@ -390,7 +388,7 @@ fn test_basic_deposit_then_withdraw() {
                 gas: None,
                 gas_price: None,
                 value: None,
-                data: Some(web3::types::Bytes(transfer_payload)),
+                data: Some(payload.into()),
                 condition: None,
                 nonce: None,
             },
@@ -399,23 +397,44 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    println!("\nSideBridge.transferToMainViaRelay transaction sent. give it plenty of time to get mined and relayed\n");
-    thread::sleep(Duration::from_millis(10000));
+    println!("\nSending message to side complete. Give it plenty of time to get mined and relayed\n");
+    thread::sleep(Duration::from_millis(15000));
 
-    // test that withdraw completed
-    let balance = event_loop
-        .run(main_eth.balance(receiver_address.into(), None))
+
+    //dwd
+
+    //let main_web3 = web3::Web3::new(&main_transport);
+    //let code_future = main_web3.eth().code(main_recipient_address.into(), None);
+    //let code = event_loop.run(code_future).unwrap();
+    //println!("code: {:?}", code);
+
+    //// TODO: remove
+    //bridge1.kill().unwrap();
+
+    //// wait for bridge to shut down
+    //thread::sleep(Duration::from_millis(1000));
+    //parity_main.kill().unwrap();
+    //parity_side.kill().unwrap();
+
+    //assert!(false);
+
+    let (payload, decoder) = bridge_contracts::test::functions::last_data::call();
+
+    let response = event_loop
+        .run(AsyncCall::new(
+            &main_transport,
+            main_recipient_address.into(),
+            TIMEOUT,
+            payload,
+            decoder,
+        ))
         .unwrap();
-    println!("balance = {}", balance);
-    assert_eq!(balance, web3::types::U256::from(800000000));
 
-    // ensure main contract balance has decreased
-    let balance = event_loop
-        .run(main_eth.balance(main_contract_address.into(), None))
-        .unwrap();
-    assert_eq!(balance, web3::types::U256::from(0));
-
-    println!("\nconfirmed that withdraw reached main\n");
+    assert_eq!(
+        response,
+        data_to_relay_to_main,
+        "data was not relayed properly to the main chain"
+    );
 
     bridge1.kill().unwrap();
 
