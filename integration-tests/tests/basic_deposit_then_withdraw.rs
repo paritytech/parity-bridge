@@ -38,7 +38,6 @@ use tokio_core::reactor::Core;
 
 use rustc_hex::FromHex;
 use bridge::helpers::AsyncCall;
-use web3::api::Namespace;
 use web3::transports::http::Http;
 
 const TMP_PATH: &str = "tmp";

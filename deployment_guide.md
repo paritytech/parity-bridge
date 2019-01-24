@@ -26,8 +26,11 @@ assuming you are authority with `authority_address`.
 [build and install the bridge](https://github.com/paritytech/parity-bridge/#build)
 
 install parity.
-we tested it with [parity 1.8.10](https://github.com/paritytech/parity/releases/tag/v1.8.10) with Byzantium fork
+we tested it with [parity 2.0.4](https://github.com/paritytech/parity/releases/tag/v2.0.4) with Byzantium fork
 enabled, though it should work with the latest stable release.
+
+install solidity compiler
+we tested it with [solc 0.5.2](https://github.com/ethereum/solidity/releases/tag/v0.5.2)
 
 start a parity node that connects to `main` chain, has `authority_address` unlocked
 and http enabled at `main.http`. TODO add instructions. please refer to
@@ -66,11 +69,11 @@ INFO:bridge: Deployed new bridge contracts
 INFO:bridge:
 main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
 side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-main_deploy = 1
-side_deploy = 1
-checked_deposit_relay = 1
-checked_withdraw_relay = 1
-checked_withdraw_confirm = 1
+main_deployed_at_block = 1
+side_deployed_at_block = 1
+last_main_to_side_sign_at_block = 1
+last_side_to_main_signatures_at_block = 1
+last_side_to_main_sign_at_block = 1
 ```
 
 **congratulations! the bridge has successfully deployed its contracts on both chains**
@@ -80,11 +83,11 @@ checked_withdraw_confirm = 1
 ```
 main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
 side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-main_deploy = 1
-side_deploy = 1
-checked_deposit_relay = 3
-checked_withdraw_relay = 4
-checked_withdraw_confirm = 4
+main_deployed_at_block = 1
+side_deployed_at_block = 1
+last_main_to_side_sign_at_block = 1
+last_side_to_main_signatures_at_block = 1
+last_side_to_main_sign_at_block = 1
 ```
 
 (verify the contracts deployed to `main_contract_address` and
@@ -109,11 +112,11 @@ it should look similar to this:
 ```
 main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
 side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f"
-main_deploy = 1
-side_deploy = 1
-checked_deposit_relay = 3
-checked_withdraw_relay = 4
-checked_withdraw_confirm = 4
+main_deployed_at_block = 1
+side_deployed_at_block = 1
+last_main_to_side_sign_at_block = 3
+last_side_to_main_signatures_at_block = 4
+last_side_to_main_sign_at_block = 4
 ```
 
 (check that the contracts deployed to

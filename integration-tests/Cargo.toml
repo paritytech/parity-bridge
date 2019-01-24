@@ -5,7 +5,7 @@ authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
 [dependencies]
 bridge = { path = "../bridge" }
-bridge-contracts = { path = "../contracts" }
+bridge-contracts = { path = "../contracts", features = ["integration-tests"] }
 ethabi = "6.0"
 ethereum-types = "0.4"
 futures = "0.1"

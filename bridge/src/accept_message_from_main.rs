@@ -118,7 +118,7 @@ impl<T: Transport> Future for AcceptMessageFromMain<T> {
                         return Ok(Async::Ready(None));
                     }
 
-                    info!("{:?} - 3/4 - accepting the meessage", self.main_tx_hash);
+                    info!("{:?} - 3/4 - accepting the message", self.main_tx_hash);
                     State::AwaitTxSent(self.side.accept_message_from_main(
                         self.main_tx_hash,
                         message.clone(),
@@ -132,7 +132,7 @@ impl<T: Transport> Future for AcceptMessageFromMain<T> {
                         future
                             .poll()
                             .chain_err(|| format!(
-                                "AcceptMessageFromMain: checking whether {} already was relayed failed",
+                                "AcceptMessageFromMain: checking whether {} was relayed failed",
                                 main_tx_hash
                             ))
                     );
