@@ -17,7 +17,7 @@ use config::Config;
 use contracts;
 use database::State;
 use ethabi::FunctionOutputDecoder;
-use ethereum_types::{Address, U256};
+use ethereum_types::{Address, U256, H256};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;
@@ -65,10 +65,39 @@ impl<T: Transport> MainContract<T> {
         self.call(payload, decoder)
     }
 
-    /// `Stream` of all txs on main that need to be relayed to side
+    /// relay a tx from side to main by submitting message and collected signatures
+    pub fn relay_side_to_main(
+        &self,
+        message: &MessageToMain,
+        signatures: &Vec<Signature>,
+        data: Vec<u8>,
+    ) -> AsyncTransaction<T> {
+        let payload = contracts::main::functions::accept_message::encode_input(
+            signatures.iter().map(|x| x.v),
+            signatures.iter().map(|x| x.r),
+            signatures.iter().map(|x| x.s),
+            message.side_tx_hash,
+            data,
+            message.sender,
+            message.recipient
+        );
+
+        AsyncTransaction::new(
+            &self.transport,
+            self.contract_address,
+            self.authority_address,
+            self.submit_collected_signatures_gas,
+            // TODO:
+            //message.main_gas_price,
+            1000.into(),
+            self.request_timeout,
+            payload,
+        )
+    }
+
     pub fn main_to_side_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::main::events::deposit::filter(),
+            filter: contracts::main::events::relay_message::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -78,27 +107,8 @@ impl<T: Transport> MainContract<T> {
         })
     }
 
-    /// relay a tx from side to main by submitting message and collected signatures
-    pub fn relay_side_to_main(
-        &self,
-        message: &MessageToMain,
-        signatures: &Vec<Signature>,
-    ) -> AsyncTransaction<T> {
-        let payload = contracts::main::functions::withdraw::encode_input(
-            signatures.iter().map(|x| x.v),
-            signatures.iter().map(|x| x.r),
-            signatures.iter().map(|x| x.s),
-            message.to_bytes(),
-        );
-
-        AsyncTransaction::new(
-            &self.transport,
-            self.contract_address,
-            self.authority_address,
-            self.submit_collected_signatures_gas,
-            message.main_gas_price,
-            self.request_timeout,
-            payload,
-        )
+    pub fn relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::main::functions::relayed_messages::Decoder> {
+        let (payload, decoder) = contracts::main::functions::relayed_messages::call(id);
+        self.call(payload, decoder)
     }
 }

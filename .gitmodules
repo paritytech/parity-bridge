@@ -1,0 +1,3 @@
+[submodule "arbitrary"]
+	path = arbitrary
+	url = https://github.com/parity-contracts/bridge

@@ -10,3 +10,6 @@ ethabi-contract = "6.0"
 
 [build-dependencies]
 solc = { git = "https://github.com/paritytech/rust_solc" }
+
+[features]
+integration-tests = []

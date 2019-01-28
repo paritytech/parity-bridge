@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_twice_no_logs() {
-        let deposit_topic = contracts::main::events::deposit::filter().topic0;
+        let deposit_topic = contracts::main::events::relay_message::filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
@@ -232,7 +232,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: contracts::main::events::deposit::filter(),
+            filter: contracts::main::events::relay_message::filter(),
         });
 
         let mut event_loop = Core::new().unwrap();
@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn test_log_stream_once_one_log() {
-        let deposit_topic = contracts::main::events::deposit::filter().topic0;
+        let deposit_topic = contracts::main::events::relay_message::filter().topic0;
 
         let transport = mock_transport!(
             "eth_blockNumber" =>
@@ -287,7 +287,7 @@ mod tests {
             transport: transport.clone(),
             contract_address: "0000000000000000000000000000000000000001".into(),
             after: 3,
-            filter: contracts::main::events::deposit::filter(),
+            filter: contracts::main::events::relay_message::filter(),
         });
 
         let mut event_loop = Core::new().unwrap();

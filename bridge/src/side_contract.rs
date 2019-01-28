@@ -80,8 +80,8 @@ impl<T: Transport> SideContract<T> {
     pub fn is_side_to_main_signed_on_side(
         &self,
         message: &MessageToMain,
-    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_side_to_main::Decoder> {
-        let (payload, decoder) = contracts::side::functions::has_authority_signed_side_to_main::call(
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_signed_message::call(
             self.authority_address,
             message.to_bytes(),
         );
@@ -89,29 +89,37 @@ impl<T: Transport> SideContract<T> {
         self.call(payload, decoder)
     }
 
-    pub fn is_main_to_side_signed_on_side(
+    pub fn is_message_accepted_from_main(
         &self,
+        transaction_hash: H256,
+        data: Vec<u8>,
+        sender: Address,
         recipient: Address,
-        value: U256,
-        main_tx_hash: H256,
-    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_main_to_side::Decoder> {
-        let (payload, decoder) = contracts::side::functions::has_authority_signed_main_to_side::call(
-            self.authority_address,
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_accepted_message_from_main::call(
+            transaction_hash,
+            data,
+            sender,
             recipient,
-            value,
-            main_tx_hash,
+            self.authority_address
         );
 
         self.call(payload, decoder)
     }
 
-    pub fn sign_main_to_side(
+    pub fn accept_message_from_main(
         &self,
+        transaction_hash: H256,
+        data: Vec<u8>,
+        sender: Address,
         recipient: Address,
-        value: U256,
-        breakout_tx_hash: H256,
     ) -> AsyncTransaction<T> {
-        let payload = contracts::side::functions::deposit::encode_input(recipient, value, breakout_tx_hash);
+        let payload = contracts::side::functions::accept_message::encode_input(
+            transaction_hash,
+            data,
+            sender,
+            recipient
+        );
 
         AsyncTransaction::new(
             &self.transport,
@@ -126,7 +134,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::withdraw::filter(),
+            filter: contracts::side::events::relay_message::filter(),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -138,7 +146,7 @@ impl<T: Transport> SideContract<T> {
 
     pub fn side_to_main_signatures_log_stream(&self, after: u64, address: Address) -> LogStream<T> {
         LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::collected_signatures::filter(address),
+            filter: contracts::side::events::signed_message::filter(address),
             request_timeout: self.request_timeout,
             poll_interval: self.logs_poll_interval,
             confirmations: self.required_log_confirmations,
@@ -148,12 +156,12 @@ impl<T: Transport> SideContract<T> {
         })
     }
 
-    pub fn submit_side_to_main_signature(
+    pub fn submit_signed_message(
         &self,
         message: &MessageToMain,
         signature: &Signature,
     ) -> AsyncTransaction<T> {
-        let payload = contracts::side::functions::submit_signature::encode_input(signature.to_bytes(), message.to_bytes());
+        let payload = contracts::side::functions::submit_signed_message::encode_input(signature.to_bytes(), message.to_bytes());
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,

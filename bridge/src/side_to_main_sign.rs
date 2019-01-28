@@ -30,7 +30,7 @@ use web3::types::{Bytes, H256, H520, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_side_to_main::Decoder>),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>),
     AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -51,8 +51,7 @@ impl<T: Transport> SideToMainSign<T> {
         let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message =
-            MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
+        let message = MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
         let message_bytes = message.to_bytes();
 
         assert_eq!(
@@ -99,7 +98,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     let timeout_future =
                         Timer::default().timeout(inner_future, self.side.request_timeout);
                     State::AwaitSignature(timeout_future)
-                }
+                },
                 State::AwaitSignature(ref mut future) => {
                     let signature_bytes = try_ready!(
                         future
@@ -113,10 +112,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
 
                     let signature = Signature::from_bytes(&signature_bytes)?;
 
-                    let future = self.side
-                        .submit_side_to_main_signature(&self.message, &signature);
+                    let future = self.side.submit_signed_message(&self.message, &signature);
                     State::AwaitTransaction(future)
-                }
+                },
                 State::AwaitTransaction(ref mut future) => {
                     let tx_hash = try_ready!(
                         future
@@ -160,19 +158,19 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed() {
-        let topic = contracts::side::events::withdraw::filter().topic0;
+        let topic = contracts::side::events::relay_message::filter().topic0;
 
-        let log = contracts::side::logs::Withdraw {
+        let log = contracts::side::logs::RelayMessage {
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
+            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
-            value: 1000.into(),
-            main_gas_price: 100.into(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
+            ethabi::Token::FixedBytes(log.message_id.to_vec()),
+            ethabi::Token::Address(log.sender),
             ethabi::Token::Address(log.recipient),
-            ethabi::Token::Uint(log.value),
-            ethabi::Token::Uint(log.main_gas_price),
         ]);
 
         let log_tx_hash =
@@ -198,20 +196,20 @@ mod tests {
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
         let message = MessageToMain {
-            recipient: log.recipient,
-            value: log.value,
             side_tx_hash: log_tx_hash,
-            main_gas_price: log.main_gas_price,
+            message_id: log.message_id,
+            recipient: log.recipient,
+            sender: log.sender,
         };
 
-        let call_data = contracts::side::functions::has_authority_signed_side_to_main::encode_input(
+        let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
             authority_address,
             message.to_bytes(),
         );
 
         let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
-        let tx_data = contracts::side::functions::submit_signature::encode_input(
+        let tx_data = contracts::side::functions::submit_signed_message::encode_input(
             signature.from_hex().unwrap(),
             message.to_bytes(),
         );
@@ -265,19 +263,19 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_already_relayed() {
-        let topic = contracts::side::events::withdraw::filter().topic0;
+        let topic = contracts::side::events::relay_message::filter().topic0;
 
-        let log = contracts::side::logs::Withdraw {
+        let log = contracts::side::logs::RelayMessage {
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
+            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
-            value: 1000.into(),
-            main_gas_price: 100.into(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
+            ethabi::Token::FixedBytes(log.message_id.to_vec()),
+            ethabi::Token::Address(log.sender),
             ethabi::Token::Address(log.recipient),
-            ethabi::Token::Uint(log.value),
-            ethabi::Token::Uint(log.main_gas_price),
         ]);
 
         let log_tx_hash =
@@ -302,13 +300,13 @@ mod tests {
         let side_contract_address = "0000000000000000000000000000000000000dd1".into();
 
         let message = MessageToMain {
-            recipient: log.recipient,
-            value: log.value,
             side_tx_hash: log_tx_hash,
-            main_gas_price: log.main_gas_price,
+            message_id: log.message_id,
+            recipient: log.recipient,
+            sender: log.sender,
         };
 
-        let call_data = contracts::side::functions::has_authority_signed_side_to_main::encode_input(
+        let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
             authority_address,
             message.to_bytes(),
         );

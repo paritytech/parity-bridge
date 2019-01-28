@@ -260,13 +260,13 @@ poll_interval = 2
 required_confirmations = 100
 
 [main.contract]
-bin = "../compiled_contracts/MainBridge.bin"
+bin = "../compiled_contracts/Main.bin"
 
 [side]
 http = "http://localhost:8546"
 
 [side.contract]
-bin = "../compiled_contracts/SideBridge.bin"
+bin = "../compiled_contracts/Side.bin"
 
 [authorities]
 accounts = [
@@ -286,7 +286,7 @@ main_deploy = { gas = "20", gas_price = "0" }
             main: NodeConfig {
                 http: "http://localhost:8545".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
+                    bin: include_str!("../../compiled_contracts/Main.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -297,7 +297,7 @@ main_deploy = { gas = "20", gas_price = "0" }
             },
             side: NodeConfig {
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
+                    bin: include_str!("../../compiled_contracts/Side.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -341,13 +341,13 @@ max_single_deposit_value = "1000000000000000000"
 http = ""
 
 [main.contract]
-bin = "../compiled_contracts/MainBridge.bin"
+bin = "../compiled_contracts/Main.bin"
 
 [side]
 http = ""
 
 [side.contract]
-bin = "../compiled_contracts/SideBridge.bin"
+bin = "../compiled_contracts/Side.bin"
 
 [authorities]
 accounts = [
@@ -363,7 +363,7 @@ required_signatures = 2
             main: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/MainBridge.bin")
+                    bin: include_str!("../../compiled_contracts/Main.bin")
                         .from_hex()
                         .unwrap()
                         .into(),
@@ -375,7 +375,7 @@ required_signatures = 2
             side: NodeConfig {
                 http: "".into(),
                 contract: ContractConfig {
-                    bin: include_str!("../../compiled_contracts/SideBridge.bin")
+                    bin: include_str!("../../compiled_contracts/Side.bin")
                         .from_hex()
                         .unwrap()
                         .into(),

@@ -19,5 +19,7 @@ extern crate ethabi_derive;
 #[macro_use]
 extern crate ethabi_contract;
 
-use_contract!(main, "../compiled_contracts/MainBridge.abi");
-use_contract!(side, "../compiled_contracts/SideBridge.abi");
+use_contract!(main, "../compiled_contracts/Main.abi");
+use_contract!(side, "../compiled_contracts/Side.abi");
+#[cfg(feature = "integration-tests")]
+use_contract!(test, "../compiled_contracts/RecipientTest.abi");

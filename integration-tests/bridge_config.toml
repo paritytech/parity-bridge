@@ -26,7 +26,7 @@ required_confirmations = 0
 [main.contract]
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
-bin = "../compiled_contracts/MainBridge.bin"
+bin = "../compiled_contracts/Main.bin"
 
 [side]
 # ACTION REQUIRED: set the the url of the parity node that has `side.account` unlocked
@@ -37,7 +37,7 @@ required_confirmations = 0
 [side.contract]
 # READ THE CONFIG DOCUMENTATION AT:
 # https://github.com/paritytech/parity-bridge/#configuration
-bin = "../compiled_contracts/SideBridge.bin"
+bin = "../compiled_contracts/Side.bin"
 
 [authorities]
 # ACTION REQUIRED: set this to the addresses of the authority list
@@ -55,7 +55,7 @@ required_signatures = 1
 # `gas_price` might need adjustment once in a while.
 
 # these happen on `main`:
-main_deploy = { gas = "1000000" , gas_price = "0" }
+main_deploy = { gas = "1500000" , gas_price = "0" }
 withdraw_relay = { gas = "200000" , gas_price = "0" }
 
 # these happen on `side`:

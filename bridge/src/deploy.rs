@@ -69,9 +69,6 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
                         self.config.main.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),
-                        self.config.estimated_gas_cost_of_withdraw,
-                        self.config.max_total_main_contract_balance,
-                        self.config.max_single_deposit_value,
                     );
 
                     let tx_request = TransactionRequest {
@@ -116,10 +113,10 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
 
                     DeployState::Deployed {
                         contract: DeployedContract::new(
-                            "MainBridge".into(),
-                            include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/MainBridge.abi").into(),
-                            include_str!("../../compiled_contracts/MainBridge.bin").into(),
+                            "Main".into(),
+                            include_str!("../../arbitrary/contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/Main.abi").into(),
+                            include_str!("../../compiled_contracts/Main.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),
@@ -161,7 +158,6 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                         self.config.side.contract.bin.clone().0,
                         self.config.authorities.required_signatures,
                         self.config.authorities.accounts.clone(),
-                        self.config.estimated_gas_cost_of_withdraw,
                     );
 
                     let tx_request = TransactionRequest {
@@ -207,9 +203,9 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                     DeployState::Deployed {
                         contract: DeployedContract::new(
                             "SideBridge".into(),
-                            include_str!("../../contracts/bridge.sol").into(),
-                            include_str!("../../compiled_contracts/SideBridge.abi").into(),
-                            include_str!("../../compiled_contracts/SideBridge.bin").into(),
+                            include_str!("../../arbitrary/contracts/bridge.sol").into(),
+                            include_str!("../../compiled_contracts/Side.abi").into(),
+                            include_str!("../../compiled_contracts/Side.bin").into(),
                             data.to_hex(),
                             receipt,
                         ),

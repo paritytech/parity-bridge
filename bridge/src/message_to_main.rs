@@ -13,11 +13,11 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
-//use contracts::side::events::Withdraw;
+
 use contracts;
 use error::Error;
 use ethabi;
-use ethereum_types::{Address, H256, U256};
+use ethereum_types::{Address, H256};
 use helpers;
 use tiny_keccak;
 use web3::types::Log;
@@ -28,14 +28,14 @@ use web3::types::Log;
 /// one node submits this message and signatures in `SideToMainSignatures`.
 #[derive(PartialEq, Debug, Clone)]
 pub struct MessageToMain {
-    pub recipient: Address,
-    pub value: U256,
     pub side_tx_hash: H256,
-    pub main_gas_price: U256,
+    pub message_id: H256,
+    pub sender: Address,
+    pub recipient: Address,
 }
 
 /// length of a `MessageToMain.to_bytes()` in bytes
-pub const MESSAGE_LENGTH: usize = 116;
+pub const MESSAGE_LENGTH: usize = 32 + 32 + 20 + 20;
 
 impl MessageToMain {
     /// parses message from a byte slice
@@ -45,10 +45,10 @@ impl MessageToMain {
         }
 
         Ok(Self {
-            recipient: bytes[0..20].into(),
-            value: U256::from_big_endian(&bytes[20..52]),
-            side_tx_hash: bytes[52..84].into(),
-            main_gas_price: U256::from_big_endian(&bytes[84..MESSAGE_LENGTH]),
+            side_tx_hash: bytes[0..32].into(),
+            message_id: bytes[32..64].into(),
+            sender: bytes[64..84].into(),
+            recipient: bytes[84..104].into(),
         })
     }
 
@@ -61,12 +61,12 @@ impl MessageToMain {
         let hash = raw_log
             .transaction_hash
             .ok_or_else(|| "`log` must be mined and contain `transaction_hash`")?;
-        let log = helpers::parse_log(contracts::side::events::withdraw::parse_log, raw_log)?;
+        let log = helpers::parse_log(contracts::side::events::relay_message::parse_log, raw_log)?;
         Ok(Self {
-            recipient: log.recipient,
-            value: log.value,
             side_tx_hash: hash,
-            main_gas_price: log.main_gas_price,
+            message_id: log.message_id,
+            sender: log.sender,
+            recipient: log.recipient,
         })
     }
 
@@ -75,11 +75,10 @@ impl MessageToMain {
     /// and passed to `SideBridge.submitSignature`
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; MESSAGE_LENGTH];
-        result[0..20].copy_from_slice(&self.recipient.0[..]);
-        self.value.to_big_endian(&mut result[20..52]);
-        result[52..84].copy_from_slice(&self.side_tx_hash.0[..]);
-        self.main_gas_price
-            .to_big_endian(&mut result[84..MESSAGE_LENGTH]);
+        result[0..32].copy_from_slice(&self.side_tx_hash.0[..]);
+        result[32..64].copy_from_slice(&self.message_id.0[..]);
+        result[64..84].copy_from_slice(&self.sender.0[..]);
+        result[84..104].copy_from_slice(&self.recipient.0[..]);
         return result;
     }
 
@@ -97,43 +96,47 @@ mod test {
 
     #[test]
     fn test_message_to_main_to_bytes() {
-        let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0ce".into();
-        let value = U256::from_dec_str("3800000000000000").unwrap();
         let side_tx_hash: H256 =
             "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
-        let main_gas_price = U256::from_dec_str("8000000000").unwrap();
+        let message_id: H256 =
+            "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff".into();
+        let sender: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0aa".into();
+        let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0bb".into();
 
         let message = MessageToMain {
-            recipient,
-            value,
             side_tx_hash,
-            main_gas_price,
+            message_id,
+            sender,
+            recipient,
         };
 
-        assert_eq!(message.to_bytes(), "eac4a655451e159313c3641e29824e77d6fcb0ce000000000000000000000000000000000000000000000000000d80147225800075ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e200000000000000000000000000000000000000000000000000000001dcd65000".from_hex().unwrap())
+        assert_eq!(message.to_bytes(), "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e275ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ffeac4a655451e159313c3641e29824e77d6fcb0aaeac4a655451e159313c3641e29824e77d6fcb0bb".from_hex().unwrap())
     }
 
     quickcheck! {
         fn quickcheck_message_to_main_roundtrips_to_bytes(
-            recipient_raw: Vec<u8>,
-            value_raw: u64,
             side_tx_hash_raw: Vec<u8>,
-            main_gas_price_raw: u64
+            message_id_raw: Vec<u8>,
+            sender_raw: Vec<u8>,
+            recipient_raw: Vec<u8>
         ) -> TestResult {
-            if recipient_raw.len() != 20 || side_tx_hash_raw.len() != 32 {
+            if side_tx_hash_raw.len() != 32 ||
+                message_id_raw.len() != 32 ||
+                sender_raw.len() != 20 ||
+                recipient_raw.len() != 20 {
                 return TestResult::discard();
             }
 
-            let recipient: Address = recipient_raw.as_slice().into();
-            let value: U256 = value_raw.into();
             let side_tx_hash: H256 = side_tx_hash_raw.as_slice().into();
-            let main_gas_price: U256 = main_gas_price_raw.into();
+            let message_id: H256 = message_id_raw.as_slice().into();
+            let sender: Address = sender_raw.as_slice().into();
+            let recipient: Address = recipient_raw.as_slice().into();
 
             let message = MessageToMain {
-                recipient,
-                value,
                 side_tx_hash,
-                main_gas_price
+                message_id,
+                sender,
+                recipient,
             };
 
             let bytes = message.to_bytes();
