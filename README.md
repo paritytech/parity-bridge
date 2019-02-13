@@ -23,7 +23,7 @@ by deploying a [proof-of-authority](https://paritytech.github.io/wiki/Proof-of-A
 network and bridging it to the Ethereum Foundation network ('mainnet') users can pass arbitrary messages between the chains, which can be used to pass information to contracts on foreign chains with much lower transaction fees,
 faster block times, that are unaffected by mainnet congestion.
 
-Users can pass messages back to the mainnet chain at any time to benefit from its higher security.
+Users can pass messages back to the mainnet chain at any time over the same bridge.
 
 parity is using the bridge project to prototype
 the system that will eventually connect ethereum and other non-parachains to
