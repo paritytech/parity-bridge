@@ -34,7 +34,7 @@ the system that will eventually connect ethereum and other non-parachains to
 the bridge connects two chains `main` and `side`.
 
 when users send messages to the [`Main` or `Side`](https://github.com/parity-contracts/bridge/blob/4fb552894bfc09cbe69dfcf2bca16d2d8b393a0a/contracts/bridge.sol#L161) contracts on `main` or `side` respectively, using `relayMessage(bytes calldata data, address recipient)`,
-the data is passed to any [`BridgeRecipient`](https://github.com/parity-contracts/bridge/blob/4fb552894bfc09cbe69dfcf2bca16d2d8b393a0a/contracts/bridge.sol#L31) contract on the other ch that may process it as it wishes.
+the data is passed to any [`BridgeRecipient`](https://github.com/parity-contracts/bridge/blob/4fb552894bfc09cbe69dfcf2bca16d2d8b393a0a/contracts/bridge.sol#L31) contract on the other chain that may process it as it wishes.
 
 
 `side` is assumed to use PoA (proof of authority) consensus.
