@@ -197,11 +197,7 @@ last_side_to_main_sign_at_block = 122
 ### considerations for relaying messages to main
 
 a bridge `authority` has to pay for gas (`cost`) to execute `Main.acceptMessage` when
-sending a message from the `side` chain to the `main` chain.
-
-When creating `BridgeRecipient`s, it is prudent to keep this cost in mind.
-
-read on for a more thorough explanation.
+sending a message from the `side` chain to the `main` chain. When creating `BridgeRecipient`s, it is prudent to keep this cost in mind.
 
 parity-bridge connects a value-bearing ethereum blockchain `main`
 (initially the ethereum foundation chain)
