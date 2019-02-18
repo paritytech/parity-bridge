@@ -194,16 +194,12 @@ last_side_to_main_sign_at_block = 122
 [read our deployment guide](deployment_guide.md)
 
 
-### recipient pays relay cost to relaying authority
+### considerations for relaying messages to main
 
-TODO: update for arbitrary message passing
+a bridge `authority` has to pay for gas (`cost`) to execute `Main.acceptMessage` when
+sending a message from the `side` chain to the `main` chain.
 
-a bridge `authority` has to pay for gas (`cost`) to execute `Main.withdraw` when
-withdrawing `value` from `side` chain to `main` chain.
-`value - cost` is transferred to the `recipient`. `cost` is transferred to the `authority`
-executing `Main.withdraw`.
-the `recipient` pays the relaying `authority` for the execution of the transaction.
-that shuts down an attack that enabled exhaustion of authorities funds on `main`.
+When creating `BridgeRecipient`s, it is prudent to keep this cost in mind.
 
 read on for a more thorough explanation.
 
@@ -218,33 +214,18 @@ non-value-bearing means that one can easily obtain a large amount of ether
 on that chain for free.
 through a faucet in the case of testnets for example.
 
-the bridge authorities are also the validators of the `side` PoA chain.
+the bridge authorities *should also be* the validators of the `side` PoA chain.
 transactions by the authorities are therefore free (gas price = 0) on `side`.
 
 to execute a transaction on `main` a bridge authority has to spend ether to
 pay for the gas.
 
-this opened up an attack where a malicious user could
-deposit a very small amount of wei on `Main`, get it relayed to `Side`,
-then spam `Side.transferMainViaRelay` with `1` wei withdraws.
-it would cost the attacker very little `main` chain wei and essentially
-free `side` testnet wei to cause the authorities to spend orders of magnitude more wei
-to relay the withdraw to `main` by executing `Main.withdraw`.
-an attacker was able to exhaust bridge authorities funds on `main`.
+this opens up an attack where a malicious user could spam `Side.relayMessage`.
+it would cost the attacker no `main` chain wei and essentially
+free `side` testnet wei to cause the authorities to spend significant amounts of wei
+to relay the message to `main` by executing `Main.acceptMessage`.
+an attacker is able to exhaust bridge authorities funds on `main`.
 
-to shut down this attack `Main.withdraw` was modified so
-`value - cost` is transferred to the `recipient` and `cost` is transferred to the `authority`
-doing the relay.
-this way the `recipient` pays the relaying `authority` for the execution of the `withdraw` transaction.
+to shut down this attack, a whitelist of approved `recipient`s should be employed for `main`.
 
-relayers can set the gas price for `Main.withdraw`.
-they could set a very high gas price resulting in a very high `cost` through which they could burn large portions of `value`.
-to shut down this attack the `mainGasPrice` param was added to `Side.transferMainViaRelay`.
-end users have control over the cost/latency tradeoff of their relay transaction through the `mainGasPrice`.
-relayers have to set gas price to `mainGasPrice` when calling `Main.withdraw`.
-the `recipient` for `value` is the exception and can freely choose any gas price.
-see https://github.com/paritytech/parity-bridge/issues/112 for more details.
-
-`Main.withdraw` is currently the only transaction bridge authorities execute on `main`.
-care must be taken to secure future functions that bridge authorities will execute
-on `main` in similar ways.
+Another method that may be used to mitigate potential abuse of authorities on `main` is to encourage users of the bridge to call `Main.acceptMessage` themselves (by collecting the message and it's signatures from `side`,) spending their own gas, instead of mandating that validators spend their gas.
