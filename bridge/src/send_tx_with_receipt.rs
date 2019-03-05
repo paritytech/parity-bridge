@@ -19,7 +19,8 @@ use futures::future::FromErr;
 use futures::{Future, Poll};
 use tokio_timer::{Timeout, Timer};
 use web3::{self, Transport};
-use web3::types::{TransactionRequest, TransactionReceipt, U256};
+use web3::types::{TransactionRequest, TransactionReceipt};
+use ethereum_types::U256;
 use web3::helpers::CallFuture;
 use web3::api::Namespace;
 use error::{self, ResultExt};
@@ -363,9 +364,10 @@ mod tests {
                 block_hash: Some("0xe0bdcf35b14a292d2998308d9b3fdea93a8c3d9c0b6c824c633fb9b15f9c3919".into()),
                 block_number: Some(0x1015.into()),
                 cumulative_gas_used: 0x1c1999.into(),
-                gas_used: 0xcdb5d.into(),
+                gas_used: Some(0xcdb5d.into()),
                 contract_address: Some("0xb1ac3a5584519119419a8e56422d912c782d8e5b".into()),
                 logs: vec![],
+                logs_bloom: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000".into(),
                 status: Some(1.into()),
             }
         );
