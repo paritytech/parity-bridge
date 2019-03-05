@@ -193,6 +193,14 @@ last_side_to_main_sign_at_block = 122
 
 [read our deployment guide](deployment_guide.md)
 
+### deposit
+
+![deposit](./res/deposit.png)
+
+### withdraw
+
+![withdraw](./res/withdraw.png)
+
 
 ### considerations for relaying messages to main
 
