@@ -15,7 +15,10 @@
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
 //! error chain
+	// Silence: `use of deprecated item 'std::error::Error::cause': replaced by Error::source, which can support downcasting`
+	// https://github.com/paritytech/parity-bridge/issues/216
 
+	#![allow(deprecated)]
 use std::io;
 use tokio_timer::{TimeoutError, TimerError};
 use {ethabi, rustc_hex, toml, web3};
