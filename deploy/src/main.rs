@@ -55,7 +55,8 @@ fn main() {
 }
 
 fn print_err(err: error::Error) {
-    let message = err.iter()
+    let message = err
+        .iter()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n\nCaused by:\n	");
@@ -100,23 +101,23 @@ Options:
         "Establishing HTTP connection to main {:?}",
         config.main.http
     );
-    let main_transport =
-        Http::with_event_loop(
-            &config.main.http,
-            &event_loop.handle(),
-            MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to main at {}", config.main.http))?;
+    let main_transport = Http::with_event_loop(
+        &config.main.http,
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    )
+    .chain_err(|| format!("Cannot connect to main at {}", config.main.http))?;
 
     info!(
         "Establishing HTTP connection to side {:?}",
         config.side.http
     );
-    let side_transport =
-        Http::with_event_loop(
-            &config.side.http,
-            &event_loop.handle(),
-            MAX_PARALLEL_REQUESTS,
-        ).chain_err(|| format!("Cannot connect to side at {}", config.side.http))?;
+    let side_transport = Http::with_event_loop(
+        &config.side.http,
+        &event_loop.handle(),
+        MAX_PARALLEL_REQUESTS,
+    )
+    .chain_err(|| format!("Cannot connect to side at {}", config.side.http))?;
 
     info!(target: "parity-bridge-deploy", "Deploying MainBridge contract");
     let main_deployed = event_loop.run(DeployMain::new(config.clone(), main_transport))?;
