@@ -25,7 +25,7 @@ matrix:
         - rustfmt --version
       script:
         # using --write-mode=diff instructs rustfmt to exit with an error code if the input is not formatted correctly
-        - cargo fmt --all -- --write-mode=diff
+        - cargo fmt --all -- --check
         - env BACKTRACE=1 cargo test --all -- --nocapture
     - language: rust
       rust: beta
