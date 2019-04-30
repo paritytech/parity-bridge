@@ -225,7 +225,7 @@ to execute a transaction on `main` a bridge authority has to spend ether to
 pay for the gas.
 
 this opens up an attack where a malicious user could spam `Side.relayMessage`.
-it would cost the attacker no `main` chain wei and essentially
+It would cost the attacker no `main` chain wei and essentially
 free `side` testnet wei to cause the authorities to spend significant amounts of wei
 to relay the message to `main` by executing `Main.acceptMessage`.
 an attacker is able to exhaust bridge authorities funds on `main`.
