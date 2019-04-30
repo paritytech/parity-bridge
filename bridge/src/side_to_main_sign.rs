@@ -26,13 +26,11 @@ use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Bytes, Log, H256, H520};
+use web3::types::{Bytes, H256, H520, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(
-        AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>,
-    ),
+    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>),
     AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -50,12 +48,10 @@ pub struct SideToMainSign<T: Transport> {
 
 impl<T: Transport> SideToMainSign<T> {
     pub fn new(log: &Log, side: SideContract<T>) -> Self {
-        let tx_hash = log
-            .transaction_hash
+        let tx_hash = log.transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message =
-            MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
+        let message = MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
         let message_bytes = message.to_bytes();
 
         assert_eq!(
@@ -87,9 +83,11 @@ impl<T: Transport> Future for SideToMainSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitCheckAlreadySigned(ref mut future) => {
-                    let is_already_signed = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: message signing failed"));
+                    let is_already_signed = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: message signing failed")
+                    );
                     if is_already_signed {
                         return Ok(Async::Ready(None));
                     }
@@ -100,11 +98,13 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     let timeout_future =
                         Timer::default().timeout(inner_future, self.side.request_timeout);
                     State::AwaitSignature(timeout_future)
-                }
+                },
                 State::AwaitSignature(ref mut future) => {
-                    let signature_bytes = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: message signing failed"));
+                    let signature_bytes = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: message signing failed")
+                    );
                     info!(
                         "{:?} - step 2/3 - message signed. about to send transaction",
                         self.tx_hash
@@ -114,11 +114,13 @@ impl<T: Transport> Future for SideToMainSign<T> {
 
                     let future = self.side.submit_signed_message(&self.message, &signature);
                     State::AwaitTransaction(future)
-                }
+                },
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: sending transaction failed"));
+                    let tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawConfirm: sending transaction failed")
+                    );
                     info!(
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
                         self.tx_hash, tx_hash

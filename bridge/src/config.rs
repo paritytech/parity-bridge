@@ -126,24 +126,19 @@ pub struct Transactions {
 impl Transactions {
     fn from_load_struct(cfg: load::Transactions) -> Self {
         Transactions {
-            main_deploy: cfg
-                .main_deploy
+            main_deploy: cfg.main_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            side_deploy: cfg
-                .side_deploy
+            side_deploy: cfg.side_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            deposit_relay: cfg
-                .deposit_relay
+            deposit_relay: cfg.deposit_relay
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            withdraw_confirm: cfg
-                .withdraw_confirm
+            withdraw_confirm: cfg.withdraw_confirm
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            withdraw_relay: cfg
-                .withdraw_relay
+            withdraw_relay: cfg.withdraw_relay
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
         }

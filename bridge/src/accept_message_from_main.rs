@@ -18,10 +18,10 @@ use contracts;
 use error::{self, ResultExt};
 use futures::{Async, Future, Poll};
 use helpers::{self, AsyncCall, AsyncTransaction};
-use main_contract::MainContract;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
-use web3::types::{Address, Log, H256};
+use main_contract::MainContract;
+use web3::types::{Address, H256, Log};
 use web3::Transport;
 
 #[derive(Clone)]
@@ -42,10 +42,7 @@ enum State<T: Transport> {
     AwaitMessage(AsyncCall<T, contracts::main::functions::relayed_messages::Decoder>),
     AwaitAlreadyAccepted {
         message: Vec<u8>,
-        future: AsyncCall<
-            T,
-            contracts::side::functions::has_authority_accepted_message_from_main::Decoder,
-        >,
+        future: AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder>
     },
     AwaitTxSent(AsyncTransaction<T>),
 }
@@ -64,16 +61,14 @@ impl<T: Transport> AcceptMessageFromMain<T> {
             .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
+
         let log = helpers::parse_log(contracts::main::events::relay_message::parse_log, raw_log)
             .expect("`log` must be for a relay message. q.e.d.");
 
         let sender = log.sender;
         let recipient = log.recipient;
 
-        info!(
-            "{:?} - step 1/4 - fetch message using message_id",
-            main_tx_hash
-        );
+        info!("{:?} - step 1/4 - fetch message using message_id", main_tx_hash);
         let future = main.relayed_message_by_id(log.message_id);
         let state = State::AwaitMessage(future);
 
@@ -95,14 +90,13 @@ impl<T: Transport> Future for AcceptMessageFromMain<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitMessage(ref mut future) => {
-                    let message = try_ready!(future
-                        .poll()
-                        .chain_err(|| "AcceptMessageFromMain: failed to fetch the message"));
-
-                    info!(
-                        "{:?} - 2/4 - checking if the message is already signed",
-                        self.main_tx_hash
+                    let message = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "AcceptMessageFromMain: failed to fetch the message")
                     );
+
+                    info!("{:?} - 2/4 - checking if the message is already signed", self.main_tx_hash);
                     State::AwaitAlreadyAccepted {
                         message: message.clone(),
                         future: self.side.is_message_accepted_from_main(
@@ -110,16 +104,15 @@ impl<T: Transport> Future for AcceptMessageFromMain<T> {
                             message,
                             self.sender,
                             self.recipient,
-                        ),
+                        )
                     }
-                }
-                State::AwaitAlreadyAccepted {
-                    ref message,
-                    ref mut future,
-                } => {
-                    let has_already_accepted = try_ready!(future.poll().chain_err(|| {
-                        "AcceptMessageFromMain: failed to check if already accepted"
-                    }));
+                },
+                State::AwaitAlreadyAccepted { ref message, ref mut future } => {
+                    let has_already_accepted = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "AcceptMessageFromMain: failed to check if already accepted")
+                    );
                     if has_already_accepted {
                         info!("{:?} - DONE - already accepted", self.main_tx_hash);
                         return Ok(Async::Ready(None));
@@ -132,16 +125,20 @@ impl<T: Transport> Future for AcceptMessageFromMain<T> {
                         self.sender,
                         self.recipient,
                     ))
-                }
+                },
                 State::AwaitTxSent(ref mut future) => {
                     let main_tx_hash = self.main_tx_hash;
-                    let side_tx_hash = try_ready!(future.poll().chain_err(|| format!(
-                        "AcceptMessageFromMain: checking whether {} was relayed failed",
-                        main_tx_hash
-                    )));
+                    let side_tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| format!(
+                                "AcceptMessageFromMain: checking whether {} was relayed failed",
+                                main_tx_hash
+                            ))
+                    );
                     info!("{:?} - DONE - accepted", self.main_tx_hash);
                     return Ok(Async::Ready(Some(side_tx_hash)));
-                }
+                },
             };
             self.state = next_state;
         }
@@ -200,24 +197,17 @@ mod tests {
 
         let encoded_message = ethabi::encode(&[ethabi::Token::Bytes(data.clone())]);
 
-        let get_message_call_data =
-            contracts::main::functions::relayed_messages::encode_input(log.message_id);
+        let get_message_call_data = contracts::main::functions::relayed_messages::encode_input(log.message_id);
 
-        let has_accepted_call_data =
-            contracts::side::functions::has_authority_accepted_message_from_main::encode_input(
-                log_tx_hash,
-                data.clone(),
-                log.sender,
-                log.recipient,
-                authority_address,
-            );
-
-        let accept_message_call_data = contracts::side::functions::accept_message::encode_input(
+        let has_accepted_call_data = contracts::side::functions::has_authority_accepted_message_from_main::encode_input(
             log_tx_hash,
-            data,
+            data.clone(),
             log.sender,
             log.recipient,
+            authority_address,
         );
+
+        let accept_message_call_data = contracts::side::functions::accept_message::encode_input(log_tx_hash, data, log.sender, log.recipient);
 
         let main_transport = mock_transport!(
             "eth_call" =>
@@ -276,14 +266,8 @@ mod tests {
         let result = event_loop.run(future).unwrap();
         assert_eq!(result, Some(tx_hash.into()));
 
-        assert_eq!(
-            side_transport.actual_requests(),
-            side_transport.expected_requests()
-        );
-        assert_eq!(
-            main_transport.actual_requests(),
-            main_transport.expected_requests()
-        );
+        assert_eq!(side_transport.actual_requests(), side_transport.expected_requests());
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
     }
 
     #[test]
@@ -328,17 +312,15 @@ mod tests {
 
         let encoded_message = ethabi::encode(&[ethabi::Token::Bytes(data.clone())]);
 
-        let get_message_call_data =
-            contracts::main::functions::relayed_messages::encode_input(log.message_id);
+        let get_message_call_data = contracts::main::functions::relayed_messages::encode_input(log.message_id);
 
-        let has_accepted_call_data =
-            contracts::side::functions::has_authority_accepted_message_from_main::encode_input(
-                log_tx_hash,
-                data.clone(),
-                log.sender,
-                log.recipient,
-                authority_address,
-            );
+        let has_accepted_call_data = contracts::side::functions::has_authority_accepted_message_from_main::encode_input(
+            log_tx_hash,
+            data.clone(),
+            log.sender,
+            log.recipient,
+            authority_address,
+        );
 
         let main_transport = mock_transport!(
             "eth_call" =>
@@ -388,13 +370,7 @@ mod tests {
         let result = event_loop.run(future).unwrap();
         assert_eq!(result, None);
 
-        assert_eq!(
-            side_transport.actual_requests(),
-            side_transport.expected_requests()
-        );
-        assert_eq!(
-            main_transport.actual_requests(),
-            main_transport.expected_requests()
-        );
+        assert_eq!(side_transport.actual_requests(), side_transport.expected_requests());
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
     }
 }

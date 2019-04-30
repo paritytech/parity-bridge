@@ -60,11 +60,7 @@ impl<T: Transport> SideContract<T> {
         }
     }
 
-    pub fn call<F: FunctionOutputDecoder>(
-        &self,
-        payload: Vec<u8>,
-        output_decoder: F,
-    ) -> AsyncCall<T, F> {
+    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, output_decoder: F) -> AsyncCall<T, F> {
         AsyncCall::new(
             &self.transport,
             self.contract_address,
@@ -74,9 +70,7 @@ impl<T: Transport> SideContract<T> {
         )
     }
 
-    pub fn is_side_contract(
-        &self,
-    ) -> AsyncCall<T, contracts::side::functions::is_side_bridge_contract::Decoder> {
+    pub fn is_side_contract(&self) -> AsyncCall<T, contracts::side::functions::is_side_bridge_contract::Decoder> {
         let (payload, decoder) = contracts::side::functions::is_side_bridge_contract::call();
         self.call(payload, decoder)
     }
@@ -101,16 +95,14 @@ impl<T: Transport> SideContract<T> {
         data: Vec<u8>,
         sender: Address,
         recipient: Address,
-    ) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder>
-    {
-        let (payload, decoder) =
-            contracts::side::functions::has_authority_accepted_message_from_main::call(
-                transaction_hash,
-                data,
-                sender,
-                recipient,
-                self.authority_address,
-            );
+    ) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder> {
+        let (payload, decoder) = contracts::side::functions::has_authority_accepted_message_from_main::call(
+            transaction_hash,
+            data,
+            sender,
+            recipient,
+            self.authority_address
+        );
 
         self.call(payload, decoder)
     }
@@ -126,7 +118,7 @@ impl<T: Transport> SideContract<T> {
             transaction_hash,
             data,
             sender,
-            recipient,
+            recipient
         );
 
         AsyncTransaction::new(
@@ -169,10 +161,7 @@ impl<T: Transport> SideContract<T> {
         message: &MessageToMain,
         signature: &Signature,
     ) -> AsyncTransaction<T> {
-        let payload = contracts::side::functions::submit_signed_message::encode_input(
-            signature.to_bytes(),
-            message.to_bytes(),
-        );
+        let payload = contracts::side::functions::submit_signed_message::encode_input(signature.to_bytes(), message.to_bytes());
         AsyncTransaction::new(
             &self.transport,
             self.contract_address,
@@ -191,8 +180,7 @@ impl<T: Transport> SideContract<T> {
         let futures = (0..self.required_signatures)
             .into_iter()
             .map(|index| {
-                let (payload, decoder) =
-                    contracts::side::functions::signature::call(message_hash, index);
+                let (payload, decoder) = contracts::side::functions::signature::call(message_hash, index);
                 self.call(payload, decoder)
             })
             .collect::<Vec<_>>();

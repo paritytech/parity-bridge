@@ -25,7 +25,7 @@ use message_to_main::MessageToMain;
 use relay_stream::LogToFuture;
 use side_contract::SideContract;
 use signature::Signature;
-use web3::types::{Log, H256};
+use web3::types::{H256, Log};
 use web3::Transport;
 
 enum State<T: Transport> {
@@ -95,25 +95,26 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitMessage(ref mut future) => {
-                    let message_bytes = try_ready!(future
-                        .poll()
-                        .chain_err(|| "SubmitSignature: fetching message failed"));
+                    let message_bytes = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "SubmitSignature: fetching message failed")
+                    );
                     let message = MessageToMain::from_bytes(&message_bytes)?;
 
-                    let (payload, decoder) =
-                        contracts::main::functions::accepted_messages::call(message.keccak256());
+                    let (payload, decoder) = contracts::main::functions::accepted_messages::call(message.keccak256());
                     State::AwaitIsRelayed {
                         future: self.main.call(payload, decoder),
                         message,
                     }
-                }
-                State::AwaitIsRelayed {
-                    ref mut future,
-                    ref message,
-                } => {
-                    let is_relayed = try_ready!(future
-                        .poll()
-                        .chain_err(|| "SubmitSignature: fetching message failed"));
+
+                },
+                State::AwaitIsRelayed { ref mut future, ref message } => {
+                    let is_relayed = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "SubmitSignature: fetching message failed")
+                    );
 
                     if is_relayed {
                         return Ok(Async::Ready(None));
@@ -123,47 +124,41 @@ impl<T: Transport> Future for SideToMainSignatures<T> {
                         future: self.side.get_signatures(message.keccak256()),
                         message: message.clone(),
                     }
-                }
-                State::AwaitSignatures {
-                    ref mut future,
-                    ref message,
-                } => {
-                    let raw_signatures = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawRelay: fetching message and signatures failed"));
+                },
+                State::AwaitSignatures { ref mut future, ref message } => {
+                    let raw_signatures = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawRelay: fetching message and signatures failed")
+                    );
                     let signatures: Vec<Signature> = raw_signatures
                         .iter()
                         .map(|x| Signature::from_bytes(x))
                         .collect::<Result<_, _>>()?;
                     info!("{:?} - step 2/3 - message and {} signatures received. about to send transaction", self.side_tx_hash, signatures.len());
 
-                    let (payload, decoder) =
-                        contracts::side::functions::relayed_messages::call(message.message_id);
+                    let (payload, decoder) = contracts::side::functions::relayed_messages::call(message.message_id);
                     State::AwaitMessageData {
                         future: self.side.call(payload, decoder),
                         message: message.clone(),
                         signatures,
                     }
-                }
-                State::AwaitMessageData {
-                    ref mut future,
-                    ref message,
-                    ref signatures,
-                } => {
-                    let message_data = try_ready!(future
-                        .poll()
-                        .chain_err(|| "SubmitSignature: fetching message failed"));
+                },
+                State::AwaitMessageData { ref mut future, ref message, ref signatures } => {
+                    let message_data = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "SubmitSignature: fetching message failed")
+                    );
 
-                    State::AwaitTxSent(self.main.relay_side_to_main(
-                        &message,
-                        &signatures,
-                        message_data,
-                    ))
-                }
+                    State::AwaitTxSent(self.main.relay_side_to_main(&message, &signatures, message_data))
+                },
                 State::AwaitTxSent(ref mut future) => {
-                    let main_tx_hash = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawRelay: sending transaction failed"));
+                    let main_tx_hash = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "WithdrawRelay: sending transaction failed")
+                    );
                     info!(
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
                         self.side_tx_hash, main_tx_hash
@@ -205,12 +200,10 @@ mod tests {
     fn test_side_to_main_sign_relay_future_not_relayed_authority_responsible() {
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
         let authority_responsible_for_relay = authority_address;
-        let topic =
-            contracts::side::events::signed_message::filter(authority_responsible_for_relay);
+        let topic = contracts::side::events::signed_message::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
-            side_tx_hash: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-                .into(),
+            side_tx_hash: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into(),
             message_id: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -222,7 +215,9 @@ mod tests {
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(log.message_hash.to_vec())]);
+        let log_data = ethabi::encode(&[
+            ethabi::Token::FixedBytes(log.message_hash.to_vec()),
+        ]);
 
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
@@ -328,10 +323,7 @@ mod tests {
         let result = event_loop.run(future).unwrap();
         assert_eq!(result, Some(tx_hash.into()));
 
-        assert_eq!(
-            main_transport.actual_requests(),
-            main_transport.expected_requests()
-        );
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
         assert_eq!(
             side_transport.actual_requests(),
             side_transport.expected_requests()
@@ -342,12 +334,10 @@ mod tests {
     fn test_side_to_main_sign_relay_future_already_relayed() {
         let authority_address: Address = "0000000000000000000000000000000000000001".into();
         let authority_responsible_for_relay = authority_address;
-        let topic =
-            contracts::side::events::signed_message::filter(authority_responsible_for_relay);
+        let topic = contracts::side::events::signed_message::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
-            side_tx_hash: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-                .into(),
+            side_tx_hash: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into(),
             message_id: "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
@@ -359,7 +349,9 @@ mod tests {
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(log.message_hash.to_vec())]);
+        let log_data = ethabi::encode(&[
+            ethabi::Token::FixedBytes(log.message_hash.to_vec()),
+        ]);
 
         let log_tx_hash: H256 =
             "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
@@ -429,10 +421,7 @@ mod tests {
         let result = event_loop.run(future).unwrap();
         assert_eq!(result, None);
 
-        assert_eq!(
-            main_transport.actual_requests(),
-            main_transport.expected_requests()
-        );
+        assert_eq!(main_transport.actual_requests(), main_transport.expected_requests());
         assert_eq!(
             side_transport.actual_requests(),
             side_transport.expected_requests()

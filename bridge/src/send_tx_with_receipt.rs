@@ -14,28 +14,28 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
-use error::{self, ResultExt};
-use ethereum_types::U256;
+use std::time::Duration;
 use futures::future::FromErr;
 use futures::{Future, Poll};
-use std::time::Duration;
 use tokio_timer::{Timeout, Timer};
-use web3::api::Namespace;
-use web3::helpers::CallFuture;
-use web3::types::{TransactionReceipt, TransactionRequest};
 use web3::{self, Transport};
+use web3::types::{TransactionRequest, TransactionReceipt};
+use ethereum_types::U256;
+use web3::helpers::CallFuture;
+use web3::api::Namespace;
+use error::{self, ResultExt};
 
 mod inner {
-    use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
-    use error::{self, ResultExt};
+    use std::time::Duration;
     use futures::future::FromErr;
     use futures::{Async, Future, Poll, Stream};
-    use std::time::Duration;
     use tokio_timer::{Timeout, Timer};
+    use web3::{self, Transport};
     use web3::api::Namespace;
     use web3::helpers::CallFuture;
-    use web3::types::{TransactionReceipt, TransactionRequest, H256};
-    use web3::{self, Transport};
+    use web3::types::{TransactionRequest, TransactionReceipt, H256};
+    use error::{self, ResultExt};
+    use block_number_stream::{BlockNumberStreamOptions, BlockNumberStream};
 
     enum State<T: Transport> {
         AwaitSendTransaction(Timeout<FromErr<CallFuture<H256, T::Out>, error::Error>>),
@@ -44,7 +44,7 @@ mod inner {
             future: Timeout<FromErr<CallFuture<Option<TransactionReceipt>, T::Out>, error::Error>>,
             transaction_hash: H256,
             last_block: u64,
-        },
+        }
     }
 
     pub struct SendTransactionWithReceiptOptions<T: Transport> {
@@ -76,8 +76,7 @@ mod inner {
                 after: options.after,
             };
             let block_number_stream = BlockNumberStream::new(block_number_stream_options);
-            let future =
-                web3::api::Eth::new(&options.transport).send_transaction(options.transaction);
+            let future = web3::api::Eth::new(&options.transport).send_transaction(options.transaction);
             let future = timer.timeout(future.from_err(), options.request_timeout);
 
             SendTransactionWithReceipt {
@@ -98,12 +97,14 @@ mod inner {
             loop {
                 let next_state = match self.state {
                     State::AwaitSendTransaction(ref mut future) => {
-                        let hash = try_ready!(future.poll().chain_err(|| {
-                            "SendTransactionWithReceipt: sending transaction failed"
-                        }));
+                        let hash = try_ready!(
+                            future
+                                .poll()
+                                .chain_err(|| "SendTransactionWithReceipt: sending transaction failed")
+                        );
                         info!("SendTransactionWithReceipt: sent transaction {}", hash);
                         State::AwaitBlockNumber(hash)
-                    }
+                    },
                     State::AwaitBlockNumber(transaction_hash) => {
                         let last_block = match try_ready!(
                             self.block_number_stream
@@ -114,35 +115,26 @@ mod inner {
                             None => bail!("SendTransactionWithReceipt: fetching of last confirmed block failed"),
                         };
 
-                        info!(
-                            "SendTransactionWithReceipt: fetched confirmed block number {}",
-                            last_block
-                        );
-                        let future = web3::api::Eth::new(&self.transport)
-                            .transaction_receipt(transaction_hash);
+                        info!("SendTransactionWithReceipt: fetched confirmed block number {}", last_block);
+                        let future = web3::api::Eth::new(&self.transport).transaction_receipt(transaction_hash);
                         State::AwaitTransactionReceipt {
                             future: self.timer.timeout(future.from_err(), self.request_timeout),
                             transaction_hash,
                             last_block,
                         }
-                    }
-                    State::AwaitTransactionReceipt {
-                        ref mut future,
-                        transaction_hash,
-                        last_block,
-                    } => {
-                        let maybe_receipt = try_ready!(future.poll().chain_err(|| {
-                            "SendTransactionWithReceipt: getting transaction receipt failed"
-                        }));
+                    },
+                    State::AwaitTransactionReceipt { ref mut future, transaction_hash, last_block } => {
+                        let maybe_receipt = try_ready!(
+                            future
+                                .poll()
+                                .chain_err(|| "SendTransactionWithReceipt: getting transaction receipt failed")
+                        );
 
                         match maybe_receipt {
                             // transaction hasn't been mined yet
                             None => State::AwaitBlockNumber(transaction_hash),
                             Some(receipt) => {
-                                info!(
-                                    "SendTransactionWithReceipt: got transaction receipt: {}",
-                                    transaction_hash
-                                );
+                                info!("SendTransactionWithReceipt: got transaction receipt: {}", transaction_hash);
                                 match receipt.block_number {
                                     // receipt comes from pending block
                                     None => State::AwaitBlockNumber(transaction_hash),
@@ -151,11 +143,11 @@ mod inner {
                                             // transaction does not have enough confirmations
                                             State::AwaitBlockNumber(transaction_hash)
                                         } else {
-                                            return Ok(Async::Ready(receipt));
+                                            return Ok(Async::Ready(receipt))
                                         }
                                     }
                                 }
-                            }
+                            },
                         }
                     }
                 };
@@ -171,8 +163,9 @@ enum State<T: Transport> {
         future: Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>,
         transaction: Option<TransactionRequest>,
     },
-    AwaitReceipt(inner::SendTransactionWithReceipt<T>),
+    AwaitReceipt(inner::SendTransactionWithReceipt<T>)
 }
+
 
 pub struct SendTransactionWithReceiptOptions<T> {
     pub transport: T,
@@ -218,21 +211,19 @@ impl<T: Transport> Future for SendTransactionWithReceipt<T> {
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         loop {
             let next_state = match self.state {
-                State::AwaitBlockNumber {
-                    ref mut future,
-                    ref mut transaction,
-                } => {
-                    let block_number = try_ready!(future.poll().chain_err(|| {
-                        "SendTransactionWithReceipt: fetching last block number failed"
-                    }));
-                    info!(
-                        "SendTransactionWithReceipt: got last block number {}",
-                        block_number
+                State::AwaitBlockNumber { ref mut future, ref mut transaction } => {
+                    let block_number = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "SendTransactionWithReceipt: fetching last block number failed")
                     );
-                    let transaction = transaction.take().expect(
-                        "SendTransactionWithReceipt is always created with
-                             State::AwaitBlockNumber with transaction set to Some; qed",
-                    );
+                    info!("SendTransactionWithReceipt: got last block number {}", block_number);
+                    let transaction = transaction
+                        .take()
+                        .expect(
+                            "SendTransactionWithReceipt is always created with
+                             State::AwaitBlockNumber with transaction set to Some; qed"
+                        );
 
                     let inner_options = inner::SendTransactionWithReceiptOptions {
                         transport: self.transport.clone(),
@@ -245,19 +236,21 @@ impl<T: Transport> Future for SendTransactionWithReceipt<T> {
 
                     let future = inner::SendTransactionWithReceipt::new(inner_options);
                     State::AwaitReceipt(future)
+                },
+                State::AwaitReceipt(ref mut future) => {
+                    return future.poll()
                 }
-                State::AwaitReceipt(ref mut future) => return future.poll(),
             };
 
             self.state = next_state;
-        }
+        };
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tokio_core::reactor::Core;
+    use super::*;
 
     #[test]
     fn test_send_tx_with_receipt() {
@@ -344,23 +337,22 @@ mod tests {
                 });
         );
 
-        let send_transaction_with_receipt =
-            SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
-                transport: transport.clone(),
-                request_timeout: Duration::from_secs(1),
-                poll_interval: Duration::from_secs(0),
-                confirmations: 2,
-                transaction: TransactionRequest {
-                    from: "0x006b5dda44dc2606f07ad86c9190fb54fd905f6d".into(),
-                    to: None,
-                    gas: Some(0xf4240.into()),
-                    gas_price: Some(0.into()),
-                    value: None,
-                    data: Some(vec![0x60].into()),
-                    nonce: None,
-                    condition: None,
-                },
-            });
+        let send_transaction_with_receipt = SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
+            transport: transport.clone(),
+            request_timeout: Duration::from_secs(1),
+            poll_interval: Duration::from_secs(0),
+            confirmations: 2,
+            transaction: TransactionRequest {
+                from: "0x006b5dda44dc2606f07ad86c9190fb54fd905f6d".into(),
+                to: None,
+                gas: Some(0xf4240.into()),
+                gas_price: Some(0.into()),
+                value: None,
+                data: Some(vec![0x60].into()),
+                nonce: None,
+                condition: None,
+            }
+        });
 
         let mut event_loop = Core::new().unwrap();
         let receipt = event_loop.run(send_transaction_with_receipt).unwrap();

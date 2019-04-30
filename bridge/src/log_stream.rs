@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
-use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
 use error::{self, ResultExt};
 use ethabi;
 use futures::future::FromErr;
@@ -24,8 +23,9 @@ use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Address, FilterBuilder, Log, H256};
+use web3::types::{Address, FilterBuilder, H256, Log};
 use web3::Transport;
+use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
 
 fn ethabi_topic_to_web3(topic: &ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
     match topic {
@@ -127,15 +127,15 @@ impl<T: Transport> Stream for LogStream<T> {
         loop {
             let (next_state, value_to_yield) = match self.state {
                 State::AwaitBlockNumber => {
-                    let last_block = try_stream!(self
-                        .block_number_stream
-                        .poll()
-                        .chain_err(|| "LogStream: fetching of last confirmed block number failed"));
+                    let last_block = try_stream!(
+                        self.block_number_stream
+                            .poll()
+                            .chain_err(|| "LogStream: fetching of last confirmed block number failed")
+                    );
                     info!("LogStream: fetched confirmed block number {}", last_block);
 
                     let from = self.last_checked_block + 1;
-                    let filter = self
-                        .filter_builder
+                    let filter = self.filter_builder
                         .clone()
                         .from_block(from.into())
                         .to_block(last_block.into())
@@ -160,9 +160,11 @@ impl<T: Transport> Stream for LogStream<T> {
                     from,
                     to,
                 } => {
-                    let logs = try_ready!(future
-                        .poll()
-                        .chain_err(|| "LogStream: polling web3 logs failed"));
+                    let logs = try_ready!(
+                        future
+                            .poll()
+                            .chain_err(|| "LogStream: polling web3 logs failed")
+                    );
                     info!(
                         "LogStream (topic: {:?}): fetched {} logs from block {} to block {}",
                         self.topic,
