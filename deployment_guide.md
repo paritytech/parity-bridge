@@ -5,8 +5,6 @@
 this guide assumes that you are one of the authorities of
 a PoA chain `side` and want to use the bridge to connect
 `side` to another chain `main`.
-this will create an ERC20 token on `side` that is backed by
-ether on `main`.
 
 since all bridge authorities use the same contracts on `side` and `main`
 one authority has to go ahead and deploy them.
@@ -133,7 +131,7 @@ env RUST_LOG=info bridge --config bridge_config.toml --database bridge.db
 it should eventually print this line:
 
 ```
-INFO:bridge: Starting listening to events
+ INFO XXXX-XX-XXTXX:XX:XXZ: parity_bridge: Started polling logs
 ```
 
 **congratulations! the bridge has successfully started and joined the other authorities**
