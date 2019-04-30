@@ -230,6 +230,6 @@ free `side` testnet wei to cause the authorities to spend significant amounts of
 to relay the message to `main` by executing `Main.acceptMessage`.
 an attacker is able to exhaust bridge authorities funds on `main`.
 
-to shut down this attack, a whitelist of approved `recipient`s should be employed for `main`.
+To shut down this attack, a whitelist of approved `recipient`s should be employed for `main`.
 
 Another method that may be used to mitigate potential abuse of authorities on `main` is to encourage users of the bridge to call `Main.acceptMessage` themselves (by collecting the message and its signatures from `side`) spending their own gas, instead of mandating that validators spend their gas.
