@@ -15,7 +15,7 @@ if the process is done correctly the other non-deploying authorities don't have 
 the deploying authority.
 
 upfront you must know the addresses of all authorities (`authorities`)
-es well as the number of `required_signatures`
+as well as the number of `required_signatures`
 
 ## initial deployment steps for any authority (deploying and non-deploying)
 
