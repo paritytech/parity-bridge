@@ -18,7 +18,7 @@ max_total_main_contract_balance = "10000000000000000000"
 max_single_deposit_value = "1000000000000000000"
 
 [main]
-# ACTION REQUIRED: set the the url of the parity node that has `main.account` unlocked
+# ACTION REQUIRED: set the url of the parity node that has `main.account` unlocked
 http = "http://localhost:8550"
 # ACTION REQUIRED: for test deployment set this to 12
 required_confirmations = 0
