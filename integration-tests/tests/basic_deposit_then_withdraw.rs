@@ -24,7 +24,7 @@ extern crate bridge;
 extern crate bridge_contracts;
 extern crate ethabi;
 extern crate ethereum_types;
-extern crate tempdir;
+extern crate tempfile;
 extern crate tokio_core;
 extern crate web3;
 extern crate rustc_hex;
@@ -103,7 +103,7 @@ fn test_basic_deposit_then_withdraw() {
     if Path::new(TMP_PATH).exists() {
         std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
     }
-    let _tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
+    let _tmp_dir = tempfile::TempDir::new_in(TMP_PATH).expect("failed to create tmp dir");
 
     println!("\nbuild the deploy executable so we can run it later\n");
     assert!(
