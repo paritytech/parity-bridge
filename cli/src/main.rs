@@ -56,7 +56,8 @@ fn main() {
 }
 
 fn print_err(err: error::Error) {
-    let message = err.iter()
+    let message = err
+        .iter()
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join("\n\nCaused by:\n  ");
@@ -105,7 +106,8 @@ Options:
         &config.main.http,
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).chain_err(|| {
+    )
+    .chain_err(|| {
         format!(
             "Cannot connect to parity node connected to main chain at {}",
             config.main.http
@@ -120,7 +122,8 @@ Options:
         &config.side.http,
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).chain_err(|| {
+    )
+    .chain_err(|| {
         format!(
             "Cannot connect to parity node connected to side chain at {}",
             config.side.http

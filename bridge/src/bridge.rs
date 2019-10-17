@@ -16,11 +16,11 @@
 use futures::{Async, Poll, Stream};
 use web3::Transport;
 
+use accept_message_from_main;
 use database::State;
 use error::{self, ResultExt};
 use log_stream::LogStream;
 use main_contract::MainContract;
-use accept_message_from_main;
 use relay_stream::RelayStream;
 use side_contract::SideContract;
 use side_to_main_sign;
@@ -35,7 +35,8 @@ use side_to_main_signatures;
 /// updates the database with results returned from relay streams.
 /// yields new state that should be persisted
 pub struct Bridge<T: Transport> {
-    accept_message_from_main: RelayStream<LogStream<T>, accept_message_from_main::LogToAcceptMessageFromMain<T>>,
+    accept_message_from_main:
+        RelayStream<LogStream<T>, accept_message_from_main::LogToAcceptMessageFromMain<T>>,
     side_to_main_sign: RelayStream<LogStream<T>, side_to_main_sign::LogToSideToMainSign<T>>,
     side_to_main_signatures:
         RelayStream<LogStream<T>, side_to_main_signatures::LogToSideToMainSignatures<T>>,
@@ -90,21 +91,18 @@ impl<T: Transport> Stream for Bridge<T> {
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         loop {
-            let maybe_main_to_side_sign = try_maybe_stream!(
-                self.accept_message_from_main
-                    .poll()
-                    .chain_err(|| "Bridge: polling main to side sign failed")
-            );
-            let maybe_side_to_main_sign = try_maybe_stream!(
-                self.side_to_main_sign
-                    .poll()
-                    .chain_err(|| "Bridge: polling side to main sign failed")
-            );
-            let maybe_side_to_main_signatures = try_maybe_stream!(
-                self.side_to_main_signatures
-                    .poll()
-                    .chain_err(|| "Bridge: polling side to main signatures failed")
-            );
+            let maybe_main_to_side_sign = try_maybe_stream!(self
+                .accept_message_from_main
+                .poll()
+                .chain_err(|| "Bridge: polling main to side sign failed"));
+            let maybe_side_to_main_sign = try_maybe_stream!(self
+                .side_to_main_sign
+                .poll()
+                .chain_err(|| "Bridge: polling side to main sign failed"));
+            let maybe_side_to_main_signatures = try_maybe_stream!(self
+                .side_to_main_signatures
+                .poll()
+                .chain_err(|| "Bridge: polling side to main signatures failed"));
 
             let mut has_state_changed = false;
 

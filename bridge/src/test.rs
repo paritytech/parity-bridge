@@ -98,7 +98,8 @@ impl Transport for MockTransport {
 
     fn send(&self, _id: usize, _request: jsonrpc_core::Call) -> web3::Result<jsonrpc_core::Value> {
         let current_request_index = { self.actual_requests.as_ref().borrow().len() };
-        let response = self.mock_responses
+        let response = self
+            .mock_responses
             .iter()
             .nth(current_request_index - 1)
             .expect("missing response");

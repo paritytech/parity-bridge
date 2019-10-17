@@ -24,10 +24,10 @@ extern crate bridge;
 extern crate bridge_contracts;
 extern crate ethabi;
 extern crate ethereum_types;
+extern crate rustc_hex;
 extern crate tempfile;
 extern crate tokio_core;
 extern crate web3;
-extern crate rustc_hex;
 
 use std::path::Path;
 use std::process::Command;
@@ -36,8 +36,8 @@ use std::time::Duration;
 
 use tokio_core::reactor::Core;
 
-use rustc_hex::FromHex;
 use bridge::helpers::AsyncCall;
+use rustc_hex::FromHex;
 use web3::transports::http::Http;
 
 const TMP_PATH: &str = "tmp";
@@ -106,26 +106,22 @@ fn test_basic_deposit_then_withdraw() {
     let _tmp_dir = tempfile::TempDir::new_in(TMP_PATH).expect("failed to create tmp dir");
 
     println!("\nbuild the deploy executable so we can run it later\n");
-    assert!(
-        Command::new("cargo")
-            .env("RUST_BACKTRACE", "1")
-            .current_dir("../deploy")
-            .arg("build")
-            .status()
-            .expect("failed to build parity-bridge-deploy executable")
-            .success()
-    );
+    assert!(Command::new("cargo")
+        .env("RUST_BACKTRACE", "1")
+        .current_dir("../deploy")
+        .arg("build")
+        .status()
+        .expect("failed to build parity-bridge-deploy executable")
+        .success());
 
     println!("\nbuild the parity-bridge executable so we can run it later\n");
-    assert!(
-        Command::new("cargo")
-            .env("RUST_BACKTRACE", "1")
-            .current_dir("../cli")
-            .arg("build")
-            .status()
-            .expect("failed to build parity-bridge executable")
-            .success()
-    );
+    assert!(Command::new("cargo")
+        .env("RUST_BACKTRACE", "1")
+        .current_dir("../cli")
+        .arg("build")
+        .status()
+        .expect("failed to build parity-bridge executable")
+        .success());
 
     // start a parity node that represents the main chain
     let mut parity_main = parity_main_command()
@@ -213,19 +209,17 @@ fn test_basic_deposit_then_withdraw() {
     // deploy bridge contracts
 
     println!("\ndeploying contracts\n");
-    assert!(
-        Command::new("env")
-            .arg("RUST_BACKTRACE=1")
-            .arg("../target/debug/parity-bridge-deploy")
-            .env("RUST_LOG", "info")
-            .arg("--config")
-            .arg("bridge_config.toml")
-            .arg("--database")
-            .arg("tmp/bridge1_db.txt")
-            .status()
-            .expect("failed spawn parity-bridge-deploy")
-            .success()
-    );
+    assert!(Command::new("env")
+        .arg("RUST_BACKTRACE=1")
+        .arg("../target/debug/parity-bridge-deploy")
+        .env("RUST_LOG", "info")
+        .arg("--config")
+        .arg("bridge_config.toml")
+        .arg("--database")
+        .arg("tmp/bridge1_db.txt")
+        .status()
+        .expect("failed spawn parity-bridge-deploy")
+        .success());
 
     // start bridge authority 1
     let mut bridge1 = Command::new("env")
@@ -246,14 +240,16 @@ fn test_basic_deposit_then_withdraw() {
         "http://localhost:8550",
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).expect("failed to connect to main at http://localhost:8550");
+    )
+    .expect("failed to connect to main at http://localhost:8550");
 
     // connect to side
     let side_transport = Http::with_event_loop(
         "http://localhost:8551",
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).expect("failed to connect to side at http://localhost:8551");
+    )
+    .expect("failed to connect to side at http://localhost:8551");
 
     println!("\ngive authority some funds to do relay later\n");
 
@@ -304,7 +300,12 @@ fn test_basic_deposit_then_withdraw() {
                 gas: None,
                 gas_price: None,
                 value: None,
-                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                data: Some(
+                    include_str!("../../compiled_contracts/RecipientTest.bin")
+                        .from_hex()
+                        .unwrap()
+                        .into(),
+                ),
                 condition: None,
                 nonce: None,
             },
@@ -322,7 +323,12 @@ fn test_basic_deposit_then_withdraw() {
                 gas: None,
                 gas_price: None,
                 value: None,
-                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                data: Some(
+                    include_str!("../../compiled_contracts/RecipientTest.bin")
+                        .from_hex()
+                        .unwrap()
+                        .into(),
+                ),
                 condition: None,
                 nonce: None,
             },
@@ -333,7 +339,10 @@ fn test_basic_deposit_then_withdraw() {
 
     println!("\nSend the message to main chain and wait for the relay to side\n");
 
-    let (payload, _) = bridge_contracts::main::functions::relay_message::call(data_to_relay_to_side.clone(), main_recipient_address);
+    let (payload, _) = bridge_contracts::main::functions::relay_message::call(
+        data_to_relay_to_side.clone(),
+        main_recipient_address,
+    );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
@@ -353,7 +362,9 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    println!("\nSending message to main complete. Give it plenty of time to get mined and relayed\n");
+    println!(
+        "\nSending message to main complete. Give it plenty of time to get mined and relayed\n"
+    );
     thread::sleep(Duration::from_millis(10000));
 
     let (payload, decoder) = bridge_contracts::test::functions::last_data::call();
@@ -369,14 +380,16 @@ fn test_basic_deposit_then_withdraw() {
         .unwrap();
 
     assert_eq!(
-        response,
-        data_to_relay_to_side,
+        response, data_to_relay_to_side,
         "data was not relayed properly to the side chain"
     );
 
     println!("\nSend the message to side chain and wait for the relay to main\n");
 
-    let (payload, _) = bridge_contracts::side::functions::relay_message::call(data_to_relay_to_main.clone(), main_recipient_address);
+    let (payload, _) = bridge_contracts::side::functions::relay_message::call(
+        data_to_relay_to_main.clone(),
+        main_recipient_address,
+    );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
@@ -396,9 +409,10 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    println!("\nSending message to side complete. Give it plenty of time to get mined and relayed\n");
+    println!(
+        "\nSending message to side complete. Give it plenty of time to get mined and relayed\n"
+    );
     thread::sleep(Duration::from_millis(15000));
-
 
     //dwd
 
@@ -430,8 +444,7 @@ fn test_basic_deposit_then_withdraw() {
         .unwrap();
 
     assert_eq!(
-        response,
-        data_to_relay_to_main,
+        response, data_to_relay_to_main,
         "data was not relayed properly to the main chain"
     );
 

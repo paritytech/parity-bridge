@@ -21,13 +21,13 @@ use contracts;
 use error::{self, ResultExt};
 use futures::{Future, Poll};
 use rustc_hex::ToHex;
+use send_tx_with_receipt::{SendTransactionWithReceipt, SendTransactionWithReceiptOptions};
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use web3::types::{TransactionReceipt, TransactionRequest};
 use web3::Transport;
-use send_tx_with_receipt::{SendTransactionWithReceipt, SendTransactionWithReceiptOptions};
 
 pub enum DeployState<T: Transport + Clone> {
     NotDeployed,
@@ -82,30 +82,26 @@ impl<T: Transport + Clone> Future for DeployMain<T> {
                         condition: None,
                     };
 
-                    let future = SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
-                        transport: self.main_transport.clone(),
-                        request_timeout: self.config.main.request_timeout,
-                        poll_interval: self.config.main.poll_interval,
-                        confirmations: self.config.main.required_confirmations,
-                        transaction: tx_request,
-                    });
+                    let future =
+                        SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
+                            transport: self.main_transport.clone(),
+                            request_timeout: self.config.main.request_timeout,
+                            poll_interval: self.config.main.poll_interval,
+                            confirmations: self.config.main.required_confirmations,
+                            transaction: tx_request,
+                        });
 
                     info!("sending MainBridge contract deployment transaction and waiting for {} confirmations...", self.config.main.required_confirmations);
 
-                    DeployState::Deploying {
-                        data,
-                        future,
-                    }
+                    DeployState::Deploying { data, future }
                 }
                 DeployState::Deploying {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "DeployMain: deployment transaction failed")
-                    );
+                    let receipt = try_ready!(future
+                        .poll()
+                        .chain_err(|| "DeployMain: deployment transaction failed"));
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
@@ -171,30 +167,26 @@ impl<T: Transport + Clone> Future for DeploySide<T> {
                         condition: None,
                     };
 
-                    let future = SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
-                        transport: self.side_transport.clone(),
-                        request_timeout: self.config.side.request_timeout,
-                        poll_interval: self.config.side.poll_interval,
-                        confirmations: self.config.side.required_confirmations,
-                        transaction: tx_request,
-                    });
+                    let future =
+                        SendTransactionWithReceipt::new(SendTransactionWithReceiptOptions {
+                            transport: self.side_transport.clone(),
+                            request_timeout: self.config.side.request_timeout,
+                            poll_interval: self.config.side.poll_interval,
+                            confirmations: self.config.side.required_confirmations,
+                            transaction: tx_request,
+                        });
 
                     info!("sending SideBridge contract deployment transaction and waiting for {} confirmations...", self.config.side.required_confirmations);
 
-                    DeployState::Deploying {
-                        data,
-                        future,
-                    }
+                    DeployState::Deploying { data, future }
                 }
                 DeployState::Deploying {
                     ref mut future,
                     ref data,
                 } => {
-                    let receipt = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "DeploySide: deployment transaction failed")
-                    );
+                    let receipt = try_ready!(future
+                        .poll()
+                        .chain_err(|| "DeploySide: deployment transaction failed"));
                     let address = receipt
                         .contract_address
                         .expect("contract creation receipt must have an address; qed");
