@@ -39,8 +39,8 @@ impl Signature {
 
         Ok(Self {
             v: bytes[64],
-            r: bytes[0..32].into(),
-            s: bytes[32..64].into(),
+            r: H256::from_slice(&bytes[0..32]),
+            s: H256::from_slice(&bytes[32..64]),
         })
     }
 

@@ -45,10 +45,10 @@ impl MessageToMain {
         }
 
         Ok(Self {
-            side_tx_hash: bytes[0..32].into(),
-            message_id: bytes[32..64].into(),
-            sender: bytes[64..84].into(),
-            recipient: bytes[84..104].into(),
+            side_tx_hash: H256::from_slice(&bytes[0..32]),
+            message_id: H256::from_slice(&bytes[32..64]),
+            sender: Address::from_slice(&bytes[64..84]),
+            recipient: Address::from_slice(&bytes[84..104]),
         })
     }
 

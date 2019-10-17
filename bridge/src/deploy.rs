@@ -246,10 +246,12 @@ impl DeployedContract {
 
         Self {
             contract_name,
-            contract_address: receipt
-                .contract_address
-                .expect("contract creation receipt must have an address; qed")
-                .to_hex(),
+            contract_address: format!(
+                "{:x}",
+                receipt
+                    .contract_address
+                    .expect("contract creation receipt must have an address; qed")
+            ),
             contract_source,
             abi,
             bytecode_hex,
@@ -303,7 +305,7 @@ impl DeployedContract {
         file.write_all(self.contract_source.as_bytes())?;
 
         let mut file = File::create(dir.join("transaction_hash"))?;
-        file.write_all(self.receipt.transaction_hash.to_hex().as_bytes())?;
+        file.write_all(format!("{:x}", self.receipt.transaction_hash).as_bytes())?;
 
         let mut file = File::create(dir.join("deployed_bytecode"))?;
         file.write_all(self.bytecode_hex.as_bytes())?;

@@ -23,12 +23,12 @@ use web3;
 use web3::api::Namespace;
 use web3::Transport;
 use web3::helpers::CallFuture;
-use web3::types::U256;
+use web3::types::U64;
 
 /// Block Number Stream state.
 enum State<T: Transport> {
     AwaitInterval,
-    AwaitBlockNumber(Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>),
+    AwaitBlockNumber(Timeout<FromErr<CallFuture<U64, T::Out>, error::Error>>),
 }
 
 pub struct BlockNumberStreamOptions<T> {

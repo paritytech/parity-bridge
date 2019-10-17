@@ -19,7 +19,7 @@ use futures::future::FromErr;
 use futures::{Future, Poll};
 use tokio_timer::{Timeout, Timer};
 use web3::{self, Transport};
-use web3::types::{TransactionRequest, TransactionReceipt, U256};
+use web3::types::{TransactionRequest, TransactionReceipt, U64};
 use web3::helpers::CallFuture;
 use web3::api::Namespace;
 use error::{self, ResultExt};
@@ -159,7 +159,7 @@ mod inner {
 
 enum State<T: Transport> {
     AwaitBlockNumber {
-        future: Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>,
+        future: Timeout<FromErr<CallFuture<U64, T::Out>, error::Error>>,
         transaction: Option<TransactionRequest>,
     },
     AwaitReceipt(inner::SendTransactionWithReceipt<T>)

@@ -110,7 +110,7 @@ impl<T: Transport> Future for SideToMainSign<T> {
                         self.tx_hash
                     );
 
-                    let signature = Signature::from_bytes(&signature_bytes)?;
+                    let signature = Signature::from_bytes(&signature_bytes.as_bytes())?;
 
                     let future = self.side.submit_signed_message(&self.message, &signature);
                     State::AwaitTransaction(future)
