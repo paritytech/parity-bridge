@@ -162,7 +162,9 @@ mod tests {
         let topic = contracts::main::events::relay_message::filter().topic0;
 
         let log = contracts::main::logs::RelayMessage {
-            message_id: "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b".parse().unwrap(),
+            message_id: "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b"
+                .parse()
+                .unwrap(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebdddd".parse().unwrap(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
@@ -173,8 +175,9 @@ mod tests {
             ethabi::Token::Address(log.recipient),
         ]);
 
-        let log_tx_hash =
-            "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap();
+        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".parse().unwrap(),
@@ -291,7 +294,9 @@ mod tests {
         let topic = contracts::main::events::relay_message::filter().topic0;
 
         let log = contracts::main::logs::RelayMessage {
-            message_id: "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b".parse().unwrap(),
+            message_id: "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b"
+                .parse()
+                .unwrap(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebdddd".parse().unwrap(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
@@ -302,8 +307,9 @@ mod tests {
             ethabi::Token::Address(log.recipient),
         ]);
 
-        let log_tx_hash =
-            "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap();
+        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".parse().unwrap(),

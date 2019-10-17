@@ -367,10 +367,14 @@ mod tests {
             receipt,
             TransactionReceipt {
                 transaction_hash:
-                    "36efc16910ea67a2425a1e75f7e39e3c6a94f5763c68a47258f552481e20cd34".parse().unwrap(),
+                    "36efc16910ea67a2425a1e75f7e39e3c6a94f5763c68a47258f552481e20cd34"
+                        .parse()
+                        .unwrap(),
                 transaction_index: 0x4.into(),
                 block_hash: Some(
-                    "e0bdcf35b14a292d2998308d9b3fdea93a8c3d9c0b6c824c633fb9b15f9c3919".parse().unwrap()
+                    "e0bdcf35b14a292d2998308d9b3fdea93a8c3d9c0b6c824c633fb9b15f9c3919"
+                        .parse()
+                        .unwrap()
                 ),
                 block_number: Some(0x1015.into()),
                 cumulative_gas_used: 0x1c1999.into(),

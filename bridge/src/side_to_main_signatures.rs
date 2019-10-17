@@ -203,15 +203,19 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_not_relayed_authority_responsible() {
-        let authority_address: Address = "0000000000000000000000000000000000000001".parse().unwrap();
+        let authority_address: Address =
+            "0000000000000000000000000000000000000001".parse().unwrap();
         let authority_responsible_for_relay = authority_address;
         let topic =
             contracts::side::events::signed_message::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
             side_tx_hash: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-                .parse().unwrap(),
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".parse().unwrap(),
+                .parse()
+                .unwrap(),
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+                .parse()
+                .unwrap(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
@@ -222,10 +226,13 @@ mod tests {
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(log.message_hash.as_bytes().to_vec())]);
+        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(
+            log.message_hash.as_bytes().to_vec(),
+        )]);
 
-        let log_tx_hash: H256 =
-            "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap();
+        let log_tx_hash: H256 = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".parse().unwrap(),
@@ -241,8 +248,10 @@ mod tests {
             removed: None,
         };
 
-        let side_contract_address: Address = "0000000000000000000000000000000000000dd1".parse().unwrap();
-        let main_contract_address: Address = "0000000000000000000000000000000000000fff".parse().unwrap();
+        let side_contract_address: Address =
+            "0000000000000000000000000000000000000dd1".parse().unwrap();
+        let main_contract_address: Address =
+            "0000000000000000000000000000000000000fff".parse().unwrap();
 
         let signature = Signature::from_bytes("8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".from_hex().unwrap().as_slice()).unwrap();
 
@@ -342,15 +351,19 @@ mod tests {
 
     #[test]
     fn test_side_to_main_sign_relay_future_already_relayed() {
-        let authority_address: Address = "0000000000000000000000000000000000000001".parse().unwrap();
+        let authority_address: Address =
+            "0000000000000000000000000000000000000001".parse().unwrap();
         let authority_responsible_for_relay = authority_address;
         let topic =
             contracts::side::events::signed_message::filter(authority_responsible_for_relay);
 
         let message = MessageToMain {
             side_tx_hash: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-                .parse().unwrap(),
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".parse().unwrap(),
+                .parse()
+                .unwrap(),
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+                .parse()
+                .unwrap(),
             sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
             recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
@@ -361,10 +374,13 @@ mod tests {
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(log.message_hash.as_bytes().to_vec())]);
+        let log_data = ethabi::encode(&[ethabi::Token::FixedBytes(
+            log.message_hash.as_bytes().to_vec(),
+        )]);
 
-        let log_tx_hash: H256 =
-            "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap();
+        let log_tx_hash: H256 = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
             address: "0000000000000000000000000000000000000001".parse().unwrap(),
@@ -380,8 +396,10 @@ mod tests {
             removed: None,
         };
 
-        let side_contract_address: Address = "0000000000000000000000000000000000000dd1".parse().unwrap();
-        let main_contract_address: Address = "0000000000000000000000000000000000000fff".parse().unwrap();
+        let side_contract_address: Address =
+            "0000000000000000000000000000000000000dd1".parse().unwrap();
+        let main_contract_address: Address =
+            "0000000000000000000000000000000000000fff".parse().unwrap();
 
         let main_transport = mock_transport!(
             "eth_call" =>

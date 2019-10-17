@@ -96,10 +96,12 @@ mod test {
 
     #[test]
     fn test_message_to_main_to_bytes() {
-        let side_tx_hash: H256 =
-            "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".parse().unwrap();
-        let message_id: H256 =
-            "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff".parse().unwrap();
+        let side_tx_hash: H256 = "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2"
+            .parse()
+            .unwrap();
+        let message_id: H256 = "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff"
+            .parse()
+            .unwrap();
         let sender: Address = "eac4a655451e159313c3641e29824e77d6fcb0aa".parse().unwrap();
         let recipient: Address = "eac4a655451e159313c3641e29824e77d6fcb0bb".parse().unwrap();
 
