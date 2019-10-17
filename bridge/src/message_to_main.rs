@@ -53,7 +53,7 @@ impl MessageToMain {
     }
 
     pub fn keccak256(&self) -> H256 {
-        tiny_keccak::keccak256(&self.to_bytes()).into()
+        H256::from_slice(&tiny_keccak::keccak256(&self.to_bytes()))
     }
 
     /// construct a message from a `Withdraw` event that was logged on `side`
@@ -97,11 +97,11 @@ mod test {
     #[test]
     fn test_message_to_main_to_bytes() {
         let side_tx_hash: H256 =
-            "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".into();
+            "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e2".parse().unwrap();
         let message_id: H256 =
-            "0x75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff".into();
-        let sender: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0aa".into();
-        let recipient: Address = "0xeac4a655451e159313c3641e29824e77d6fcb0bb".into();
+            "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ff".parse().unwrap();
+        let sender: Address = "eac4a655451e159313c3641e29824e77d6fcb0aa".parse().unwrap();
+        let recipient: Address = "eac4a655451e159313c3641e29824e77d6fcb0bb".parse().unwrap();
 
         let message = MessageToMain {
             side_tx_hash,
@@ -127,10 +127,10 @@ mod test {
                 return TestResult::discard();
             }
 
-            let side_tx_hash: H256 = side_tx_hash_raw.as_slice().into();
-            let message_id: H256 = message_id_raw.as_slice().into();
-            let sender: Address = sender_raw.as_slice().into();
-            let recipient: Address = recipient_raw.as_slice().into();
+            let side_tx_hash = H256::from_slice(side_tx_hash_raw.as_slice());
+            let message_id = H256::from_slice(message_id_raw.as_slice());
+            let sender = Address::from_slice(sender_raw.as_slice());
+            let recipient = Address::from_slice(recipient_raw.as_slice());
 
             let message = MessageToMain {
                 side_tx_hash,

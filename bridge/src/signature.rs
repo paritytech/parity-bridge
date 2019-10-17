@@ -68,8 +68,8 @@ mod test {
                 return TestResult::discard();
             }
 
-            let r: H256 = r_raw.as_slice().into();
-            let s: H256 = s_raw.as_slice().into();
+            let r = H256::from_slice(r_raw.as_slice());
+            let s = H256::from_slice(s_raw.as_slice());
             let signature = Signature { v, r, s };
             assert_eq!(v, signature.v);
             assert_eq!(r, signature.r);

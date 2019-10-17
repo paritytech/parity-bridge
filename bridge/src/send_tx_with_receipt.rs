@@ -350,7 +350,7 @@ mod tests {
                 poll_interval: Duration::from_secs(0),
                 confirmations: 2,
                 transaction: TransactionRequest {
-                    from: "0x006b5dda44dc2606f07ad86c9190fb54fd905f6d".into(),
+                    from: "006b5dda44dc2606f07ad86c9190fb54fd905f6d".parse().unwrap(),
                     to: None,
                     gas: Some(0xf4240.into()),
                     gas_price: Some(0.into()),
@@ -367,17 +367,18 @@ mod tests {
             receipt,
             TransactionReceipt {
                 transaction_hash:
-                    "0x36efc16910ea67a2425a1e75f7e39e3c6a94f5763c68a47258f552481e20cd34".into(),
+                    "36efc16910ea67a2425a1e75f7e39e3c6a94f5763c68a47258f552481e20cd34".parse().unwrap(),
                 transaction_index: 0x4.into(),
                 block_hash: Some(
-                    "0xe0bdcf35b14a292d2998308d9b3fdea93a8c3d9c0b6c824c633fb9b15f9c3919".into()
+                    "e0bdcf35b14a292d2998308d9b3fdea93a8c3d9c0b6c824c633fb9b15f9c3919".parse().unwrap()
                 ),
                 block_number: Some(0x1015.into()),
                 cumulative_gas_used: 0x1c1999.into(),
-                gas_used: 0xcdb5d.into(),
-                contract_address: Some("0xb1ac3a5584519119419a8e56422d912c782d8e5b".into()),
+                gas_used: "cdb5d".parse().ok(),
+                contract_address: Some("b1ac3a5584519119419a8e56422d912c782d8e5b".parse().unwrap()),
                 logs: vec![],
                 status: Some(1.into()),
+                logs_bloom: Default::default(),
             }
         );
         assert_eq!(transport.actual_requests(), transport.expected_requests());

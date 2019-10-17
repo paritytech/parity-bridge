@@ -39,6 +39,7 @@ use tokio_core::reactor::Core;
 use bridge::helpers::AsyncCall;
 use rustc_hex::FromHex;
 use web3::transports::http::Http;
+use web3::types::Address;
 
 const TMP_PATH: &str = "tmp";
 const MAX_PARALLEL_REQUESTS: usize = 10;
@@ -103,6 +104,7 @@ fn test_basic_deposit_then_withdraw() {
     if Path::new(TMP_PATH).exists() {
         std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
     }
+    let _ = std::fs::create_dir_all(TMP_PATH).expect("failed to create tmp dir");
     let _tmp_dir = tempfile::TempDir::new_in(TMP_PATH).expect("failed to create tmp dir");
 
     println!("\nbuild the deploy executable so we can run it later\n");
@@ -257,8 +259,8 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(authority_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(authority_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: Some(1000000000.into()),
@@ -275,8 +277,8 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(authority_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(authority_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: Some(1000000000.into()),
@@ -295,7 +297,7 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
+                from: user_address.parse().unwrap(),
                 to: None,
                 gas: None,
                 gas_price: None,
@@ -318,7 +320,7 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
+                from: user_address.parse().unwrap(),
                 to: None,
                 gas: None,
                 gas_price: None,
@@ -341,15 +343,15 @@ fn test_basic_deposit_then_withdraw() {
 
     let (payload, _) = bridge_contracts::main::functions::relay_message::call(
         data_to_relay_to_side.clone(),
-        main_recipient_address,
+        main_recipient_address.parse::<Address>().unwrap(),
     );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(main_contract_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(main_contract_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: None,
@@ -372,7 +374,7 @@ fn test_basic_deposit_then_withdraw() {
     let response = event_loop
         .run(AsyncCall::new(
             &side_transport,
-            side_recipient_address.into(),
+            side_recipient_address.parse().unwrap(),
             TIMEOUT,
             payload,
             decoder,
@@ -388,15 +390,15 @@ fn test_basic_deposit_then_withdraw() {
 
     let (payload, _) = bridge_contracts::side::functions::relay_message::call(
         data_to_relay_to_main.clone(),
-        main_recipient_address,
+        main_recipient_address.parse::<Address>().unwrap(),
     );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(side_contract_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(side_contract_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: None,
@@ -436,7 +438,7 @@ fn test_basic_deposit_then_withdraw() {
     let response = event_loop
         .run(AsyncCall::new(
             &main_transport,
-            main_recipient_address.into(),
+            main_recipient_address.parse().unwrap(),
             TIMEOUT,
             payload,
             decoder,

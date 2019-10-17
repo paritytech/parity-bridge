@@ -228,7 +228,7 @@ mod tests {
             poll_interval: Duration::from_secs(1),
             confirmations: 12,
             transport: transport.clone(),
-            contract_address: "0000000000000000000000000000000000000001".into(),
+            contract_address: "0000000000000000000000000000000000000001".parse().unwrap(),
             after: 3,
             filter: contracts::main::events::relay_message::filter(),
         });
@@ -283,7 +283,7 @@ mod tests {
             poll_interval: Duration::from_secs(1),
             confirmations: 12,
             transport: transport.clone(),
-            contract_address: "0000000000000000000000000000000000000001".into(),
+            contract_address: "0000000000000000000000000000000000000001".parse().unwrap(),
             after: 3,
             filter: contracts::main::events::relay_message::filter(),
         });
@@ -296,10 +296,10 @@ mod tests {
             vec![
                 LogsInBlockRange { from: 4, to: 4101, logs: vec![
                     Log {
-                        address: "0x0000000000000000000000000000000000000cc1".into(),
+                        address: "0000000000000000000000000000000000000cc1".parse().unwrap(),
                         topics: deposit_topic.into(),
                         data: Bytes("000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap()),
-                        transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
+                        transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
                         block_hash: None,
                         block_number: None,
                         transaction_index: None,
