@@ -141,13 +141,13 @@ fn test_basic_deposit_then_withdraw() {
     // A address containing a lot of tokens (0x00a329c0648769a73afac7f9381e08fb43dbea72) should be
     // automatically added with a password being an empty string.
     // source: https://paritytech.github.io/wiki/Private-development-chain.html
-    let user_address = "0x00a329c0648769a73afac7f9381e08fb43dbea72";
-    let authority_address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e";
+    let user_address = "00a329c0648769a73afac7f9381e08fb43dbea72";
+    let authority_address = "00bd138abd70e2f00903268f3db08f2d25677c9e";
 
-    let main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let main_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
-    let side_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
+    let main_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    let side_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    let main_recipient_address = "b4c79dab8f259c7aee6e5b2aa729821864227e84";
+    let side_recipient_address = "b4c79dab8f259c7aee6e5b2aa729821864227e84";
 
     let data_to_relay_to_side = vec![0u8, 1, 5];
     let data_to_relay_to_main = vec![0u8, 1, 5, 7];
@@ -190,7 +190,7 @@ fn test_basic_deposit_then_withdraw() {
     // start a parity node that represents the main chain with accounts unlocked
     let mut parity_main = parity_main_command()
         .arg("--unlock")
-        .arg(format!("{},{}", user_address, authority_address))
+        .arg(format!("0x{},0x{}", user_address, authority_address))
         .arg("--password")
         .arg("password.txt")
         .spawn()
@@ -199,7 +199,7 @@ fn test_basic_deposit_then_withdraw() {
     // start a parity node that represents the side chain with accounts unlocked
     let mut parity_side = parity_side_command()
         .arg("--unlock")
-        .arg(format!("{},{}", user_address, authority_address))
+        .arg(format!("0x{},0x{}", user_address, authority_address))
         .arg("--password")
         .arg("password.txt")
         .spawn()
