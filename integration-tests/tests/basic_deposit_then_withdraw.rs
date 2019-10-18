@@ -51,10 +51,10 @@ fn parity_main_command() -> Command {
         .arg("--base-path")
         .arg(format!("{}/main", TMP_PATH))
         .arg("--chain")
-        .arg("dev")
+        .arg("./spec.json")
         .arg("--no-ipc")
         .arg("--logging")
-        .arg("rpc=trace")
+        .arg("rpc=trace,miner=trace,executive=trace")
         .arg("--jsonrpc-port")
         .arg("8550")
         .arg("--jsonrpc-apis")
@@ -78,10 +78,10 @@ fn parity_side_command() -> Command {
         .arg("--base-path")
         .arg(format!("{}/side", TMP_PATH))
         .arg("--chain")
-        .arg("dev")
+        .arg("./spec.json")
         .arg("--no-ipc")
         .arg("--logging")
-        .arg("rpc=trace")
+        .arg("rpc=trace,miner=trace,executive=trace")
         .arg("--jsonrpc-port")
         .arg("8551")
         .arg("--jsonrpc-apis")
@@ -138,44 +138,46 @@ fn test_basic_deposit_then_withdraw() {
     // give the clients time to start up
     thread::sleep(Duration::from_millis(3000));
 
-    // A address containing a lot of tokens (0x00a329c0648769a73afac7f9381e08fb43dbea72) should be
-    // automatically added with a password being an empty string.
-    // source: https://paritytech.github.io/wiki/Private-development-chain.html
-    let user_address = "00a329c0648769a73afac7f9381e08fb43dbea72";
+    let user_address = "004ec07d2329997267ec62b4166639513386f32e";
     let authority_address = "00bd138abd70e2f00903268f3db08f2d25677c9e";
 
     let main_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
     let side_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let main_recipient_address = "b4c79dab8f259c7aee6e5b2aa729821864227e84";
-    let side_recipient_address = "b4c79dab8f259c7aee6e5b2aa729821864227e84";
+    // Note this has to be the first contract created by `user_address`
+    let main_recipient_address = "5f3dba5e45909d1bf126aa0af0601b1a369dbfd7";
+    let side_recipient_address = "5f3dba5e45909d1bf126aa0af0601b1a369dbfd7";
 
     let data_to_relay_to_side = vec![0u8, 1, 5];
     let data_to_relay_to_main = vec![0u8, 1, 5, 7];
 
+    fn new_account(phrase: &str, port: u16) {
+        // this is currently not supported in web3 crate so we have to use curl
+        let exit_status = Command::new("curl")
+            .arg("--data")
+            .arg(format!(
+                "{}{}{}",
+                r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":[""#,
+                phrase,
+                r#"", ""],"id":0}"#,
+            ))
+            .arg("-H").arg("Content-Type: application/json")
+            .arg("-X").arg("POST")
+            .arg(format!("localhost:{}", port))
+            .status()
+            .expect("failed to create authority account on main");
+        assert!(exit_status.success());
+    }
+
     // create authority account on main
-    // this is currently not supported in web3 crate so we have to use curl
-    let exit_status = Command::new("curl")
-		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
-		.arg("-H").arg("Content-Type: application/json")
-		.arg("-X").arg("POST")
-		.arg("localhost:8550")
-		.status()
-		.expect("failed to create authority account on main");
-    assert!(exit_status.success());
+    new_account("node0", 8550);
+    new_account("user", 8550);
     // TODO [snd] assert that created address matches authority_address
 
     // TODO don't shell out to curl
     // create authority account on side
-    // this is currently not supported in web3 crate so we have to use curl
-    let exit_status = Command::new("curl")
-		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
-		.arg("-H").arg("Content-Type: application/json")
-		.arg("-X").arg("POST")
-		.arg("localhost:8551")
-		.status()
-		.expect("failed to create/unlock authority account on side");
-    assert!(exit_status.success());
-    // TODO [snd] assert that created address matches authority_address
+    new_account("node0", 8551);
+    new_account("user", 8551);
+   // TODO [snd] assert that created address matches authority_address
 
     // give the operations time to complete
     thread::sleep(Duration::from_millis(5000));
