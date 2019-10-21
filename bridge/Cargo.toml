@@ -18,7 +18,7 @@ ethabi = "9.0"
 rustc-hex = "1.0"
 log = "0.4"
 ethereum-types = "0.8"
-pretty_assertions = "0.2.1"
+pretty_assertions = "0.6.1"
 tiny-keccak = "1.3"
 
 [dev-dependencies]
