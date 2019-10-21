@@ -160,8 +160,10 @@ fn test_basic_deposit_then_withdraw() {
                 phrase,
                 r#"", ""],"id":0}"#,
             ))
-            .arg("-H").arg("Content-Type: application/json")
-            .arg("-X").arg("POST")
+            .arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-X")
+            .arg("POST")
             .arg(format!("localhost:{}", port))
             .status()
             .expect("failed to create authority account on main");
@@ -177,7 +179,7 @@ fn test_basic_deposit_then_withdraw() {
     // create authority account on side
     new_account("node0", 8551);
     new_account("user", 8551);
-   // TODO [snd] assert that created address matches authority_address
+    // TODO [snd] assert that created address matches authority_address
 
     // give the operations time to complete
     thread::sleep(Duration::from_millis(5000));
