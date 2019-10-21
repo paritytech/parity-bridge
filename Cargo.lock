@@ -1198,7 +1198,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "solc"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/rust_solc#a07c55c2fe37ff20025ea849f347536bc79f4b50"
+source = "git+https://github.com/paritytech/rust_solc#3b615dd39d24d956eb22a5666999172527a382f0"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
