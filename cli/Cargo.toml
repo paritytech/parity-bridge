@@ -14,6 +14,6 @@ serde_derive = "1.0"
 tokio-core = "0.1.8"
 docopt = "1.0"
 log = "0.4"
-env_logger = "0.5"
+env_logger = "0.6"
 futures = "0.1.14"
 web3 = { git = "https://github.com/tomusdrw/rust-web3" }
