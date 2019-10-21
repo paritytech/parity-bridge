@@ -15,7 +15,7 @@ toml = "0.5.3"
 web3 = { git = "https://github.com/tomusdrw/rust-web3" }
 error-chain = "0.12"
 ethabi = "9.0"
-rustc-hex = "1.0"
+rustc-hex = "2.0"
 log = "0.4"
 ethereum-types = "0.8"
 pretty_assertions = "0.6.1"
