@@ -126,19 +126,24 @@ pub struct Transactions {
 impl Transactions {
     fn from_load_struct(cfg: load::Transactions) -> Self {
         Transactions {
-            main_deploy: cfg.main_deploy
+            main_deploy: cfg
+                .main_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            side_deploy: cfg.side_deploy
+            side_deploy: cfg
+                .side_deploy
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            deposit_relay: cfg.deposit_relay
+            deposit_relay: cfg
+                .deposit_relay
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            withdraw_confirm: cfg.withdraw_confirm
+            withdraw_confirm: cfg
+                .withdraw_confirm
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
-            withdraw_relay: cfg.withdraw_relay
+            withdraw_relay: cfg
+                .withdraw_relay
                 .map(TransactionConfig::from_load_struct)
                 .unwrap_or_default(),
         }
@@ -281,7 +286,7 @@ main_deploy = { gas = "20", gas_price = "0" }
 "#;
 
         let mut expected = Config {
-            address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".into(),
+            address: "1B68Cb0B50181FC4006Ce572cF346e596E51818b".parse().unwrap(),
             txs: Transactions::default(),
             main: NodeConfig {
                 http: "http://localhost:8545".into(),
@@ -309,9 +314,9 @@ main_deploy = { gas = "20", gas_price = "0" }
             },
             authorities: Authorities {
                 accounts: vec![
-                    "0000000000000000000000000000000000000001".into(),
-                    "0000000000000000000000000000000000000002".into(),
-                    "0000000000000000000000000000000000000003".into(),
+                    "0000000000000000000000000000000000000001".parse().unwrap(),
+                    "0000000000000000000000000000000000000002".parse().unwrap(),
+                    "0000000000000000000000000000000000000003".parse().unwrap(),
                 ],
                 required_signatures: 2,
             },
@@ -358,7 +363,7 @@ accounts = [
 required_signatures = 2
 "#;
         let expected = Config {
-            address: "0000000000000000000000000000000000000001".into(),
+            address: "0000000000000000000000000000000000000001".parse().unwrap(),
             txs: Transactions::default(),
             main: NodeConfig {
                 http: "".into(),
@@ -386,9 +391,9 @@ required_signatures = 2
             },
             authorities: Authorities {
                 accounts: vec![
-                    "0000000000000000000000000000000000000001".into(),
-                    "0000000000000000000000000000000000000002".into(),
-                    "0000000000000000000000000000000000000003".into(),
+                    "0000000000000000000000000000000000000001".parse().unwrap(),
+                    "0000000000000000000000000000000000000002".parse().unwrap(),
+                    "0000000000000000000000000000000000000003".parse().unwrap(),
                 ],
                 required_signatures: 2,
             },

@@ -67,11 +67,10 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
         // on each poll we loop until there are neither new logs
         // nor newly completed relays
         loop {
-            let maybe_logs_in_block_range = try_maybe_stream!(
-                self.stream_of_logs
-                    .poll()
-                    .chain_err(|| "RelayStream: fetching logs failed")
-            );
+            let maybe_logs_in_block_range = try_maybe_stream!(self
+                .stream_of_logs
+                .poll()
+                .chain_err(|| "RelayStream: fetching logs failed"));
 
             if let Some(ref logs_in_block_range) = maybe_logs_in_block_range {
                 // if there are new logs, create futures from them
@@ -84,11 +83,10 @@ impl<S: Stream<Item = LogsInBlockRange, Error = error::Error>, F: LogToFuture> S
                 }
             }
 
-            let maybe_fully_relayed_until_block = try_maybe_stream!(
-                self.ordered_stream
-                    .poll()
-                    .chain_err(|| "RelayStream: relaying logs failed")
-            );
+            let maybe_fully_relayed_until_block = try_maybe_stream!(self
+                .ordered_stream
+                .poll()
+                .chain_err(|| "RelayStream: relaying logs failed"));
 
             if let Some((fully_relayed_until_block, _)) = maybe_fully_relayed_until_block {
                 // all relay futures for this block or before have completed

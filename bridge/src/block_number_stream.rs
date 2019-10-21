@@ -14,21 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::time::Duration;
 use error::{self, ResultExt};
-use tokio_timer::{Interval, Timeout, Timer};
 use futures::future::FromErr;
 use futures::{Async, Future, Poll, Stream};
+use std::time::Duration;
+use tokio_timer::{Interval, Timeout, Timer};
 use web3;
 use web3::api::Namespace;
-use web3::Transport;
 use web3::helpers::CallFuture;
-use web3::types::U256;
+use web3::types::U64;
+use web3::Transport;
 
 /// Block Number Stream state.
 enum State<T: Transport> {
     AwaitInterval,
-    AwaitBlockNumber(Timeout<FromErr<CallFuture<U256, T::Out>, error::Error>>),
+    AwaitBlockNumber(Timeout<FromErr<CallFuture<U64, T::Out>, error::Error>>),
 }
 
 pub struct BlockNumberStreamOptions<T> {
@@ -75,9 +75,10 @@ impl<T: Transport> Stream for BlockNumberStream<T> {
             let (next_state, value_to_yield) = match self.state {
                 State::AwaitInterval => {
                     // wait until `interval` has passed
-                    let _ = try_stream!(self.poll_interval.poll().chain_err(|| format!(
-                        "BlockNumberStream polling interval failed",
-                    )));
+                    let _ = try_stream!(self
+                        .poll_interval
+                        .poll()
+                        .chain_err(|| format!("BlockNumberStream polling interval failed",)));
                     info!("BlockNumberStream polling last block number");
                     let future = web3::api::Eth::new(&self.transport).block_number();
                     let next_state = State::AwaitBlockNumber(
@@ -86,12 +87,14 @@ impl<T: Transport> Stream for BlockNumberStream<T> {
                     (next_state, None)
                 }
                 State::AwaitBlockNumber(ref mut future) => {
-                    let last_block = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "BlockNumberStream: fetching of last block number failed")
-                    ).as_u64();
-                    info!("BlockNumberStream: fetched last block number {}", last_block);
+                    let last_block = try_ready!(future
+                        .poll()
+                        .chain_err(|| "BlockNumberStream: fetching of last block number failed"))
+                    .as_u64();
+                    info!(
+                        "BlockNumberStream: fetched last block number {}",
+                        last_block
+                    );
                     // subtraction that saturates at zero
                     let last_confirmed_block = last_block.saturating_sub(self.confirmations as u64);
 
@@ -116,8 +119,8 @@ impl<T: Transport> Stream for BlockNumberStream<T> {
 
 #[cfg(test)]
 mod tests {
-    use tokio_core::reactor::Core;
     use super::*;
+    use tokio_core::reactor::Core;
 
     #[test]
     fn test_block_number_stream() {
@@ -145,12 +148,11 @@ mod tests {
         });
 
         let mut event_loop = Core::new().unwrap();
-        let block_numbers = event_loop.run(block_number_stream.take(3).collect()).unwrap();
+        let block_numbers = event_loop
+            .run(block_number_stream.take(3).collect())
+            .unwrap();
 
-        assert_eq!(
-            block_numbers,
-            vec![0x1011 - 12, 0x1012 - 12, 0x1015 - 12]
-        );
+        assert_eq!(block_numbers, vec![0x1011 - 12, 0x1012 - 12, 0x1015 - 12]);
         assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
 }

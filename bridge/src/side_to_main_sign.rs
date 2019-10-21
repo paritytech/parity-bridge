@@ -26,11 +26,13 @@ use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Bytes, H256, H520, Log};
+use web3::types::{Bytes, Log, H256, H520};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>),
+    AwaitCheckAlreadySigned(
+        AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>,
+    ),
     AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
     AwaitTransaction(AsyncTransaction<T>),
 }
@@ -48,10 +50,12 @@ pub struct SideToMainSign<T: Transport> {
 
 impl<T: Transport> SideToMainSign<T> {
     pub fn new(log: &Log, side: SideContract<T>) -> Self {
-        let tx_hash = log.transaction_hash
+        let tx_hash = log
+            .transaction_hash
             .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message = MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
+        let message =
+            MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
         let message_bytes = message.to_bytes();
 
         assert_eq!(
@@ -83,11 +87,9 @@ impl<T: Transport> Future for SideToMainSign<T> {
         loop {
             let next_state = match self.state {
                 State::AwaitCheckAlreadySigned(ref mut future) => {
-                    let is_already_signed = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "WithdrawConfirm: message signing failed")
-                    );
+                    let is_already_signed = try_ready!(future
+                        .poll()
+                        .chain_err(|| "WithdrawConfirm: message signing failed"));
                     if is_already_signed {
                         return Ok(Async::Ready(None));
                     }
@@ -98,29 +100,25 @@ impl<T: Transport> Future for SideToMainSign<T> {
                     let timeout_future =
                         Timer::default().timeout(inner_future, self.side.request_timeout);
                     State::AwaitSignature(timeout_future)
-                },
+                }
                 State::AwaitSignature(ref mut future) => {
-                    let signature_bytes = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "WithdrawConfirm: message signing failed")
-                    );
+                    let signature_bytes = try_ready!(future
+                        .poll()
+                        .chain_err(|| "WithdrawConfirm: message signing failed"));
                     info!(
                         "{:?} - step 2/3 - message signed. about to send transaction",
                         self.tx_hash
                     );
 
-                    let signature = Signature::from_bytes(&signature_bytes)?;
+                    let signature = Signature::from_bytes(&signature_bytes.as_bytes())?;
 
                     let future = self.side.submit_signed_message(&self.message, &signature);
                     State::AwaitTransaction(future)
-                },
+                }
                 State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "WithdrawConfirm: sending transaction failed")
-                    );
+                    let tx_hash = try_ready!(future
+                        .poll()
+                        .chain_err(|| "WithdrawConfirm: sending transaction failed"));
                     info!(
                         "{:?} - step 3/3 - DONE - transaction sent {:?}",
                         self.tx_hash, tx_hash
@@ -161,23 +159,26 @@ mod tests {
         let topic = contracts::side::events::relay_message::filter().topic0;
 
         let log = contracts::side::logs::RelayMessage {
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
-            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
-            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+                .parse()
+                .unwrap(),
+            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
-            ethabi::Token::FixedBytes(log.message_id.to_vec()),
+            ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
             ethabi::Token::Address(log.sender),
             ethabi::Token::Address(log.recipient),
         ]);
 
-        let log_tx_hash =
-            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
-            address: "0000000000000000000000000000000000000001".into(),
+            address: "0000000000000000000000000000000000000001".parse().unwrap(),
             topics: topic.into(),
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
@@ -190,10 +191,11 @@ mod tests {
             removed: None,
         };
 
-        let authority_address: Address = "0000000000000000000000000000000000000001".into();
+        let authority_address: Address =
+            "0000000000000000000000000000000000000001".parse().unwrap();
 
-        let tx_hash = "0x1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-        let side_contract_address = "0000000000000000000000000000000000000dd1".into();
+        let tx_hash = "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+        let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
 
         let message = MessageToMain {
             side_tx_hash: log_tx_hash,
@@ -218,24 +220,24 @@ mod tests {
             "eth_call" =>
                 req => json!([{
                     "data": format!("0x{}", call_data.to_hex()),
-                    "to": side_contract_address,
+                    "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
                 res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
             "eth_sign" =>
                 req => json!([
-                    authority_address,
+                    format!("0x{:x}", authority_address),
                     format!("0x{}", message.to_bytes().to_hex())
                 ]),
                 res => json!(format!("0x{}", signature));
             "eth_sendTransaction" =>
                 req => json!([{
                     "data": format!("0x{}", tx_data.to_hex()),
-                    "from": format!("0x{}", authority_address.to_hex()),
+                    "from": format!("0x{:x}", authority_address),
                     "gas": "0xfd",
                     "gasPrice": "0xa0",
-                    "to": side_contract_address,
+                    "to": format!("0x{:x}", side_contract_address),
                 }]),
-                res => json!(tx_hash);
+                res => json!(format!("0x{}", tx_hash));
         );
 
         let side_contract = SideContract {
@@ -256,7 +258,7 @@ mod tests {
 
         let mut event_loop = Core::new().unwrap();
         let result = event_loop.run(future).unwrap();
-        assert_eq!(result, Some(tx_hash.into()));
+        assert_eq!(result, Some(tx_hash.parse().unwrap()));
 
         assert_eq!(transport.actual_requests(), transport.expected_requests());
     }
@@ -266,23 +268,26 @@ mod tests {
         let topic = contracts::side::events::relay_message::filter().topic0;
 
         let log = contracts::side::logs::RelayMessage {
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff".into(),
-            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".into(),
-            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".into(),
+            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+                .parse()
+                .unwrap(),
+            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
+            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
         };
 
         // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
         let log_data = ethabi::encode(&[
-            ethabi::Token::FixedBytes(log.message_id.to_vec()),
+            ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
             ethabi::Token::Address(log.sender),
             ethabi::Token::Address(log.recipient),
         ]);
 
-        let log_tx_hash =
-            "0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into();
+        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+            .parse()
+            .unwrap();
 
         let raw_log = Log {
-            address: "0000000000000000000000000000000000000001".into(),
+            address: "0000000000000000000000000000000000000001".parse().unwrap(),
             topics: topic.into(),
             data: Bytes(log_data),
             transaction_hash: Some(log_tx_hash),
@@ -295,9 +300,10 @@ mod tests {
             removed: None,
         };
 
-        let authority_address: Address = "0000000000000000000000000000000000000001".into();
+        let authority_address: Address =
+            "0000000000000000000000000000000000000001".parse().unwrap();
 
-        let side_contract_address = "0000000000000000000000000000000000000dd1".into();
+        let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
 
         let message = MessageToMain {
             side_tx_hash: log_tx_hash,

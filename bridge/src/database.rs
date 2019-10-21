@@ -50,11 +50,13 @@ impl State {
         main_contract_deployment_receipt: &TransactionReceipt,
         side_contract_deployment_receipt: &TransactionReceipt,
     ) -> Self {
-        let main_block_number = main_contract_deployment_receipt.block_number
+        let main_block_number = main_contract_deployment_receipt
+            .block_number
             .expect("main contract creation receipt must have a block number; qed")
             .as_u64();
 
-        let side_block_number = side_contract_deployment_receipt.block_number
+        let side_block_number = side_contract_deployment_receipt
+            .block_number
             .expect("main contract creation receipt must have a block number; qed")
             .as_u64();
 

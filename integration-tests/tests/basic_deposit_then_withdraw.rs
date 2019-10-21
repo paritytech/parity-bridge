@@ -24,10 +24,10 @@ extern crate bridge;
 extern crate bridge_contracts;
 extern crate ethabi;
 extern crate ethereum_types;
-extern crate tempdir;
+extern crate rustc_hex;
+extern crate tempfile;
 extern crate tokio_core;
 extern crate web3;
-extern crate rustc_hex;
 
 use std::path::Path;
 use std::process::Command;
@@ -36,9 +36,10 @@ use std::time::Duration;
 
 use tokio_core::reactor::Core;
 
-use rustc_hex::FromHex;
 use bridge::helpers::AsyncCall;
+use rustc_hex::FromHex;
 use web3::transports::http::Http;
+use web3::types::Address;
 
 const TMP_PATH: &str = "tmp";
 const MAX_PARALLEL_REQUESTS: usize = 10;
@@ -50,10 +51,10 @@ fn parity_main_command() -> Command {
         .arg("--base-path")
         .arg(format!("{}/main", TMP_PATH))
         .arg("--chain")
-        .arg("dev")
+        .arg("./spec.json")
         .arg("--no-ipc")
         .arg("--logging")
-        .arg("rpc=trace")
+        .arg("rpc=trace,miner=trace,executive=trace")
         .arg("--jsonrpc-port")
         .arg("8550")
         .arg("--jsonrpc-apis")
@@ -77,10 +78,10 @@ fn parity_side_command() -> Command {
         .arg("--base-path")
         .arg(format!("{}/side", TMP_PATH))
         .arg("--chain")
-        .arg("dev")
+        .arg("./spec.json")
         .arg("--no-ipc")
         .arg("--logging")
-        .arg("rpc=trace")
+        .arg("rpc=trace,miner=trace,executive=trace")
         .arg("--jsonrpc-port")
         .arg("8551")
         .arg("--jsonrpc-apis")
@@ -103,29 +104,26 @@ fn test_basic_deposit_then_withdraw() {
     if Path::new(TMP_PATH).exists() {
         std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
     }
-    let _tmp_dir = tempdir::TempDir::new(TMP_PATH).expect("failed to create tmp dir");
+    let _ = std::fs::create_dir_all(TMP_PATH).expect("failed to create tmp dir");
+    let _tmp_dir = tempfile::TempDir::new_in(TMP_PATH).expect("failed to create tmp dir");
 
     println!("\nbuild the deploy executable so we can run it later\n");
-    assert!(
-        Command::new("cargo")
-            .env("RUST_BACKTRACE", "1")
-            .current_dir("../deploy")
-            .arg("build")
-            .status()
-            .expect("failed to build parity-bridge-deploy executable")
-            .success()
-    );
+    assert!(Command::new("cargo")
+        .env("RUST_BACKTRACE", "1")
+        .current_dir("../deploy")
+        .arg("build")
+        .status()
+        .expect("failed to build parity-bridge-deploy executable")
+        .success());
 
     println!("\nbuild the parity-bridge executable so we can run it later\n");
-    assert!(
-        Command::new("cargo")
-            .env("RUST_BACKTRACE", "1")
-            .current_dir("../cli")
-            .arg("build")
-            .status()
-            .expect("failed to build parity-bridge executable")
-            .success()
-    );
+    assert!(Command::new("cargo")
+        .env("RUST_BACKTRACE", "1")
+        .current_dir("../cli")
+        .arg("build")
+        .status()
+        .expect("failed to build parity-bridge executable")
+        .success());
 
     // start a parity node that represents the main chain
     let mut parity_main = parity_main_command()
@@ -140,43 +138,47 @@ fn test_basic_deposit_then_withdraw() {
     // give the clients time to start up
     thread::sleep(Duration::from_millis(3000));
 
-    // A address containing a lot of tokens (0x00a329c0648769a73afac7f9381e08fb43dbea72) should be
-    // automatically added with a password being an empty string.
-    // source: https://paritytech.github.io/wiki/Private-development-chain.html
-    let user_address = "0x00a329c0648769a73afac7f9381e08fb43dbea72";
-    let authority_address = "0x00bd138abd70e2f00903268f3db08f2d25677c9e";
+    let user_address = "004ec07d2329997267ec62b4166639513386f32e";
+    let authority_address = "00bd138abd70e2f00903268f3db08f2d25677c9e";
 
-    let main_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let side_contract_address = "0xebd3944af37ccc6b67ff61239ac4fef229c8f69f";
-    let main_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
-    let side_recipient_address = "0xb4c79dab8f259c7aee6e5b2aa729821864227e84";
+    let main_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    let side_contract_address = "ebd3944af37ccc6b67ff61239ac4fef229c8f69f";
+    // Note this has to be the first contract created by `user_address`
+    let main_recipient_address = "5f3dba5e45909d1bf126aa0af0601b1a369dbfd7";
+    let side_recipient_address = "5f3dba5e45909d1bf126aa0af0601b1a369dbfd7";
 
     let data_to_relay_to_side = vec![0u8, 1, 5];
     let data_to_relay_to_main = vec![0u8, 1, 5, 7];
 
+    fn new_account(phrase: &str, port: u16) {
+        // this is currently not supported in web3 crate so we have to use curl
+        let exit_status = Command::new("curl")
+            .arg("--data")
+            .arg(format!(
+                "{}{}{}",
+                r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":[""#,
+                phrase,
+                r#"", ""],"id":0}"#,
+            ))
+            .arg("-H")
+            .arg("Content-Type: application/json")
+            .arg("-X")
+            .arg("POST")
+            .arg(format!("localhost:{}", port))
+            .status()
+            .expect("failed to create authority account on main");
+        assert!(exit_status.success());
+    }
+
     // create authority account on main
-    // this is currently not supported in web3 crate so we have to use curl
-    let exit_status = Command::new("curl")
-		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
-		.arg("-H").arg("Content-Type: application/json")
-		.arg("-X").arg("POST")
-		.arg("localhost:8550")
-		.status()
-		.expect("failed to create authority account on main");
-    assert!(exit_status.success());
+    new_account("node0", 8550);
+    new_account("user", 8550);
     // TODO [snd] assert that created address matches authority_address
 
     // TODO don't shell out to curl
     // create authority account on side
-    // this is currently not supported in web3 crate so we have to use curl
-    let exit_status = Command::new("curl")
-		.arg("--data").arg(r#"{"jsonrpc":"2.0","method":"parity_newAccountFromPhrase","params":["node0", ""],"id":0}"#)
-		.arg("-H").arg("Content-Type: application/json")
-		.arg("-X").arg("POST")
-		.arg("localhost:8551")
-		.status()
-		.expect("failed to create/unlock authority account on side");
-    assert!(exit_status.success());
+    new_account("node0", 8551);
+    new_account("user", 8551);
     // TODO [snd] assert that created address matches authority_address
 
     // give the operations time to complete
@@ -192,7 +194,7 @@ fn test_basic_deposit_then_withdraw() {
     // start a parity node that represents the main chain with accounts unlocked
     let mut parity_main = parity_main_command()
         .arg("--unlock")
-        .arg(format!("{},{}", user_address, authority_address))
+        .arg(format!("0x{},0x{}", user_address, authority_address))
         .arg("--password")
         .arg("password.txt")
         .spawn()
@@ -201,7 +203,7 @@ fn test_basic_deposit_then_withdraw() {
     // start a parity node that represents the side chain with accounts unlocked
     let mut parity_side = parity_side_command()
         .arg("--unlock")
-        .arg(format!("{},{}", user_address, authority_address))
+        .arg(format!("0x{},0x{}", user_address, authority_address))
         .arg("--password")
         .arg("password.txt")
         .spawn()
@@ -213,19 +215,17 @@ fn test_basic_deposit_then_withdraw() {
     // deploy bridge contracts
 
     println!("\ndeploying contracts\n");
-    assert!(
-        Command::new("env")
-            .arg("RUST_BACKTRACE=1")
-            .arg("../target/debug/parity-bridge-deploy")
-            .env("RUST_LOG", "info")
-            .arg("--config")
-            .arg("bridge_config.toml")
-            .arg("--database")
-            .arg("tmp/bridge1_db.txt")
-            .status()
-            .expect("failed spawn parity-bridge-deploy")
-            .success()
-    );
+    assert!(Command::new("env")
+        .arg("RUST_BACKTRACE=1")
+        .arg("../target/debug/parity-bridge-deploy")
+        .env("RUST_LOG", "info")
+        .arg("--config")
+        .arg("bridge_config.toml")
+        .arg("--database")
+        .arg("tmp/bridge1_db.txt")
+        .status()
+        .expect("failed spawn parity-bridge-deploy")
+        .success());
 
     // start bridge authority 1
     let mut bridge1 = Command::new("env")
@@ -246,14 +246,16 @@ fn test_basic_deposit_then_withdraw() {
         "http://localhost:8550",
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).expect("failed to connect to main at http://localhost:8550");
+    )
+    .expect("failed to connect to main at http://localhost:8550");
 
     // connect to side
     let side_transport = Http::with_event_loop(
         "http://localhost:8551",
         &event_loop.handle(),
         MAX_PARALLEL_REQUESTS,
-    ).expect("failed to connect to side at http://localhost:8551");
+    )
+    .expect("failed to connect to side at http://localhost:8551");
 
     println!("\ngive authority some funds to do relay later\n");
 
@@ -261,8 +263,8 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(authority_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(authority_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: Some(1000000000.into()),
@@ -279,8 +281,8 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(authority_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(authority_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: Some(1000000000.into()),
@@ -299,12 +301,17 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
+                from: user_address.parse().unwrap(),
                 to: None,
                 gas: None,
                 gas_price: None,
                 value: None,
-                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                data: Some(
+                    include_str!("../../compiled_contracts/RecipientTest.bin")
+                        .from_hex()
+                        .unwrap()
+                        .into(),
+                ),
                 condition: None,
                 nonce: None,
             },
@@ -317,12 +324,17 @@ fn test_basic_deposit_then_withdraw() {
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
+                from: user_address.parse().unwrap(),
                 to: None,
                 gas: None,
                 gas_price: None,
                 value: None,
-                data: Some(include_str!("../../compiled_contracts/RecipientTest.bin").from_hex().unwrap().into()),
+                data: Some(
+                    include_str!("../../compiled_contracts/RecipientTest.bin")
+                        .from_hex()
+                        .unwrap()
+                        .into(),
+                ),
                 condition: None,
                 nonce: None,
             },
@@ -333,14 +345,17 @@ fn test_basic_deposit_then_withdraw() {
 
     println!("\nSend the message to main chain and wait for the relay to side\n");
 
-    let (payload, _) = bridge_contracts::main::functions::relay_message::call(data_to_relay_to_side.clone(), main_recipient_address);
+    let (payload, _) = bridge_contracts::main::functions::relay_message::call(
+        data_to_relay_to_side.clone(),
+        main_recipient_address.parse::<Address>().unwrap(),
+    );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &main_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(main_contract_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(main_contract_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: None,
@@ -353,7 +368,9 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    println!("\nSending message to main complete. Give it plenty of time to get mined and relayed\n");
+    println!(
+        "\nSending message to main complete. Give it plenty of time to get mined and relayed\n"
+    );
     thread::sleep(Duration::from_millis(10000));
 
     let (payload, decoder) = bridge_contracts::test::functions::last_data::call();
@@ -361,7 +378,7 @@ fn test_basic_deposit_then_withdraw() {
     let response = event_loop
         .run(AsyncCall::new(
             &side_transport,
-            side_recipient_address.into(),
+            side_recipient_address.parse().unwrap(),
             TIMEOUT,
             payload,
             decoder,
@@ -369,21 +386,23 @@ fn test_basic_deposit_then_withdraw() {
         .unwrap();
 
     assert_eq!(
-        response,
-        data_to_relay_to_side,
+        response, data_to_relay_to_side,
         "data was not relayed properly to the side chain"
     );
 
     println!("\nSend the message to side chain and wait for the relay to main\n");
 
-    let (payload, _) = bridge_contracts::side::functions::relay_message::call(data_to_relay_to_main.clone(), main_recipient_address);
+    let (payload, _) = bridge_contracts::side::functions::relay_message::call(
+        data_to_relay_to_main.clone(),
+        main_recipient_address.parse::<Address>().unwrap(),
+    );
 
     event_loop
         .run(web3::confirm::send_transaction_with_confirmation(
             &side_transport,
             web3::types::TransactionRequest {
-                from: user_address.into(),
-                to: Some(side_contract_address.into()),
+                from: user_address.parse().unwrap(),
+                to: Some(side_contract_address.parse().unwrap()),
                 gas: None,
                 gas_price: None,
                 value: None,
@@ -396,9 +415,10 @@ fn test_basic_deposit_then_withdraw() {
         ))
         .unwrap();
 
-    println!("\nSending message to side complete. Give it plenty of time to get mined and relayed\n");
+    println!(
+        "\nSending message to side complete. Give it plenty of time to get mined and relayed\n"
+    );
     thread::sleep(Duration::from_millis(15000));
-
 
     //dwd
 
@@ -422,7 +442,7 @@ fn test_basic_deposit_then_withdraw() {
     let response = event_loop
         .run(AsyncCall::new(
             &main_transport,
-            main_recipient_address.into(),
+            main_recipient_address.parse().unwrap(),
             TIMEOUT,
             payload,
             decoder,
@@ -430,8 +450,7 @@ fn test_basic_deposit_then_withdraw() {
         .unwrap();
 
     assert_eq!(
-        response,
-        data_to_relay_to_main,
+        response, data_to_relay_to_main,
         "data was not relayed properly to the main chain"
     );
 

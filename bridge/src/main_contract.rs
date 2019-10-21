@@ -17,7 +17,7 @@ use config::Config;
 use contracts;
 use database::State;
 use ethabi::FunctionOutputDecoder;
-use ethereum_types::{Address, U256, H256};
+use ethereum_types::{Address, H256, U256};
 use helpers::{AsyncCall, AsyncTransaction};
 use log_stream::{LogStream, LogStreamOptions};
 use message_to_main::MessageToMain;
@@ -50,7 +50,11 @@ impl<T: Transport> MainContract<T> {
         }
     }
 
-    pub fn call<F: FunctionOutputDecoder>(&self, payload: Vec<u8>, output_decoder: F) -> AsyncCall<T, F> {
+    pub fn call<F: FunctionOutputDecoder>(
+        &self,
+        payload: Vec<u8>,
+        output_decoder: F,
+    ) -> AsyncCall<T, F> {
         AsyncCall::new(
             &self.transport,
             self.contract_address,
@@ -60,7 +64,9 @@ impl<T: Transport> MainContract<T> {
         )
     }
 
-    pub fn is_main_contract(&self) -> AsyncCall<T, contracts::main::functions::is_main_bridge_contract::Decoder> {
+    pub fn is_main_contract(
+        &self,
+    ) -> AsyncCall<T, contracts::main::functions::is_main_bridge_contract::Decoder> {
         let (payload, decoder) = contracts::main::functions::is_main_bridge_contract::call();
         self.call(payload, decoder)
     }
@@ -79,7 +85,7 @@ impl<T: Transport> MainContract<T> {
             message.side_tx_hash,
             data,
             message.sender,
-            message.recipient
+            message.recipient,
         );
 
         AsyncTransaction::new(
@@ -107,7 +113,10 @@ impl<T: Transport> MainContract<T> {
         })
     }
 
-    pub fn relayed_message_by_id(&self, id: H256) -> AsyncCall<T, contracts::main::functions::relayed_messages::Decoder> {
+    pub fn relayed_message_by_id(
+        &self,
+        id: H256,
+    ) -> AsyncCall<T, contracts::main::functions::relayed_messages::Decoder> {
         let (payload, decoder) = contracts::main::functions::relayed_messages::call(id);
         self.call(payload, decoder)
     }

@@ -17,7 +17,7 @@
 //! various helper functions
 
 use error::{self, ResultExt};
-use ethabi::{self, RawLog, FunctionOutputDecoder};
+use ethabi::{self, FunctionOutputDecoder, RawLog};
 use futures::future::FromErr;
 use futures::{Async, Future, Poll, Stream};
 use serde::de::Error;
@@ -26,11 +26,14 @@ use std::time::Duration;
 use tokio_timer::{Timeout, Timer};
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Address, Bytes, CallRequest, H256, TransactionRequest, U256};
+use web3::types::{Address, Bytes, CallRequest, TransactionRequest, H256, U256};
 use web3::{self, Transport};
 
 /// attempts to convert a raw `web3_log` into the ethabi log type of a specific `event`
-pub fn parse_log<T: Fn(RawLog) -> ethabi::Result<L>, L>(parse: T, web3_log: &web3::types::Log) -> ethabi::Result<L> {
+pub fn parse_log<T: Fn(RawLog) -> ethabi::Result<L>, L>(
+    parse: T,
+    web3_log: &web3::types::Log,
+) -> ethabi::Result<L> {
     let ethabi_log = RawLog {
         topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
         data: web3_log.data.0.clone(),
@@ -49,7 +52,13 @@ pub struct AsyncCall<T: Transport, F: FunctionOutputDecoder> {
 impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
     /// call `function` at `contract_address`.
     /// returns a `Future` that resolves with the decoded output of `function`.
-    pub fn new(transport: &T, contract_address: Address, timeout: Duration, payload: Vec<u8>, output_decoder: F) -> Self {
+    pub fn new(
+        transport: &T,
+        contract_address: Address,
+        timeout: Duration,
+        payload: Vec<u8>,
+        output_decoder: F,
+    ) -> Self {
         let request = CallRequest {
             from: None,
             to: contract_address,
@@ -62,7 +71,10 @@ impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
             .call(request, None)
             .from_err();
         let future = Timer::default().timeout(inner_future, timeout);
-        Self { future, output_decoder }
+        Self {
+            future,
+            output_decoder,
+        }
     }
 }
 
@@ -71,12 +83,13 @@ impl<T: Transport, F: FunctionOutputDecoder> Future for AsyncCall<T, F> {
     type Error = error::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let encoded = try_ready!(
-            self.future
-                .poll()
-                .chain_err(|| "failed to poll inner web3 CallFuture future")
-        );
-        let decoded = self.output_decoder.decode(&encoded.0)
+        let encoded = try_ready!(self
+            .future
+            .poll()
+            .chain_err(|| "failed to poll inner web3 CallFuture future"));
+        let decoded = self
+            .output_decoder
+            .decode(&encoded.0)
             .chain_err(|| format!("failed to decode response {:?}", encoded))?;
         Ok(Async::Ready(decoded))
     }

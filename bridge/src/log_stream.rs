@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
+use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
 use error::{self, ResultExt};
 use ethabi;
 use futures::future::FromErr;
@@ -23,9 +24,8 @@ use tokio_timer::{Timeout, Timer};
 use web3;
 use web3::api::Namespace;
 use web3::helpers::CallFuture;
-use web3::types::{Address, FilterBuilder, H256, Log};
+use web3::types::{Address, FilterBuilder, Log, H256};
 use web3::Transport;
-use block_number_stream::{BlockNumberStream, BlockNumberStreamOptions};
 
 fn ethabi_topic_to_web3(topic: &ethabi::Topic<ethabi::Hash>) -> Option<Vec<H256>> {
     match topic {
@@ -127,15 +127,15 @@ impl<T: Transport> Stream for LogStream<T> {
         loop {
             let (next_state, value_to_yield) = match self.state {
                 State::AwaitBlockNumber => {
-                    let last_block = try_stream!(
-                        self.block_number_stream
-                            .poll()
-                            .chain_err(|| "LogStream: fetching of last confirmed block number failed")
-                    );
+                    let last_block = try_stream!(self
+                        .block_number_stream
+                        .poll()
+                        .chain_err(|| "LogStream: fetching of last confirmed block number failed"));
                     info!("LogStream: fetched confirmed block number {}", last_block);
 
                     let from = self.last_checked_block + 1;
-                    let filter = self.filter_builder
+                    let filter = self
+                        .filter_builder
                         .clone()
                         .from_block(from.into())
                         .to_block(last_block.into())
@@ -160,11 +160,9 @@ impl<T: Transport> Stream for LogStream<T> {
                     from,
                     to,
                 } => {
-                    let logs = try_ready!(
-                        future
-                            .poll()
-                            .chain_err(|| "LogStream: polling web3 logs failed")
-                    );
+                    let logs = try_ready!(future
+                        .poll()
+                        .chain_err(|| "LogStream: polling web3 logs failed"));
                     info!(
                         "LogStream (topic: {:?}): fetched {} logs from block {} to block {}",
                         self.topic,
@@ -230,7 +228,7 @@ mod tests {
             poll_interval: Duration::from_secs(1),
             confirmations: 12,
             transport: transport.clone(),
-            contract_address: "0000000000000000000000000000000000000001".into(),
+            contract_address: "0000000000000000000000000000000000000001".parse().unwrap(),
             after: 3,
             filter: contracts::main::events::relay_message::filter(),
         });
@@ -285,7 +283,7 @@ mod tests {
             poll_interval: Duration::from_secs(1),
             confirmations: 12,
             transport: transport.clone(),
-            contract_address: "0000000000000000000000000000000000000001".into(),
+            contract_address: "0000000000000000000000000000000000000001".parse().unwrap(),
             after: 3,
             filter: contracts::main::events::relay_message::filter(),
         });
@@ -298,10 +296,10 @@ mod tests {
             vec![
                 LogsInBlockRange { from: 4, to: 4101, logs: vec![
                     Log {
-                        address: "0x0000000000000000000000000000000000000cc1".into(),
+                        address: "0000000000000000000000000000000000000cc1".parse().unwrap(),
                         topics: deposit_topic.into(),
                         data: Bytes("000000000000000000000000aff3454fce5edbc8cca8697c15331677e6ebcccc00000000000000000000000000000000000000000000000000000000000000f0".from_hex().unwrap()),
-                        transaction_hash: Some("0x884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".into()),
+                        transaction_hash: Some("884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364".parse().unwrap()),
                         block_hash: None,
                         block_number: None,
                         transaction_index: None,

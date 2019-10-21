@@ -4,9 +4,9 @@ version = "0.5.0"
 authors = ["debris <marek.kotewicz@gmail.com>", "snd <kruemaxi@gmail.com>"]
 
 [dependencies]
-ethabi = "6.0"
-ethabi-derive = "6.0"
-ethabi-contract = "6.0"
+ethabi = "9.0"
+ethabi-derive = "9.0"
+ethabi-contract = "9.0"
 
 [build-dependencies]
 solc = { git = "https://github.com/paritytech/rust_solc" }
