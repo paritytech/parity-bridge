@@ -112,7 +112,7 @@ mod test {
             recipient,
         };
 
-        assert_eq!(message.to_bytes(), "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e275ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ffeac4a655451e159313c3641e29824e77d6fcb0aaeac4a655451e159313c3641e29824e77d6fcb0bb".from_hex().unwrap())
+        assert_eq!(message.to_bytes(), "75ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798e275ebc3036b5a5a758be9a8c0e6f6ed8d46c640dda39845de99d9570ba76798ffeac4a655451e159313c3641e29824e77d6fcb0aaeac4a655451e159313c3641e29824e77d6fcb0bb".from_hex::<Vec<u8>>().unwrap())
     }
 
     quickcheck! {

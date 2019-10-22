@@ -308,7 +308,7 @@ fn test_basic_deposit_then_withdraw() {
                 value: None,
                 data: Some(
                     include_str!("../../compiled_contracts/RecipientTest.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 ),
@@ -331,7 +331,7 @@ fn test_basic_deposit_then_withdraw() {
                 value: None,
                 data: Some(
                     include_str!("../../compiled_contracts/RecipientTest.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 ),

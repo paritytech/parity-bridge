@@ -253,7 +253,10 @@ mod tests {
         let main_contract_address: Address =
             "0000000000000000000000000000000000000fff".parse().unwrap();
 
-        let signature = Signature::from_bytes("8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc".from_hex().unwrap().as_slice()).unwrap();
+        let sig: Vec<u8> = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc"
+            .from_hex()
+            .unwrap();
+        let signature = Signature::from_bytes(&*sig).unwrap();
 
         let tx_hash = "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
         let data: Vec<u8> = vec![10, 0];
@@ -261,10 +264,10 @@ mod tests {
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::main::functions::accepted_messages::encode_input(log.message_hash).to_hex()),
+                    "data": format!("0x{}", contracts::main::functions::accepted_messages::encode_input(log.message_hash).to_hex::<String>()),
                     "to": format!("0x{:x}", main_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex::<String>()));
             "eth_sendTransaction" =>
                 req => json!([{
                     "data": format!(
@@ -277,7 +280,7 @@ mod tests {
                             data.clone(),
                             message.sender,
                             message.recipient,
-                        ).to_hex()
+                        ).to_hex::<String>()
                     ),
                     "from": format!("0x{:x}", authority_address),
                     "gas": "0xfd",
@@ -291,22 +294,25 @@ mod tests {
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::message::encode_input(log.message_hash).to_hex()),
+                    "data": format!("0x{}",
+                                    contracts::side::functions::message::encode_input(log.message_hash).to_hex::<String>()),
                     "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex()));
+                res => json!(format!("0x{}",
+                                     ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex::<String>()));
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::signature::encode_input(log.message_hash, 0).to_hex()),
+                    "data": format!("0x{}", contracts::side::functions::signature::encode_input(log.message_hash, 0).to_hex::<String>()),
                     "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(signature.to_bytes())]).to_hex()));
+                res => json!(format!("0x{}",
+                                     ethabi::encode(&[ethabi::Token::Bytes(signature.to_bytes())]).to_hex::<String>()));
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::relayed_messages::encode_input(message.message_id).to_hex()),
+                    "data": format!("0x{}", contracts::side::functions::relayed_messages::encode_input(message.message_id).to_hex::<String>()),
                     "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(data)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(data)]).to_hex::<String>()));
         );
 
         let main_contract = MainContract {
@@ -404,19 +410,21 @@ mod tests {
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::main::functions::accepted_messages::encode_input(log.message_hash).to_hex()),
+                    "data": format!("0x{}", contracts::main::functions::accepted_messages::encode_input(log.message_hash).to_hex::<String>()),
                     "to": main_contract_address,
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex::<String>()));
         );
 
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", contracts::side::functions::message::encode_input(log.message_hash).to_hex()),
+                    "data": format!("0x{}",
+                                    contracts::side::functions::message::encode_input(log.message_hash).to_hex::<String>()),
                     "to": side_contract_address,
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex()));
+                res => json!(format!("0x{}",
+                                     ethabi::encode(&[ethabi::Token::Bytes(message.to_bytes())]).to_hex::<String>()));
         );
 
         let main_contract = MainContract {

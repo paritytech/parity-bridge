@@ -292,7 +292,7 @@ main_deploy = { gas = "20", gas_price = "0" }
                 http: "http://localhost:8545".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/Main.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 },
@@ -303,7 +303,7 @@ main_deploy = { gas = "20", gas_price = "0" }
             side: NodeConfig {
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/Side.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 },
@@ -369,7 +369,7 @@ required_signatures = 2
                 http: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/Main.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 },
@@ -381,7 +381,7 @@ required_signatures = 2
                 http: "".into(),
                 contract: ContractConfig {
                     bin: include_str!("../../compiled_contracts/Side.bin")
-                        .from_hex()
+                        .from_hex::<Vec<u8>>()
                         .unwrap()
                         .into(),
                 },
