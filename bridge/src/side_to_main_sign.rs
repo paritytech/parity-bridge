@@ -212,26 +212,26 @@ mod tests {
         let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
         let tx_data = contracts::side::functions::submit_signed_message::encode_input(
-            signature.from_hex().unwrap(),
+            signature.from_hex::<Vec<u8>>().unwrap(),
             message.to_bytes(),
         );
 
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.to_hex()),
+                    "data": format!("0x{}", call_data.to_hex::<String>()),
                     "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex::<String>()));
             "eth_sign" =>
                 req => json!([
                     format!("0x{:x}", authority_address),
-                    format!("0x{}", message.to_bytes().to_hex())
+                    format!("0x{}", message.to_bytes().to_hex::<String>())
                 ]),
                 res => json!(format!("0x{}", signature));
             "eth_sendTransaction" =>
                 req => json!([{
-                    "data": format!("0x{}", tx_data.to_hex()),
+                    "data": format!("0x{}", tx_data.to_hex::<String>()),
                     "from": format!("0x{:x}", authority_address),
                     "gas": "0xfd",
                     "gasPrice": "0xa0",
@@ -320,10 +320,10 @@ mod tests {
         let transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", call_data.to_hex()),
+                    "data": format!("0x{}", call_data.to_hex::<String>()),
                     "to": side_contract_address,
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex::<String>()));
         );
 
         let side_contract = SideContract {

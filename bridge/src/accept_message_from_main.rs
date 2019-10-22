@@ -225,22 +225,22 @@ mod tests {
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", get_message_call_data.to_hex()),
+                    "data": format!("0x{}", get_message_call_data.to_hex::<String>()),
                     "to": format!("0x{:x}", main_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", encoded_message.to_hex()));
+                res => json!(format!("0x{}", encoded_message.to_hex::<String>()));
         );
 
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", has_accepted_call_data.to_hex()),
+                    "data": format!("0x{}", has_accepted_call_data.to_hex::<String>()),
                     "to": format!("0x{:x}", side_contract_address),
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex::<String>()));
             "eth_sendTransaction" =>
                 req => json!([{
-                    "data": format!("0x{}", accept_message_call_data.to_hex()),
+                    "data": format!("0x{}", accept_message_call_data.to_hex::<String>()),
                     "from": "0x0000000000000000000000000000000000000001",
                     "gas": "0xfd",
                     "gasPrice": "0xa0",
@@ -349,19 +349,19 @@ mod tests {
         let main_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", get_message_call_data.to_hex()),
+                    "data": format!("0x{}", get_message_call_data.to_hex::<String>()),
                     "to": main_contract_address,
                 }, "latest"]),
-                res => json!(format!("0x{}", encoded_message.to_hex()));
+                res => json!(format!("0x{}", encoded_message.to_hex::<String>()));
         );
 
         let side_transport = mock_transport!(
             "eth_call" =>
                 req => json!([{
-                    "data": format!("0x{}", has_accepted_call_data.to_hex()),
+                    "data": format!("0x{}", has_accepted_call_data.to_hex::<String>()),
                     "to": side_contract_address,
                 }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex()));
+                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex::<String>()));
         );
 
         let main_contract = MainContract {
