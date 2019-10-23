@@ -12,7 +12,7 @@ we'll update this disclaimer once that changes*
 [coveralls-image]: https://coveralls.io/repos/github/tomusdrw/parity-bridge/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/github/tomusdrw/parity-bridge?branch=master
 
-- bridge is able to pass arbitrary messages between an ethereum Proof of Authority chain and a Substrate Chain or Polkadot Parachain.
+- bridge is able to pass arbitrary messages between an Ethereum Proof of Authority chain and a Substrate Chain or Polkadot Parachain.
 
 ## TODO: Docs
 
