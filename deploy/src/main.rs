@@ -40,106 +40,106 @@ const MAX_PARALLEL_REQUESTS: usize = 10;
 
 #[derive(Debug, Deserialize)]
 pub struct Args {
-    arg_config: PathBuf,
-    arg_database: PathBuf,
+	arg_config: PathBuf,
+	arg_database: PathBuf,
 }
 
 fn main() {
-    let _ = env_logger::init();
-    let result = execute(env::args());
+	let _ = env_logger::init();
+	let result = execute(env::args());
 
-    match result {
-        Ok(s) => println!("{}", s),
-        Err(err) => print_err(err),
-    }
+	match result {
+		Ok(s) => println!("{}", s),
+		Err(err) => print_err(err),
+	}
 }
 
 fn print_err(err: error::Error) {
-    let message = err
-        .iter()
-        .map(|e| e.to_string())
-        .collect::<Vec<_>>()
-        .join("\n\nCaused by:\n	");
-    println!("{}", message);
+	let message = err
+		.iter()
+		.map(|e| e.to_string())
+		.collect::<Vec<_>>()
+		.join("\n\nCaused by:\n	");
+	println!("{}", message);
 }
 
 fn execute<S, I>(command: I) -> Result<String, error::Error>
 where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
+	I: IntoIterator<Item = S>,
+	S: AsRef<str>,
 {
-    let usage = format!(
-        r#"
+	let usage = format!(
+		r#"
 Parity-bridge
-    Copyright 2017 Parity Technologies (UK) Limited
-    Version: {}
-    Commit: {}
+	Copyright 2017 Parity Technologies (UK) Limited
+	Version: {}
+	Commit: {}
 
 Usage:
-    parity-bridge-deploy --config <config> --database <database>
-    parity-bridge-deploy -h | --help
+	parity-bridge-deploy --config <config> --database <database>
+	parity-bridge-deploy -h | --help
 
 Options:
-    -h, --help           Display help message and exit.
+	-h, --help           Display help message and exit.
 "#,
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    );
+		env!("CARGO_PKG_VERSION"),
+		env!("GIT_HASH")
+	);
 
-    info!(target: "parity-bridge-deploy", "Parsing cli arguments");
-    let args: Args = Docopt::new(usage)
-        .and_then(|d| d.argv(command).deserialize())
-        .map_err(|e| e.to_string())?;
+	info!(target: "parity-bridge-deploy", "Parsing cli arguments");
+	let args: Args = Docopt::new(usage)
+		.and_then(|d| d.argv(command).deserialize())
+		.map_err(|e| e.to_string())?;
 
-    info!(target: "parity-bridge-deploy", "Loading config");
-    let config = Config::load(args.arg_config)?;
+	info!(target: "parity-bridge-deploy", "Loading config");
+	let config = Config::load(args.arg_config)?;
 
-    info!(target: "parity-bridge-deploy", "Starting event loop");
-    let mut event_loop = Core::new().unwrap();
+	info!(target: "parity-bridge-deploy", "Starting event loop");
+	let mut event_loop = Core::new().unwrap();
 
-    info!(
-        "Establishing HTTP connection to main {:?}",
-        config.main.http
-    );
-    let main_transport = Http::with_event_loop(
-        &config.main.http,
-        &event_loop.handle(),
-        MAX_PARALLEL_REQUESTS,
-    )
-    .chain_err(|| format!("Cannot connect to main at {}", config.main.http))?;
+	info!(
+		"Establishing HTTP connection to main {:?}",
+		config.main.http
+	);
+	let main_transport = Http::with_event_loop(
+		&config.main.http,
+		&event_loop.handle(),
+		MAX_PARALLEL_REQUESTS,
+	)
+	.chain_err(|| format!("Cannot connect to main at {}", config.main.http))?;
 
-    info!(
-        "Establishing HTTP connection to side {:?}",
-        config.side.http
-    );
-    let side_transport = Http::with_event_loop(
-        &config.side.http,
-        &event_loop.handle(),
-        MAX_PARALLEL_REQUESTS,
-    )
-    .chain_err(|| format!("Cannot connect to side at {}", config.side.http))?;
+	info!(
+		"Establishing HTTP connection to side {:?}",
+		config.side.http
+	);
+	let side_transport = Http::with_event_loop(
+		&config.side.http,
+		&event_loop.handle(),
+		MAX_PARALLEL_REQUESTS,
+	)
+	.chain_err(|| format!("Cannot connect to side at {}", config.side.http))?;
 
-    info!(target: "parity-bridge-deploy", "Deploying MainBridge contract");
-    let main_deployed = event_loop.run(DeployMain::new(config.clone(), main_transport))?;
-    info!(target: "parity-bridge-deploy", "Successfully deployed MainBridge contract");
+	info!(target: "parity-bridge-deploy", "Deploying MainBridge contract");
+	let main_deployed = event_loop.run(DeployMain::new(config.clone(), main_transport))?;
+	info!(target: "parity-bridge-deploy", "Successfully deployed MainBridge contract");
 
-    main_deployed.dump_info(format!(
-        "deployment-main-{}",
-        main_deployed.contract_address
-    ))?;
+	main_deployed.dump_info(format!(
+		"deployment-main-{}",
+		main_deployed.contract_address
+	))?;
 
-    info!(target: "parity-bridge-deploy", "Deploying SideBridge contract");
-    let side_deployed = event_loop.run(DeploySide::new(config.clone(), side_transport))?;
-    info!(target: "parity-bridge-deploy", "Successfully deployed SideBridge contract");
+	info!(target: "parity-bridge-deploy", "Deploying SideBridge contract");
+	let side_deployed = event_loop.run(DeploySide::new(config.clone(), side_transport))?;
+	info!(target: "parity-bridge-deploy", "Successfully deployed SideBridge contract");
 
-    side_deployed.dump_info(format!(
-        "deployment-side-{}",
-        side_deployed.contract_address
-    ))?;
+	side_deployed.dump_info(format!(
+		"deployment-side-{}",
+		side_deployed.contract_address
+	))?;
 
-    let state = State::from_transaction_receipts(&main_deployed.receipt, &side_deployed.receipt);
-    info!(target: "parity-bridge-deploy", "\n\n{}\n", state);
-    state.write(fs::File::create(args.arg_database)?)?;
+	let state = State::from_transaction_receipts(&main_deployed.receipt, &side_deployed.receipt);
+	info!(target: "parity-bridge-deploy", "\n\n{}\n", state);
+	state.write(fs::File::create(args.arg_database)?)?;
 
-    Ok("Done".into())
+	Ok("Done".into())
 }

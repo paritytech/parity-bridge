@@ -29,173 +29,173 @@ use web3::Transport;
 /// highlevel wrapper around the auto generated ethabi contract `bridge_contracts::side`
 #[derive(Clone)]
 pub struct SideContract<T> {
-    pub transport: T,
-    pub contract_address: Address,
-    pub authority_address: Address,
-    // TODO [snd] this should get fetched from the contract
-    pub required_signatures: u32,
-    pub request_timeout: Duration,
-    pub logs_poll_interval: Duration,
-    pub required_log_confirmations: u32,
-    pub sign_main_to_side_gas: U256,
-    pub sign_main_to_side_gas_price: U256,
-    pub sign_side_to_main_gas: U256,
-    pub sign_side_to_main_gas_price: U256,
+	pub transport: T,
+	pub contract_address: Address,
+	pub authority_address: Address,
+	// TODO [snd] this should get fetched from the contract
+	pub required_signatures: u32,
+	pub request_timeout: Duration,
+	pub logs_poll_interval: Duration,
+	pub required_log_confirmations: u32,
+	pub sign_main_to_side_gas: U256,
+	pub sign_main_to_side_gas_price: U256,
+	pub sign_side_to_main_gas: U256,
+	pub sign_side_to_main_gas_price: U256,
 }
 
 impl<T: Transport> SideContract<T> {
-    pub fn new(transport: T, config: &Config, state: &State) -> Self {
-        Self {
-            transport,
-            contract_address: state.side_contract_address,
-            authority_address: config.address,
-            required_signatures: config.authorities.required_signatures,
-            request_timeout: config.side.request_timeout,
-            logs_poll_interval: config.side.poll_interval,
-            required_log_confirmations: config.side.required_confirmations,
-            sign_main_to_side_gas: config.txs.deposit_relay.gas,
-            sign_main_to_side_gas_price: config.txs.deposit_relay.gas_price,
-            sign_side_to_main_gas: config.txs.withdraw_confirm.gas,
-            sign_side_to_main_gas_price: config.txs.withdraw_confirm.gas_price,
-        }
-    }
+	pub fn new(transport: T, config: &Config, state: &State) -> Self {
+		Self {
+			transport,
+			contract_address: state.side_contract_address,
+			authority_address: config.address,
+			required_signatures: config.authorities.required_signatures,
+			request_timeout: config.side.request_timeout,
+			logs_poll_interval: config.side.poll_interval,
+			required_log_confirmations: config.side.required_confirmations,
+			sign_main_to_side_gas: config.txs.deposit_relay.gas,
+			sign_main_to_side_gas_price: config.txs.deposit_relay.gas_price,
+			sign_side_to_main_gas: config.txs.withdraw_confirm.gas,
+			sign_side_to_main_gas_price: config.txs.withdraw_confirm.gas_price,
+		}
+	}
 
-    pub fn call<F: FunctionOutputDecoder>(
-        &self,
-        payload: Vec<u8>,
-        output_decoder: F,
-    ) -> AsyncCall<T, F> {
-        AsyncCall::new(
-            &self.transport,
-            self.contract_address,
-            self.request_timeout,
-            payload,
-            output_decoder,
-        )
-    }
+	pub fn call<F: FunctionOutputDecoder>(
+		&self,
+		payload: Vec<u8>,
+		output_decoder: F,
+	) -> AsyncCall<T, F> {
+		AsyncCall::new(
+			&self.transport,
+			self.contract_address,
+			self.request_timeout,
+			payload,
+			output_decoder,
+		)
+	}
 
-    pub fn is_side_contract(
-        &self,
-    ) -> AsyncCall<T, contracts::side::functions::is_side_bridge_contract::Decoder> {
-        let (payload, decoder) = contracts::side::functions::is_side_bridge_contract::call();
-        self.call(payload, decoder)
-    }
+	pub fn is_side_contract(
+		&self,
+	) -> AsyncCall<T, contracts::side::functions::is_side_bridge_contract::Decoder> {
+		let (payload, decoder) = contracts::side::functions::is_side_bridge_contract::call();
+		self.call(payload, decoder)
+	}
 
-    /// returns `Future` that resolves with `bool` whether `authority`
-    /// has signed side to main relay for `tx_hash`
-    pub fn is_side_to_main_signed_on_side(
-        &self,
-        message: &MessageToMain,
-    ) -> AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder> {
-        let (payload, decoder) = contracts::side::functions::has_authority_signed_message::call(
-            self.authority_address,
-            message.to_bytes(),
-        );
+	/// returns `Future` that resolves with `bool` whether `authority`
+	/// has signed side to main relay for `tx_hash`
+	pub fn is_side_to_main_signed_on_side(
+		&self,
+		message: &MessageToMain,
+	) -> AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder> {
+		let (payload, decoder) = contracts::side::functions::has_authority_signed_message::call(
+			self.authority_address,
+			message.to_bytes(),
+		);
 
-        self.call(payload, decoder)
-    }
+		self.call(payload, decoder)
+	}
 
-    pub fn is_message_accepted_from_main(
-        &self,
-        transaction_hash: H256,
-        data: Vec<u8>,
-        sender: Address,
-        recipient: Address,
-    ) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder>
-    {
-        let (payload, decoder) =
-            contracts::side::functions::has_authority_accepted_message_from_main::call(
-                transaction_hash,
-                data,
-                sender,
-                recipient,
-                self.authority_address,
-            );
+	pub fn is_message_accepted_from_main(
+		&self,
+		transaction_hash: H256,
+		data: Vec<u8>,
+		sender: Address,
+		recipient: Address,
+	) -> AsyncCall<T, contracts::side::functions::has_authority_accepted_message_from_main::Decoder>
+	{
+		let (payload, decoder) =
+			contracts::side::functions::has_authority_accepted_message_from_main::call(
+				transaction_hash,
+				data,
+				sender,
+				recipient,
+				self.authority_address,
+			);
 
-        self.call(payload, decoder)
-    }
+		self.call(payload, decoder)
+	}
 
-    pub fn accept_message_from_main(
-        &self,
-        transaction_hash: H256,
-        data: Vec<u8>,
-        sender: Address,
-        recipient: Address,
-    ) -> AsyncTransaction<T> {
-        let payload = contracts::side::functions::accept_message::encode_input(
-            transaction_hash,
-            data,
-            sender,
-            recipient,
-        );
+	pub fn accept_message_from_main(
+		&self,
+		transaction_hash: H256,
+		data: Vec<u8>,
+		sender: Address,
+		recipient: Address,
+	) -> AsyncTransaction<T> {
+		let payload = contracts::side::functions::accept_message::encode_input(
+			transaction_hash,
+			data,
+			sender,
+			recipient,
+		);
 
-        AsyncTransaction::new(
-            &self.transport,
-            self.contract_address,
-            self.authority_address,
-            self.sign_main_to_side_gas,
-            self.sign_main_to_side_gas_price,
-            self.request_timeout,
-            payload,
-        )
-    }
+		AsyncTransaction::new(
+			&self.transport,
+			self.contract_address,
+			self.authority_address,
+			self.sign_main_to_side_gas,
+			self.sign_main_to_side_gas_price,
+			self.request_timeout,
+			payload,
+		)
+	}
 
-    pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
-        LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::relay_message::filter(),
-            request_timeout: self.request_timeout,
-            poll_interval: self.logs_poll_interval,
-            confirmations: self.required_log_confirmations,
-            transport: self.transport.clone(),
-            contract_address: self.contract_address,
-            after,
-        })
-    }
+	pub fn side_to_main_sign_log_stream(&self, after: u64) -> LogStream<T> {
+		LogStream::new(LogStreamOptions {
+			filter: contracts::side::events::relay_message::filter(),
+			request_timeout: self.request_timeout,
+			poll_interval: self.logs_poll_interval,
+			confirmations: self.required_log_confirmations,
+			transport: self.transport.clone(),
+			contract_address: self.contract_address,
+			after,
+		})
+	}
 
-    pub fn side_to_main_signatures_log_stream(&self, after: u64, address: Address) -> LogStream<T> {
-        LogStream::new(LogStreamOptions {
-            filter: contracts::side::events::signed_message::filter(address),
-            request_timeout: self.request_timeout,
-            poll_interval: self.logs_poll_interval,
-            confirmations: self.required_log_confirmations,
-            transport: self.transport.clone(),
-            contract_address: self.contract_address,
-            after,
-        })
-    }
+	pub fn side_to_main_signatures_log_stream(&self, after: u64, address: Address) -> LogStream<T> {
+		LogStream::new(LogStreamOptions {
+			filter: contracts::side::events::signed_message::filter(address),
+			request_timeout: self.request_timeout,
+			poll_interval: self.logs_poll_interval,
+			confirmations: self.required_log_confirmations,
+			transport: self.transport.clone(),
+			contract_address: self.contract_address,
+			after,
+		})
+	}
 
-    pub fn submit_signed_message(
-        &self,
-        message: &MessageToMain,
-        signature: &Signature,
-    ) -> AsyncTransaction<T> {
-        let payload = contracts::side::functions::submit_signed_message::encode_input(
-            signature.to_bytes(),
-            message.to_bytes(),
-        );
-        AsyncTransaction::new(
-            &self.transport,
-            self.contract_address,
-            self.authority_address,
-            self.sign_side_to_main_gas,
-            self.sign_side_to_main_gas_price,
-            self.request_timeout,
-            payload,
-        )
-    }
+	pub fn submit_signed_message(
+		&self,
+		message: &MessageToMain,
+		signature: &Signature,
+	) -> AsyncTransaction<T> {
+		let payload = contracts::side::functions::submit_signed_message::encode_input(
+			signature.to_bytes(),
+			message.to_bytes(),
+		);
+		AsyncTransaction::new(
+			&self.transport,
+			self.contract_address,
+			self.authority_address,
+			self.sign_side_to_main_gas,
+			self.sign_side_to_main_gas_price,
+			self.request_timeout,
+			payload,
+		)
+	}
 
-    pub fn get_signatures(
-        &self,
-        message_hash: H256,
-    ) -> JoinAll<Vec<AsyncCall<T, contracts::side::functions::signature::Decoder>>> {
-        let futures = (0..self.required_signatures)
-            .into_iter()
-            .map(|index| {
-                let (payload, decoder) =
-                    contracts::side::functions::signature::call(message_hash, index);
-                self.call(payload, decoder)
-            })
-            .collect::<Vec<_>>();
-        join_all(futures)
-    }
+	pub fn get_signatures(
+		&self,
+		message_hash: H256,
+	) -> JoinAll<Vec<AsyncCall<T, contracts::side::functions::signature::Decoder>>> {
+		let futures = (0..self.required_signatures)
+			.into_iter()
+			.map(|index| {
+				let (payload, decoder) =
+					contracts::side::functions::signature::call(message_hash, index);
+				self.call(payload, decoder)
+			})
+			.collect::<Vec<_>>();
+		join_all(futures)
+	}
 }
