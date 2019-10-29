@@ -5,6 +5,24 @@ version = "0.1.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+serde = { version = "1.0", optional = true }
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
+rstd = { package = "sr-std", path = "/home/svyatonik/dev/substrate/core/sr-std", default-features = false }
+support = { package = "srml-support", path = "/home/svyatonik/dev/substrate/srml/support", default-features = false }
+sr-primitives = { path = "/home/svyatonik/dev/substrate/core/sr-primitives", default-features = false }
+system = { package = "srml-system", path = "/home/svyatonik/dev/substrate/srml/system", default-features = false }
+runtime-io = { package = "sr-io", path = "/home/svyatonik/dev/substrate/core/sr-io", default-features = false }
+primitives = { package = "srml-bridge-poa-primitives", path = "./primitives", default-features = false }
+
+[features]
+default = ["std"]
+std =[
+	"serde",
+	"codec/std",
+	"rstd/std",
+	"sr-primitives/std",
+	"support/std",
+	"system/std",
+	"primitives/std",
+]
