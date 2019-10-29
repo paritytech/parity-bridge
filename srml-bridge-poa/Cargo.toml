@@ -1,0 +1,10 @@
+[package]
+name = "srml-bridge-poa"
+description = "A Substrate Runtime module that is able to verify PoA headers and their finality."
+version = "0.1.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

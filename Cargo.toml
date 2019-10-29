@@ -1,2 +1,10 @@
 [workspace]
-members = ["cli", "bridge", "integration-tests", "deploy", "contracts"]
+members = [
+    "bridge",
+    "cli",
+    "contracts",
+    "deploy",
+    "integration-tests",
+    "parity-ethereum-grandpa-builtin",
+    "srml-bridge-poa",
+]
