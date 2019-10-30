@@ -6,16 +6,22 @@ pub use tiny_keccak::keccak256;
 
 use rstd::prelude::*;
 use codec::{Decode, Encode};
-use ethereum_types::{Bloom, BloomInput};
+use ethereum_types::{Bloom as EthBloom, BloomInput};
 use parity_bytes::Bytes;
 use rlp::{Decodable, DecoderError, Rlp, RlpStream};
 use sr_primitives::RuntimeDebug;
+
+#[cfg(feature = "std")]
+use serde::{Serialize, Deserialize};
+#[cfg(feature = "std")]
+use serde_big_array::big_array;
 
 /// An ethereum address.
 pub type Address = H160;
 
 /// An Aura header.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Default, Serialize, Deserialize))]
 pub struct Header {
 	/// Parent block hash.
 	pub parent_hash: H256,
@@ -38,7 +44,7 @@ pub struct Header {
 	/// Block receipts root.
 	pub receipts_root: H256,
 	/// Block bloom.
-	pub log_bloom: H256, // Bloom, TODO: make Bloom: Decode + Encode?
+	pub log_bloom: Bloom,
 	/// Gas used for contracts execution.
 	pub gas_used: U256,
 	/// Block gas limit.
@@ -56,7 +62,7 @@ pub struct Receipt {
 	/// The total gas used in the block following execution of the transaction.
 	pub gas_used: U256,
 	/// The OR-wide combination of all logs' blooms for this transaction.
-	pub log_bloom: H256, // Bloom, TODO: make Bloom: Decode + Encode?
+	pub log_bloom: Bloom,
 	/// The logs stemming from this transaction.
 	pub logs: Vec<LogEntry>,
 	/// Transaction outcome.
@@ -85,6 +91,16 @@ pub struct LogEntry {
 	pub data: Bytes,
 }
 
+/// Logs bloom.
+#[derive(Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct Bloom(
+	#[serde(with = "BigArray")]
+	[u8; 256]
+);
+
+big_array! { BigArray; }
+
 /// An empty step message that is included in a seal, the only difference is that it doesn't include
 /// the `parent_hash` in order to save space. The included signature is of the original empty step
 /// message, which can be reconstructed by using the parent hash of the block in which this sealed
@@ -99,40 +115,19 @@ pub struct SealedEmptyStep {
 impl Header {
 	/// Get the hash of this header (keccak of the RLP with seal).
 	pub fn hash(&self) -> H256 {
-		let mut s = RlpStream::new();
-		s.begin_list(13 + self.seal.len());
-
-		s.append(&self.parent_hash);
-		s.append(&self.uncles_hash);
-		s.append(&self.author);
-		s.append(&self.state_root);
-		s.append(&self.transactions_root);
-		s.append(&self.receipts_root);
-		s.append(&self.log_bloom);
-		s.append(&self.difficulty);
-		s.append(&self.number);
-		s.append(&self.gas_limit);
-		s.append(&self.gas_used);
-		s.append(&self.timestamp);
-		s.append(&self.extra_data);
-
-		for b in &self.seal {
-			s.append_raw(b, 1);
-		}
-
-		keccak256(&s.out()).into()
+		keccak256(&self.rlp(true)).into()
 	}
 
 	/// Gets the seal hash of this header.
-	pub fn seal_hash(&self, include_empty_steps: bool) -> H256 {
-		match include_empty_steps {
+	pub fn seal_hash(&self, include_empty_steps: bool) -> Option<H256> {
+		Some(match include_empty_steps {
 			true => {
 				let mut message = self.hash().as_bytes().to_vec();
-				message.extend_from_slice(self.seal.get(2).expect("TODO"));
+				message.extend_from_slice(self.seal.get(2)?);
 				keccak256(&message).into()
 			},
-			false => self.hash(),
-		}
+			false => keccak256(&self.rlp(false)).into(),
+		})
 	}
 
 	/// Get step this header is generated for.
@@ -145,9 +140,41 @@ impl Header {
 		self.seal.get(1).and_then(|x| Rlp::new(x).as_val().ok())
 	}
 
-	// Extracts the empty steps from the header seal.
+	/// Extracts the empty steps from the header seal.
 	pub fn empty_steps(&self) -> Option<Vec<SealedEmptyStep>> {
 		self.seal.get(2).and_then(|x| Rlp::new(x).as_list::<SealedEmptyStep>().ok())
+	}
+
+	/// Returns header RLP with or without seals.
+	fn rlp(&self, with_seal: bool) -> Bytes {
+		let mut s = RlpStream::new();
+		if with_seal {
+			s.begin_list(13 + self.seal.len());
+		} else {
+			s.begin_list(13);
+		}
+
+		s.append(&self.parent_hash);
+		s.append(&self.uncles_hash);
+		s.append(&self.author);
+		s.append(&self.state_root);
+		s.append(&self.transactions_root);
+		s.append(&self.receipts_root);
+		s.append(&EthBloom::from(self.log_bloom.0));
+		s.append(&self.difficulty);
+		s.append(&self.number);
+		s.append(&self.gas_limit);
+		s.append(&self.gas_used);
+		s.append(&self.timestamp);
+		s.append(&self.extra_data);
+
+		if with_seal {
+			for b in &self.seal {
+				s.append_raw(b, 1);
+			}
+		}
+
+		s.out()
 	}
 }
 
@@ -173,9 +200,51 @@ impl Decodable for SealedEmptyStep {
 impl LogEntry {
 	/// Calculates the bloom of this log entry.
 	pub fn bloom(&self) -> Bloom {
-		self.topics.iter().fold(Bloom::from(BloomInput::Raw(self.address.as_bytes())), |mut b, t| {
+		let eth_bloom = self.topics.iter().fold(EthBloom::from(BloomInput::Raw(self.address.as_bytes())), |mut b, t| {
 			b.accrue(BloomInput::Raw(t.as_bytes()));
 			b
-		})
+		});
+		Bloom(*eth_bloom.data())
 	}
+}
+
+impl Bloom {
+	/// Returns true if this bloom has all bits from the other set.
+	pub fn contains(&self, other: &Bloom) -> bool {
+		self.0.iter().zip(other.0.iter()).all(|(l, r)| (l & r) == *r)
+	}
+}
+
+impl<'a> From<&'a [u8; 256]> for Bloom {
+	fn from(buffer: &'a [u8; 256]) -> Bloom {
+		Bloom(*buffer)
+	}
+}
+
+impl PartialEq<Bloom> for Bloom {
+	fn eq(&self, other: &Bloom) -> bool {
+		self.0.iter().zip(other.0.iter()).all(|(l, r)| l == r)
+	}
+}
+
+#[cfg(feature = "std")]
+impl Default for Bloom {
+	fn default() -> Self {
+		Bloom([0; 256])
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::fmt::Debug for Bloom {
+	fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+		fmt.debug_struct("Bloom").finish()
+	}
+}
+
+/// Convert public key into corresponding ethereum address.
+pub fn public_to_address(public: &[u8; 64]) -> Address {
+	let hash = keccak256(public);
+	let mut result = Address::zero();
+	result.as_bytes_mut().copy_from_slice(&hash[12..]);
+	result
 }

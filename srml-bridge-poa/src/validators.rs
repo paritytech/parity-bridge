@@ -1,33 +1,203 @@
 use rstd::prelude::*;
-use primitives::{Address, H256};
+use primitives::{Address, H256, Header, LogEntry, Receipt, U256};
+use crate::Storage;
+use crate::error::Error;
+
+/// The hash of InitiateChange event of the validators set contract.
+const CHANGE_EVENT_HASH: &'static [u8; 32] = &[0x55, 0x25, 0x2f, 0xa6, 0xee, 0xe4, 0x74, 0x1b,
+	0x4e, 0x24, 0xa7, 0x4a, 0x70, 0xe9, 0xc1, 0x1f, 0xd2, 0xc2, 0x28, 0x1d, 0xf8, 0xd6, 0xea,
+	0x13, 0x12, 0x6f, 0xf8, 0x45, 0xf7, 0x82, 0x5c, 0x89];
+
+/// Where source of validators addresses come from. This covers the chain lifetime.
+pub enum ValidatorsConfiguration {
+	/// There's a single source for the whole chain lifetime.
+	Single(ValidatorsSource),
+	/// Validators source changes at given blocks. The blocks are ordered
+	/// by the block number.
+	Multi(Vec<(u64, ValidatorsSource)>),
+}
+
+/// Where validators addresses come from.
+///
+/// This source is valid within some blocks range. The blocks range could
+/// cover multiple epochs - i.e. the validators that are authoring blocks
+/// within this range could change, but the source itself can not.
+pub enum ValidatorsSource {
+	/// The validators addresses are hardcoded and never change.
+	List(Vec<Address>),
+	/// The validators addresses are determined by the validators set contract
+	/// deployed at given address. The contract must implement the `ValidatorSet`
+	/// interface. Additionally, the initial validators set must be provided.
+	Contract(Address, Vec<Address>),
+}
 
 /// Validators manager.
-pub struct Validators;
+pub struct Validators<'a> {
+	config: &'a ValidatorsConfiguration,
+}
 
-impl Validators {
-	/// Returns set of validators that should verify direct descendands of
-	/// block with given hash.
-	pub fn at(&self, _hash: &H256) -> Vec<Address> {
-		// these validators are taken just for example - they were valid at the Kovan' start
-		vec![
-			[0x00, 0xD6, 0xCc, 0x1B, 0xA9, 0xcf, 0x89, 0xBD, 0x2e, 0x58,
-				0x00, 0x97, 0x41, 0xf4, 0xF7, 0x32, 0x5B, 0xAd, 0xc0, 0xED].into(),
-			[0x00, 0x42, 0x7f, 0xea, 0xe2, 0x41, 0x9c, 0x15, 0xb8, 0x9d,
-				0x1c, 0x21, 0xaf, 0x10, 0xd1, 0xb6, 0x65, 0x0a, 0x4d, 0x3d].into(),
-			[0x4E, 0xd9, 0xB0, 0x8e, 0x63, 0x54, 0xC7, 0x0f, 0xE6, 0xF8,
-				0xCB, 0x04, 0x11, 0xb0, 0xd3, 0x24, 0x6b, 0x42, 0x4d, 0x6c].into(),
-			[0x00, 0x20, 0xee, 0x4B, 0xe0, 0xe2, 0x02, 0x7d, 0x76, 0x60,
-				0x3c, 0xB7, 0x51, 0xeE, 0x06, 0x95, 0x19, 0xbA, 0x81, 0xA1].into(),
-			[0x00, 0x10, 0xf9, 0x4b, 0x29, 0x6a, 0x85, 0x2a, 0xaa, 0xc5,
-				0x2e, 0xa6, 0xc5, 0xac, 0x72, 0xe0, 0x3a, 0xfd, 0x03, 0x2d].into(),
-			[0x00, 0x77, 0x33, 0xa1, 0xFE, 0x69, 0xCF, 0x3f, 0x2C, 0xF9,
-				0x89, 0xF8, 0x1C, 0x7b, 0x4c, 0xAc, 0x16, 0x93, 0x38, 0x7A].into(),
-			[0x00, 0xE6, 0xd2, 0xb9, 0x31, 0xF5, 0x5a, 0x3f, 0x17, 0x01,
-				0xc7, 0x38, 0x9d, 0x59, 0x2a, 0x77, 0x78, 0x89, 0x78, 0x79].into(),
-			[0x00, 0xe4, 0xa1, 0x06, 0x50, 0xe5, 0xa6, 0xD6, 0x00, 0x1C,
-				0x38, 0xff, 0x8E, 0x64, 0xF9, 0x70, 0x16, 0xa1, 0x64, 0x5c].into(),
-			[0x00, 0xa0, 0xa2, 0x4b, 0x9f, 0x0e, 0x5e, 0xc7, 0xaa, 0x4c,
-				0x73, 0x89, 0xb8, 0x30, 0x2f, 0xd0, 0x12, 0x31, 0x94, 0xde].into(),
-		]
+impl<'a> Validators<'a> {
+	/// Creates new validators manager using given configuration.
+	pub fn new(initial_block_number: u64, config: &'a ValidatorsConfiguration) -> Self {
+		if let ValidatorsConfiguration::Multi(ref sources) = *config {
+			if sources.is_empty() || sources[0].0 > initial_block_number {
+				panic!("Validators source for initial block is not provided");
+			}
+		}
+
+		Self { config }
 	}
+
+	/// Returns true if header (probabilistically) signals validators change and
+	/// the caller needs to provide transactions receipts to import the header.
+	pub fn maybe_signals_validators_change(&self, header: &Header) -> bool {
+		let (_, source) = self.source_at(header.number);
+
+		// if we are taking validators set from the fixed list, there's always
+		// single epoch
+		// => we never require transactions receipts
+		let contract_address = match source {
+			ValidatorsSource::List(_) => return false,
+			ValidatorsSource::Contract(contract_address, _) => contract_address,
+		};
+
+		// else we need to check logs bloom and if it has required bits set, it means
+		// that the contract has (probably) emitted epoch change event
+		let expected_bloom = LogEntry {
+			address: *contract_address,
+			topics: vec![
+				CHANGE_EVENT_HASH.into(),
+				header.parent_hash,
+			],
+			data: Vec::new(), // irrelevant for bloom.
+		}.bloom();
+
+		header.log_bloom.contains(&expected_bloom)
+	}
+
+	/// Extracts validators change signal from the header.
+	///
+	/// Returns tuple where first element is the change scheduled by this header 
+	/// (i.e. this change is only applied starting from the block that has finalized
+	/// current block). The second element is the immediately applied change.
+	pub fn extract_validators_change(
+		&self,
+		header: &Header,
+		receipts: Option<Vec<Receipt>>,
+	) -> Result<(Option<Vec<Address>>, Option<Vec<Address>>), Error> {
+		// TODO: verify receipts root!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+		// let's first check if new source is starting from this header
+		let (starts_at, source) = self.source_at(header.number + 1);
+		if starts_at == header.number {
+			match *source {
+				ValidatorsSource::List(ref new_list) => return Ok((None, Some(new_list.clone()))),
+				ValidatorsSource::Contract(_, ref new_list) => return Ok((Some(new_list.clone()), None)),
+			}
+		}
+
+		// else deal with previous source
+		let (_, source) = self.source_at(header.number);
+
+		// if we are taking validators set from the fixed list, there's always
+		// single epoch
+		// => we never require transactions receipts
+		let contract_address = match source {
+			ValidatorsSource::List(_) => return Ok((None, None)),
+			ValidatorsSource::Contract(contract_address, _) => contract_address,
+		};
+
+		// else we need to check logs bloom and if it has required bits set, it means
+		// that the contract has (probably) emitted epoch change event
+		let expected_bloom = LogEntry {
+			address: *contract_address,
+			topics: vec![
+				CHANGE_EVENT_HASH.into(),
+				header.parent_hash,
+			],
+			data: Vec::new(), // irrelevant for bloom.
+		}.bloom();
+
+		if !header.log_bloom.contains(&expected_bloom) {
+			return Ok((None, None));
+		}
+
+		let receipts = receipts.ok_or(Error::MissingTransactionsReceipts)?;
+
+		// iterate in reverse because only the _last_ change in a given
+		// block actually has any effect
+		Ok((receipts.iter()
+			.rev()
+			.filter(|r| r.log_bloom.contains(&expected_bloom))
+			.flat_map(|r| r.logs.iter())
+			.filter(|l| l.address == *contract_address &&
+				l.topics.len() == 2 &&
+				l.topics[0].as_fixed_bytes() == CHANGE_EVENT_HASH &&
+				l.topics[1] == header.parent_hash
+			)
+			.filter_map(|l| {
+				let data_len = l.data.len();
+				if data_len < 64 {
+					return None;
+				}
+
+				let new_validators_len_u256 = U256::from_big_endian(&l.data[32..64]);
+				let new_validators_len = new_validators_len_u256.low_u64();
+				if new_validators_len_u256 != new_validators_len.into() {
+					return None;
+				}
+
+				if (data_len - 64) as u64 != new_validators_len.saturating_mul(32) {
+					return None;
+				}
+
+				Some(l.data[64..]
+					.chunks(32)
+					.map(|chunk| {
+						let mut new_validator = Address::default();
+						new_validator.as_mut().copy_from_slice(&chunk[12..32]);
+						new_validator
+					})
+					.collect())
+			})
+			.next(), None))
+	}
+
+	/// Finalize changes when blocks are finalized.
+	pub fn finalize_validators_change<S: Storage>(&self, storage: &mut S, finalized_blocks: &[(u64, H256)]) -> Option<Vec<Address>> {
+		for (_, finalized_hash) in finalized_blocks.iter().rev() {
+			if let Some(changes) = storage.scheduled_change(finalized_hash) {
+				return Some(changes);
+			}
+		}
+		None
+	}
+
+	/// Returns source of validators that should author the header.
+	fn source_at<'b>(&'b self, header_number: u64) -> (u64, &'b ValidatorsSource) {
+		match self.config {
+			ValidatorsConfiguration::Single(ref source) => (0, source),
+			ValidatorsConfiguration::Multi(ref sources) =>
+				sources.iter().rev()
+					.find(|&(begin, _)| *begin < header_number)
+					.map(|(begin, source)| (*begin, source))
+					.expect("there's always entry for the initial block;\
+						we do not touch any headers with number < initial block number; qed"),
+		}
+	}
+}
+
+impl ValidatorsSource {
+	/// Returns initial validators set.
+	pub fn initial_epoch_validators(&self) -> Vec<Address> {
+		match self {
+			ValidatorsSource::List(ref list) => list.clone(),
+			ValidatorsSource::Contract(_, ref list) => list.clone(),
+		}
+	}
+}
+
+/// Get validator that should author the block at given step.
+pub fn step_validator(header_validators: &[Address], header_step: u64) -> Address {
+	header_validators[(header_step % header_validators.len() as u64) as usize]
 }
