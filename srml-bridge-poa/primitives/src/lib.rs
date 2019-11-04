@@ -95,10 +95,11 @@ pub struct LogEntry {
 #[derive(Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct Bloom(
-	#[serde(with = "BigArray")]
+	#[cfg_attr(feature = "std", serde(with = "BigArray"))]
 	[u8; 256]
 );
 
+#[cfg(feature = "std")]
 big_array! { BigArray; }
 
 /// An empty step message that is included in a seal, the only difference is that it doesn't include

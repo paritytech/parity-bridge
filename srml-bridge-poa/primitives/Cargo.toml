@@ -13,7 +13,7 @@ parity-bytes = { version = "0.1.1", default-features = false }
 primitive-types = { version = "0.5.1", default-features = false, features = ["codec", "rlp"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
 rlp = { version = "0.4.3", default-features = false }
-tiny-keccak = { version = "1.5.0", default-features = false }
+tiny-keccak = "1.5.0"
 rstd = { package = "sr-std", path = "/home/svyatonik/dev/substrate/core/sr-std", default-features = false }
 sr-primitives = { path = "/home/svyatonik/dev/substrate/core/sr-primitives", default-features = false }
 
@@ -26,6 +26,7 @@ std =[
 	"parity-bytes/std",
 	"primitive-types/std",
 	"codec/std",
+	"rlp/std",
 	"rstd/std",
 	"sr-primitives/std",
 ]
