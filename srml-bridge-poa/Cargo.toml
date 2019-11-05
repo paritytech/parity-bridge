@@ -15,9 +15,13 @@ system = { package = "srml-system", path = "/home/svyatonik/dev/substrate/srml/s
 runtime-io = { package = "sr-io", path = "/home/svyatonik/dev/substrate/core/sr-io", default-features = false }
 primitives = { package = "srml-bridge-poa-primitives", path = "./primitives", default-features = false }
 
+[dev-dependencies]
+primitives = { package = "srml-bridge-poa-primitives", path = "./primitives", features = ["std", "test-helpers"] }
+parity-crypto = { version = "0.4.2", features = ["publickey"] }
+
 [features]
 default = ["std"]
-std =[
+std = [
 	"serde",
 	"codec/std",
 	"rstd/std",

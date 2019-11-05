@@ -19,7 +19,8 @@ sr-primitives = { path = "/home/svyatonik/dev/substrate/core/sr-primitives", def
 
 [features]
 default = ["std"]
-std =[
+test-helpers = []
+std = [
 	"serde/std",
 	"serde-big-array",
 	"ethereum-types/std",

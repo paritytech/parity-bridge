@@ -129,6 +129,8 @@ decl_storage! {
 			// 2) there are no scheduled validators changes from previous blocks;
 			// 3) (implied) all direct children of initial block are authred by the same validators set.
 
+			// TODO: ensure that !initial_validators.is_empty()
+
 			let initial_hash = config.initial_header.hash();
 			InitialBlock::put((config.initial_header.number, initial_hash));
 			BestBlock::put((config.initial_header.number, initial_hash, config.initial_difficulty));
@@ -271,4 +273,74 @@ pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl 
 			None => None
 		}
 	})
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+	use std::collections::HashMap;
+	use super::*;
+
+	pub struct InMemoryStorage {
+		initial_block: u64,
+		best_block: (u64, H256, U256),
+		headers: HashMap<H256, ImportedHeader>,
+		scheduled_changes: HashMap<H256, Vec<Address>>,
+	}
+
+	impl InMemoryStorage {
+		pub fn new(initial_header: Header, initial_validators: Vec<Address>) -> Self {
+			let hash = initial_header.hash();
+			InMemoryStorage {
+				initial_block: initial_header.number,
+				best_block: (initial_header.number, hash, 0.into()),
+				headers: vec![(
+					hash,
+					ImportedHeader {
+						header: initial_header,
+						total_difficulty: 0.into(),
+						next_validators: (hash, initial_validators),
+					},
+				)].into_iter().collect(),
+				scheduled_changes: HashMap::new(),
+			}
+		}
+	}
+
+	impl Storage for InMemoryStorage {
+		fn initial_block(&self) -> u64 {
+			self.initial_block
+		}
+
+		fn best_block(&self) -> (u64, H256, U256) {
+			self.best_block.clone()
+		}
+
+		fn header(&self, hash: &H256) -> Option<ImportedHeader> {
+			self.headers.get(hash).cloned()
+		}
+
+		fn scheduled_change(&self, hash: &H256) -> Option<Vec<Address>> {
+			self.scheduled_changes.get(hash).cloned()
+		}
+
+		fn insert_header(
+			&mut self,
+			is_best: bool,
+			hash: H256,
+			header: ImportedHeader,
+			scheduled_change: Option<Vec<Address>>,
+		) {
+			if is_best {
+				self.best_block = (header.header.number, hash, header.total_difficulty);
+			}
+			self.headers.insert(hash, header);
+			if let Some(scheduled_change) = scheduled_change {
+				self.scheduled_changes.insert(hash, scheduled_change);
+			}
+
+			/*if self.headers.len() > 2048 {
+				self.headers.pop_front();
+			}*/
+		}
+	}
 }

@@ -20,6 +20,9 @@ pub use ethereum_types::H520;
 pub use primitive_types::{H160, H256, H512, U128, U256};
 pub use tiny_keccak::keccak256;
 
+#[cfg(feature = "test-helpers")]
+pub use rlp::encode as rlp_encode;
+
 use rstd::prelude::*;
 use codec::{Decode, Encode};
 use ethereum_types::{Bloom as EthBloom, BloomInput};
@@ -202,6 +205,19 @@ impl SealedEmptyStep {
 		message.append(&self.step);
 		message.append(parent_hash);
 		keccak256(&message.out()).into()
+	}
+
+	/// Returns rlp for the vector of empty steps (we only do encoding in tests).
+	#[cfg(feature = "test-helpers")]
+	pub fn rlp_of(empty_steps: &[SealedEmptyStep]) -> Bytes {
+		let mut s = RlpStream::new();
+		s.begin_list(empty_steps.len());
+		for empty_step in empty_steps {
+			s.begin_list(2)
+				.append(&empty_step.signature)
+				.append(&empty_step.step);
+		}
+		s.out()
 	}
 }
 

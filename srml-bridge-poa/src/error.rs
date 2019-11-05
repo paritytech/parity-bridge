@@ -18,6 +18,7 @@ use sr_primitives::RuntimeDebug;
 
 /// Header import error.
 #[derive(RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(PartialEq))]
 pub enum Error {
 	/// The header is beyound last finalized and can not be imported.
 	AncientHeader,

@@ -18,19 +18,18 @@ use runtime_io::secp256k1_ecdsa_recover;
 use primitives::{Address, Header, H256, H520, SealedEmptyStep, U128, U256, public_to_address};
 use crate::{AuraConfiguration, ImportedHeader, Storage};
 use crate::error::Error;
-use crate::validators::{/*Validators, */step_validator};
+use crate::validators::step_validator;
 
 /// Verify header by Aura rules.
 pub fn verify_aura_header<S: Storage>(
 	storage: &S,
 	params: &AuraConfiguration,
-//	validators: &Validators,
 	header: &Header,
 ) -> Result<ImportedHeader, Error> {
 	// let's do the lightest check first
 	contextless_checks(params, header)?;
 
-	// the rest of heck requires parent
+	// the rest of checks requires parent
 	let parent = storage.header(&header.parent_hash).ok_or(Error::MissingParentBlock)?;
 	let epoch_validators = &parent.next_validators.1;
 	let header_step = header.step().ok_or(Error::MissingStep)?;
@@ -88,7 +87,8 @@ pub fn verify_aura_header<S: Storage>(
 	}
 
 	let validator_signature = header.signature().ok_or(Error::MissingSignature)?;
-	let header_seal_hash = header.seal_hash(header.number >= params.empty_steps_transition)
+	let header_seal_hash = header
+		.seal_hash(header.number >= params.empty_steps_transition)
 		.ok_or(Error::MissingEmptySteps)?;
 	let is_invalid_proposer = !verify_signature(&expected_validator, &validator_signature, &header_seal_hash);
 	if is_invalid_proposer {
@@ -156,4 +156,320 @@ fn verify_signature(expected_validator: &Address, signature: &H520, message: &H2
 		.map(|public| public_to_address(&public))
 		.map(|address| *expected_validator == address)
 		.unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+	use parity_crypto::publickey::{KeyPair, Secret, sign};
+	use primitives::{H520, rlp_encode};
+	use crate::kovan_aura_config;
+	use crate::tests::InMemoryStorage;
+	use super::*;
+
+	fn genesis() -> Header {
+		Header {
+			seal: vec![
+				vec![42].into(),
+				vec![].into(),
+			],
+			..Default::default()
+		}
+	}
+
+	fn validator(index: u8) -> KeyPair {
+		KeyPair::from_secret(Secret::from([index + 1; 32])).unwrap()
+	}
+
+	fn validators_addresses() -> Vec<Address> {
+		(0..3).map(|i| validator(i as u8).address().as_fixed_bytes().into()).collect()
+	}
+
+	fn sealed_empty_step(validators: &[KeyPair], parent_hash: &H256, step: u64) -> SealedEmptyStep {
+		let mut empty_step = SealedEmptyStep { step, signature: Default::default() };
+		let message = empty_step.message(parent_hash);
+		let validator_index = (step % validators.len() as u64) as usize;
+		empty_step.signature = sign(
+			validators[validator_index].secret(),
+			&message.as_fixed_bytes().into(),
+		).unwrap().into();
+		empty_step
+	}
+
+	fn signed_header(validators: &[KeyPair], mut header: Header, step: u64) -> Header {
+		let message = header.seal_hash(false).unwrap();
+		let validator_index = (step % validators.len() as u64) as usize;
+		let signature = sign(validators[validator_index].secret(), &message.as_fixed_bytes().into()).unwrap();
+		let signature: [u8; 65] = signature.into();
+		let signature = H520::from(signature);
+		header.seal[1] = rlp_encode(&signature);
+		header
+	}
+
+	fn verify_with_config(config: &AuraConfiguration, header: &Header) -> Result<ImportedHeader, Error> {
+		let storage = InMemoryStorage::new(genesis(), validators_addresses());
+		verify_aura_header(&storage, &config, header)
+	}
+
+	fn default_verify(header: &Header) -> Result<ImportedHeader, Error> {
+		verify_with_config(&kovan_aura_config(), header)
+	}
+
+	#[test]
+	fn verifies_seal_count() {
+		// when there are no seals at all
+		let mut header = Header::default();
+		assert_eq!(default_verify(&header), Err(Error::InvalidSealArity));
+
+		// when there's single seal (we expect 2 or 3 seals)
+		header.seal = vec![vec![].into()];
+		assert_eq!(default_verify(&header), Err(Error::InvalidSealArity));
+
+		// when there's 3 seals (we expect 2 on Kovan)
+		header.seal = vec![vec![].into(), vec![].into(), vec![].into()];
+		assert_eq!(default_verify(&header), Err(Error::InvalidSealArity));
+
+		// when there's 2 seals
+		header.seal = vec![vec![].into(), vec![].into()];
+		assert_ne!(default_verify(&header), Err(Error::InvalidSealArity));
+	}
+
+	#[test]
+	fn verifies_header_number() {
+		// when number is u64::max_value()
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into(), vec![].into()],
+			number: u64::max_value(),
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::RidiculousNumber));
+
+		// when header is < u64::max_value()
+		header.seal = vec![vec![].into(), vec![].into()];
+		header.number -= 1;
+		assert_ne!(default_verify(&header), Err(Error::RidiculousNumber));
+	}
+
+	#[test]
+	fn verifies_gas_used() {
+		// when gas used is larger than gas limit
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_used: 1.into(),
+			gas_limit: 0.into(),
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::TooMuchGasUsed));
+
+		// when gas used is less than gas limit
+		header.gas_limit = 1.into();
+		assert_ne!(default_verify(&header), Err(Error::TooMuchGasUsed));
+	}
+
+	#[test]
+	fn verifies_gas_limit() {
+		let mut config = kovan_aura_config();
+		config.min_gas_limit = 100.into();
+		config.max_gas_limit = 200.into();
+
+		// when limit is lower than expected
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_limit: 50.into(),
+			..Default::default()
+		};
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InvalidGasLimit));
+
+		// when limit is larger than expected
+		header.gas_limit = 250.into();
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InvalidGasLimit));
+
+		// when limit is within expected range
+		header.gas_limit = 150.into();
+		assert_ne!(verify_with_config(&config, &header), Err(Error::InvalidGasLimit));
+	}
+
+	#[test]
+	fn verifies_extra_data_len() {
+		// when extra data is too large
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			extra_data: std::iter::repeat(42).take(1000).collect::<Vec<_>>().into(),
+			number: 1,
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::ExtraDataOutOfBounds));
+
+		// when extra data size is OK
+		header.extra_data = std::iter::repeat(42).take(10).collect::<Vec<_>>().into();
+		assert_ne!(default_verify(&header), Err(Error::ExtraDataOutOfBounds));
+	}
+
+	#[test]
+	fn verifies_timestamp() {
+		// when timestamp overflows i32
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			timestamp: i32::max_value() as u64 + 1,
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::TimestampOverflow));
+
+		// when timestamp doesn't overflow i32
+		header.timestamp -= 1;
+		assert_ne!(default_verify(&header), Err(Error::TimestampOverflow));
+	}
+
+	#[test]
+	fn verifies_parent_existence() {
+		// when there's no parent in the storage
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::MissingParentBlock));
+
+		// when parent is in the storage
+		header.parent_hash = genesis().hash();
+		assert_ne!(default_verify(&header), Err(Error::MissingParentBlock));
+	}
+
+	#[test]
+	fn verifies_step() {
+		// when step is missing from seals
+		let mut header = Header {
+			seal: vec![vec![].into(), vec![].into()],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			parent_hash: genesis().hash(),
+			..Default::default()
+		};
+		assert_eq!(default_verify(&header), Err(Error::MissingStep));
+
+		// when step is the same as for the parent block
+		header.seal = vec![
+			vec![42].into(),
+			vec![].into(),
+		];
+		assert_eq!(default_verify(&header), Err(Error::DoubleVote));
+
+		// when step is OK
+		header.seal = vec![
+			vec![43].into(),
+			vec![].into(),
+		];
+		assert_ne!(default_verify(&header), Err(Error::DoubleVote));
+
+		// now check with validate_step check enabled
+		let mut config = kovan_aura_config();
+		config.validate_step_transition = 0;
+
+		// when step is lesser that for the parent block
+		header.seal = vec![
+			vec![40].into(),
+			vec![].into(),
+		];
+		assert_eq!(verify_with_config(&config, &header), Err(Error::DoubleVote));
+
+		// when step is OK
+		header.seal = vec![
+			vec![44].into(),
+			vec![].into(),
+		];
+		assert_ne!(verify_with_config(&config, &header), Err(Error::DoubleVote));
+	}
+
+	#[test]
+	fn verifies_empty_step() {
+		let validators = vec![validator(0), validator(1), validator(2)];
+		let mut config = kovan_aura_config();
+		config.empty_steps_transition = 0;
+
+		// when empty step duplicates parent step
+		let mut header = Header {
+			seal: vec![
+				vec![45].into(),
+				vec![142].into(),
+				SealedEmptyStep::rlp_of(&[
+					sealed_empty_step(&validators, &genesis().hash(), 42),
+				]),
+			],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			parent_hash: genesis().hash(),
+			..Default::default()
+		};
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InsufficientProof));
+
+		// when empty step signature check fails
+		let mut wrong_sealed_empty_step = sealed_empty_step(&validators, &genesis().hash(), 43);
+		wrong_sealed_empty_step.signature = Default::default();
+		header.seal[2] = SealedEmptyStep::rlp_of(&[wrong_sealed_empty_step]);
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InsufficientProof));
+
+		// when we are accepting strict empty steps and they come not in order
+		config.strict_empty_steps_transition = 0;
+		header.seal[2] = SealedEmptyStep::rlp_of(&[
+			sealed_empty_step(&validators, &genesis().hash(), 44),
+			sealed_empty_step(&validators, &genesis().hash(), 43),
+		]);
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InsufficientProof));
+
+		// when empty steps are OK
+		header.seal[2] = SealedEmptyStep::rlp_of(&[
+			sealed_empty_step(&validators, &genesis().hash(), 43),
+			sealed_empty_step(&validators, &genesis().hash(), 44),
+		]);
+		assert_ne!(verify_with_config(&config, &header), Err(Error::InsufficientProof));
+	}
+
+	#[test]
+	fn verifies_chain_score() {
+		let mut config = kovan_aura_config();
+		config.validate_score_transition = 0;
+
+		// when chain score is invalid
+		let mut header = Header {
+			seal: vec![
+				vec![43].into(),
+				vec![].into(),
+			],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			parent_hash: genesis().hash(),
+			..Default::default()
+		};
+		assert_eq!(verify_with_config(&config, &header), Err(Error::InvalidDifficulty));
+
+		// when chain score is accepted
+		header.difficulty = calculate_score(42, 43, 0);
+		assert_ne!(verify_with_config(&config, &header), Err(Error::InvalidDifficulty));
+	}
+
+	#[test]
+	fn verifies_validator() {
+		let validators = vec![validator(0), validator(1), validator(2)];
+		let good_header = signed_header(&validators, Header {
+			author: validators[1].address().as_fixed_bytes().into(),
+			seal: vec![
+				vec![43].into(),
+				vec![].into(),
+			],
+			gas_limit: kovan_aura_config().min_gas_limit,
+			parent_hash: genesis().hash(),
+			..Default::default()
+		}, 43);
+
+		// when header author is invalid
+		let mut header = good_header.clone();
+		header.author = Default::default();
+		assert_eq!(default_verify(&header), Err(Error::NotValidator));
+
+		// when header signature is invalid
+		let mut header = good_header.clone();
+		header.seal[1] = rlp_encode(&H520::default());
+		assert_eq!(default_verify(&header), Err(Error::NotValidator));
+
+		// when everything is OK
+		assert_eq!(default_verify(&good_header).map(|_| ()), Ok(()));
+	}
 }
