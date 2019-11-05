@@ -31,108 +31,108 @@ use web3::{self, Transport};
 
 /// attempts to convert a raw `web3_log` into the ethabi log type of a specific `event`
 pub fn parse_log<T: Fn(RawLog) -> ethabi::Result<L>, L>(
-    parse: T,
-    web3_log: &web3::types::Log,
+	parse: T,
+	web3_log: &web3::types::Log,
 ) -> ethabi::Result<L> {
-    let ethabi_log = RawLog {
-        topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
-        data: web3_log.data.0.clone(),
-    };
-    parse(ethabi_log)
+	let ethabi_log = RawLog {
+		topics: web3_log.topics.iter().map(|t| t.0.into()).collect(),
+		data: web3_log.data.0.clone(),
+	};
+	parse(ethabi_log)
 }
 
 /// use `AsyncCall::new(transport, contract_address, timeout, output_decoder)` to
 /// get a `Future` that resolves with the decoded output from calling `function`
 /// on `contract_address`.
 pub struct AsyncCall<T: Transport, F: FunctionOutputDecoder> {
-    future: Timeout<FromErr<CallFuture<Bytes, T::Out>, error::Error>>,
-    output_decoder: F,
+	future: Timeout<FromErr<CallFuture<Bytes, T::Out>, error::Error>>,
+	output_decoder: F,
 }
 
 impl<T: Transport, F: FunctionOutputDecoder> AsyncCall<T, F> {
-    /// call `function` at `contract_address`.
-    /// returns a `Future` that resolves with the decoded output of `function`.
-    pub fn new(
-        transport: &T,
-        contract_address: Address,
-        timeout: Duration,
-        payload: Vec<u8>,
-        output_decoder: F,
-    ) -> Self {
-        let request = CallRequest {
-            from: None,
-            to: contract_address,
-            gas: None,
-            gas_price: None,
-            value: None,
-            data: Some(Bytes(payload)),
-        };
-        let inner_future = web3::api::Eth::new(transport)
-            .call(request, None)
-            .from_err();
-        let future = Timer::default().timeout(inner_future, timeout);
-        Self {
-            future,
-            output_decoder,
-        }
-    }
+	/// call `function` at `contract_address`.
+	/// returns a `Future` that resolves with the decoded output of `function`.
+	pub fn new(
+		transport: &T,
+		contract_address: Address,
+		timeout: Duration,
+		payload: Vec<u8>,
+		output_decoder: F,
+	) -> Self {
+		let request = CallRequest {
+			from: None,
+			to: contract_address,
+			gas: None,
+			gas_price: None,
+			value: None,
+			data: Some(Bytes(payload)),
+		};
+		let inner_future = web3::api::Eth::new(transport)
+			.call(request, None)
+			.from_err();
+		let future = Timer::default().timeout(inner_future, timeout);
+		Self {
+			future,
+			output_decoder,
+		}
+	}
 }
 
 impl<T: Transport, F: FunctionOutputDecoder> Future for AsyncCall<T, F> {
-    type Item = F::Output;
-    type Error = error::Error;
+	type Item = F::Output;
+	type Error = error::Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let encoded = try_ready!(self
-            .future
-            .poll()
-            .chain_err(|| "failed to poll inner web3 CallFuture future"));
-        let decoded = self
-            .output_decoder
-            .decode(&encoded.0)
-            .chain_err(|| format!("failed to decode response {:?}", encoded))?;
-        Ok(Async::Ready(decoded))
-    }
+	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+		let encoded = try_ready!(self
+			.future
+			.poll()
+			.chain_err(|| "failed to poll inner web3 CallFuture future"));
+		let decoded = self
+			.output_decoder
+			.decode(&encoded.0)
+			.chain_err(|| format!("failed to decode response {:?}", encoded))?;
+		Ok(Async::Ready(decoded))
+	}
 }
 
 pub struct AsyncTransaction<T: Transport> {
-    future: Timeout<FromErr<CallFuture<H256, T::Out>, error::Error>>,
+	future: Timeout<FromErr<CallFuture<H256, T::Out>, error::Error>>,
 }
 
 impl<T: Transport> AsyncTransaction<T> {
-    pub fn new(
-        transport: &T,
-        contract_address: Address,
-        authority_address: Address,
-        gas: U256,
-        gas_price: U256,
-        timeout: Duration,
-        payload: Vec<u8>,
-    ) -> Self {
-        let request = TransactionRequest {
-            from: authority_address,
-            to: Some(contract_address),
-            gas: Some(gas),
-            gas_price: Some(gas_price),
-            value: None,
-            data: Some(Bytes(payload)),
-            nonce: None,
-            condition: None,
-        };
-        let inner_future = web3::api::Eth::new(transport)
-            .send_transaction(request)
-            .from_err();
-        let future = Timer::default().timeout(inner_future, timeout);
-        Self { future }
-    }
+	pub fn new(
+		transport: &T,
+		contract_address: Address,
+		authority_address: Address,
+		gas: U256,
+		gas_price: U256,
+		timeout: Duration,
+		payload: Vec<u8>,
+	) -> Self {
+		let request = TransactionRequest {
+			from: authority_address,
+			to: Some(contract_address),
+			gas: Some(gas),
+			gas_price: Some(gas_price),
+			value: None,
+			data: Some(Bytes(payload)),
+			nonce: None,
+			condition: None,
+		};
+		let inner_future = web3::api::Eth::new(transport)
+			.send_transaction(request)
+			.from_err();
+		let future = Timer::default().timeout(inner_future, timeout);
+		Self { future }
+	}
 }
 
 impl<T: Transport> Future for AsyncTransaction<T> {
-    type Item = H256;
-    type Error = error::Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.future.poll().map_err(|x| x.into())
-    }
+	type Item = H256;
+	type Error = error::Error;
+	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+		self.future.poll().map_err(|x| x.into())
+	}
 }
 
 /// the toml crate parses integer literals as `i64`.
@@ -142,101 +142,101 @@ impl<T: Transport> Future for AsyncTransaction<T> {
 /// deserializer and parse them as U256.
 pub fn deserialize_u256<'de, D>(deserializer: D) -> Result<U256, D::Error>
 where
-    D: Deserializer<'de>,
+	D: Deserializer<'de>,
 {
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
+	let s: &str = Deserialize::deserialize(deserializer)?;
+	U256::from_dec_str(s).map_err(|_| D::Error::custom("failed to parse U256 from dec str"))
 }
 
 pub fn serialize_u256<S>(value: &U256, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: Serializer,
+	S: Serializer,
 {
-    serializer.serialize_str(&format!("{}", value))
+	serializer.serialize_str(&format!("{}", value))
 }
 
 /// extends the `Stream` trait by the `last` function
 pub trait StreamExt<I> {
-    /// if you're interested only in the last item in a stream
-    fn last(self) -> Last<Self, I>
-    where
-        Self: Sized;
+	/// if you're interested only in the last item in a stream
+	fn last(self) -> Last<Self, I>
+	where
+		Self: Sized;
 }
 
 impl<S, I> StreamExt<I> for S
 where
-    S: Stream,
+	S: Stream,
 {
-    fn last(self) -> Last<Self, I>
-    where
-        Self: Sized,
-    {
-        Last {
-            stream: self,
-            last: None,
-        }
-    }
+	fn last(self) -> Last<Self, I>
+	where
+		Self: Sized,
+	{
+		Last {
+			stream: self,
+			last: None,
+		}
+	}
 }
 
 /// `Future` that wraps a `Stream` and completes with the last
 /// item in the stream once the stream is over.
 pub struct Last<S, I> {
-    stream: S,
-    last: Option<I>,
+	stream: S,
+	last: Option<I>,
 }
 
 impl<S, I> Future for Last<S, I>
 where
-    S: Stream<Item = I>,
+	S: Stream<Item = I>,
 {
-    type Item = Option<I>;
-    type Error = S::Error;
+	type Item = Option<I>;
+	type Error = S::Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, S::Error> {
-        loop {
-            match self.stream.poll() {
-                Err(err) => return Err(err),
-                Ok(Async::NotReady) => return Ok(Async::NotReady),
-                // stream is finished
-                Ok(Async::Ready(None)) => return Ok(Async::Ready(self.last.take())),
-                // there is more
-                Ok(Async::Ready(item)) => self.last = item,
-            }
-        }
-    }
+	fn poll(&mut self) -> Poll<Self::Item, S::Error> {
+		loop {
+			match self.stream.poll() {
+				Err(err) => return Err(err),
+				Ok(Async::NotReady) => return Ok(Async::NotReady),
+				// stream is finished
+				Ok(Async::Ready(None)) => return Ok(Async::Ready(self.last.take())),
+				// there is more
+				Ok(Async::Ready(item)) => self.last = item,
+			}
+		}
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use futures;
-    use tokio_core::reactor::Core;
+	use super::*;
+	use futures;
+	use tokio_core::reactor::Core;
 
-    #[test]
-    fn test_stream_ext_last_empty() {
-        let stream = futures::stream::empty::<(), ()>();
-        let mut event_loop = Core::new().unwrap();
-        assert_eq!(event_loop.run(stream.last()).unwrap(), None);
-    }
+	#[test]
+	fn test_stream_ext_last_empty() {
+		let stream = futures::stream::empty::<(), ()>();
+		let mut event_loop = Core::new().unwrap();
+		assert_eq!(event_loop.run(stream.last()).unwrap(), None);
+	}
 
-    #[test]
-    fn test_stream_ext_last_once_ok() {
-        let stream = futures::stream::once::<u32, ()>(Ok(42));
-        let mut event_loop = Core::new().unwrap();
-        assert_eq!(event_loop.run(stream.last()).unwrap(), Some(42));
-    }
+	#[test]
+	fn test_stream_ext_last_once_ok() {
+		let stream = futures::stream::once::<u32, ()>(Ok(42));
+		let mut event_loop = Core::new().unwrap();
+		assert_eq!(event_loop.run(stream.last()).unwrap(), Some(42));
+	}
 
-    #[test]
-    fn test_stream_ext_last_once_err() {
-        let stream = futures::stream::once::<u32, u32>(Err(42));
-        let mut event_loop = Core::new().unwrap();
-        assert_eq!(event_loop.run(stream.last()).unwrap_err(), 42);
-    }
+	#[test]
+	fn test_stream_ext_last_once_err() {
+		let stream = futures::stream::once::<u32, u32>(Err(42));
+		let mut event_loop = Core::new().unwrap();
+		assert_eq!(event_loop.run(stream.last()).unwrap_err(), 42);
+	}
 
-    #[test]
-    fn test_stream_ext_last_three() {
-        let stream = futures::stream::iter_ok::<_, ()>(vec![17, 19, 3]);
-        let mut event_loop = Core::new().unwrap();
-        assert_eq!(event_loop.run(stream.last()).unwrap(), Some(3));
-    }
+	#[test]
+	fn test_stream_ext_last_three() {
+		let stream = futures::stream::iter_ok::<_, ()>(vec![17, 19, 3]);
+		let mut event_loop = Core::new().unwrap();
+		assert_eq!(event_loop.run(stream.last()).unwrap(), Some(3));
+	}
 }

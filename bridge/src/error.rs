@@ -21,35 +21,35 @@ use tokio_timer::{TimeoutError, TimerError};
 use {ethabi, rustc_hex, toml, web3};
 
 error_chain! {
-    types {
-        Error, ErrorKind, ResultExt, Result;
-    }
+	types {
+		Error, ErrorKind, ResultExt, Result;
+	}
 
-    foreign_links {
-        Io(io::Error);
-        Toml(toml::de::Error);
-        Ethabi(ethabi::Error);
-        Timer(TimerError);
-        Hex(rustc_hex::FromHexError);
-    }
+	foreign_links {
+		Io(io::Error);
+		Toml(toml::de::Error);
+		Ethabi(ethabi::Error);
+		Timer(TimerError);
+		Hex(rustc_hex::FromHexError);
+	}
 
-    errors {
-        TimedOut {
-            description("Request timed out"),
-            display("Request timed out"),
-        }
-        // workaround for error_chain not allowing to check internal error kind
-        // https://github.com/rust-lang-nursery/error-chain/issues/206
-        MissingFile(filename: String) {
-            description("File not found"),
-            display("File {} not found", filename),
-        }
-        // workaround for lack of web3:Error Display and Error implementations
-        Web3(err: web3::Error) {
-            description("web3 error"),
-            display("{:?}", err),
-        }
-    }
+	errors {
+		TimedOut {
+			description("Request timed out"),
+			display("Request timed out"),
+		}
+		// workaround for error_chain not allowing to check internal error kind
+		// https://github.com/rust-lang-nursery/error-chain/issues/206
+		MissingFile(filename: String) {
+			description("File not found"),
+			display("File {} not found", filename),
+		}
+		// workaround for lack of web3:Error Display and Error implementations
+		Web3(err: web3::Error) {
+			description("web3 error"),
+			display("{:?}", err),
+		}
+	}
 }
 
 // tokio timer `Timeout<F>` can only wrap futures `F` whose assocaited `Error` type
@@ -66,16 +66,16 @@ error_chain! {
 // with `Timeout`.
 
 impl<F> From<TimeoutError<F>> for Error {
-    fn from(err: TimeoutError<F>) -> Self {
-        match err {
-            TimeoutError::Timer(_, timer_error) => timer_error.into(),
-            TimeoutError::TimedOut(_) => ErrorKind::TimedOut.into(),
-        }
-    }
+	fn from(err: TimeoutError<F>) -> Self {
+		match err {
+			TimeoutError::Timer(_, timer_error) => timer_error.into(),
+			TimeoutError::TimedOut(_) => ErrorKind::TimedOut.into(),
+		}
+	}
 }
 
 impl From<web3::Error> for Error {
-    fn from(err: web3::Error) -> Self {
-        ErrorKind::Web3(err).into()
-    }
+	fn from(err: web3::Error) -> Self {
+		ErrorKind::Web3(err).into()
+	}
 }

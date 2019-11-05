@@ -30,11 +30,11 @@ use web3::types::{Bytes, Log, H256, H520};
 use web3::Transport;
 
 enum State<T: Transport> {
-    AwaitCheckAlreadySigned(
-        AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>,
-    ),
-    AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
-    AwaitTransaction(AsyncTransaction<T>),
+	AwaitCheckAlreadySigned(
+		AsyncCall<T, contracts::side::functions::has_authority_signed_message::Decoder>,
+	),
+	AwaitSignature(Timeout<FromErr<CallFuture<H520, T::Out>, error::Error>>),
+	AwaitTransaction(AsyncTransaction<T>),
 }
 
 /// `Future` that is responsible for calling `sideContract.submitSignature`
@@ -42,310 +42,310 @@ enum State<T: Transport> {
 /// these get created by the `side_to_main_sign` `RelayStream` that's part
 /// of the `Bridge`.
 pub struct SideToMainSign<T: Transport> {
-    tx_hash: H256,
-    side: SideContract<T>,
-    message: MessageToMain,
-    state: State<T>,
+	tx_hash: H256,
+	side: SideContract<T>,
+	message: MessageToMain,
+	state: State<T>,
 }
 
 impl<T: Transport> SideToMainSign<T> {
-    pub fn new(log: &Log, side: SideContract<T>) -> Self {
-        let tx_hash = log
-            .transaction_hash
-            .expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
+	pub fn new(log: &Log, side: SideContract<T>) -> Self {
+		let tx_hash = log
+			.transaction_hash
+			.expect("`log` must be mined and contain `transaction_hash`. q.e.d.");
 
-        let message =
-            MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
-        let message_bytes = message.to_bytes();
+		let message =
+			MessageToMain::from_log(log).expect("`log` must contain valid message. q.e.d.");
+		let message_bytes = message.to_bytes();
 
-        assert_eq!(
-            message_bytes.len(),
-            MESSAGE_LENGTH,
-            "SideBridge never accepts messages with len != {} bytes; qed",
-            MESSAGE_LENGTH
-        );
+		assert_eq!(
+			message_bytes.len(),
+			MESSAGE_LENGTH,
+			"SideBridge never accepts messages with len != {} bytes; qed",
+			MESSAGE_LENGTH
+		);
 
-        let future = side.is_side_to_main_signed_on_side(&message);
-        let state = State::AwaitCheckAlreadySigned(future);
-        info!("{:?} - step 1/3 - about to sign message", tx_hash);
+		let future = side.is_side_to_main_signed_on_side(&message);
+		let state = State::AwaitCheckAlreadySigned(future);
+		info!("{:?} - step 1/3 - about to sign message", tx_hash);
 
-        Self {
-            side,
-            tx_hash,
-            message,
-            state,
-        }
-    }
+		Self {
+			side,
+			tx_hash,
+			message,
+			state,
+		}
+	}
 }
 
 impl<T: Transport> Future for SideToMainSign<T> {
-    /// transaction hash
-    type Item = Option<H256>;
-    type Error = error::Error;
+	/// transaction hash
+	type Item = Option<H256>;
+	type Error = error::Error;
 
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        loop {
-            let next_state = match self.state {
-                State::AwaitCheckAlreadySigned(ref mut future) => {
-                    let is_already_signed = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: message signing failed"));
-                    if is_already_signed {
-                        return Ok(Async::Ready(None));
-                    }
+	fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+		loop {
+			let next_state = match self.state {
+				State::AwaitCheckAlreadySigned(ref mut future) => {
+					let is_already_signed = try_ready!(future
+						.poll()
+						.chain_err(|| "WithdrawConfirm: message signing failed"));
+					if is_already_signed {
+						return Ok(Async::Ready(None));
+					}
 
-                    let inner_future = web3::api::Eth::new(self.side.transport.clone())
-                        .sign(self.side.authority_address, Bytes(self.message.to_bytes()))
-                        .from_err();
-                    let timeout_future =
-                        Timer::default().timeout(inner_future, self.side.request_timeout);
-                    State::AwaitSignature(timeout_future)
-                }
-                State::AwaitSignature(ref mut future) => {
-                    let signature_bytes = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: message signing failed"));
-                    info!(
-                        "{:?} - step 2/3 - message signed. about to send transaction",
-                        self.tx_hash
-                    );
+					let inner_future = web3::api::Eth::new(self.side.transport.clone())
+						.sign(self.side.authority_address, Bytes(self.message.to_bytes()))
+						.from_err();
+					let timeout_future =
+						Timer::default().timeout(inner_future, self.side.request_timeout);
+					State::AwaitSignature(timeout_future)
+				}
+				State::AwaitSignature(ref mut future) => {
+					let signature_bytes = try_ready!(future
+						.poll()
+						.chain_err(|| "WithdrawConfirm: message signing failed"));
+					info!(
+						"{:?} - step 2/3 - message signed. about to send transaction",
+						self.tx_hash
+					);
 
-                    let signature = Signature::from_bytes(&signature_bytes.as_bytes())?;
+					let signature = Signature::from_bytes(&signature_bytes.as_bytes())?;
 
-                    let future = self.side.submit_signed_message(&self.message, &signature);
-                    State::AwaitTransaction(future)
-                }
-                State::AwaitTransaction(ref mut future) => {
-                    let tx_hash = try_ready!(future
-                        .poll()
-                        .chain_err(|| "WithdrawConfirm: sending transaction failed"));
-                    info!(
-                        "{:?} - step 3/3 - DONE - transaction sent {:?}",
-                        self.tx_hash, tx_hash
-                    );
-                    return Ok(Async::Ready(Some(tx_hash)));
-                }
-            };
-            self.state = next_state;
-        }
-    }
+					let future = self.side.submit_signed_message(&self.message, &signature);
+					State::AwaitTransaction(future)
+				}
+				State::AwaitTransaction(ref mut future) => {
+					let tx_hash = try_ready!(future
+						.poll()
+						.chain_err(|| "WithdrawConfirm: sending transaction failed"));
+					info!(
+						"{:?} - step 3/3 - DONE - transaction sent {:?}",
+						self.tx_hash, tx_hash
+					);
+					return Ok(Async::Ready(Some(tx_hash)));
+				}
+			};
+			self.state = next_state;
+		}
+	}
 }
 
 pub struct LogToSideToMainSign<T: Transport> {
-    pub side: SideContract<T>,
+	pub side: SideContract<T>,
 }
 
 /// from the options and a log a relay future can be made
 impl<T: Transport> LogToFuture for LogToSideToMainSign<T> {
-    type Future = SideToMainSign<T>;
+	type Future = SideToMainSign<T>;
 
-    fn log_to_future(&self, log: &Log) -> Self::Future {
-        SideToMainSign::new(log, self.side.clone())
-    }
+	fn log_to_future(&self, log: &Log) -> Self::Future {
+		SideToMainSign::new(log, self.side.clone())
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use contracts;
-    use ethabi;
-    use rustc_hex::FromHex;
-    use rustc_hex::ToHex;
-    use tokio_core::reactor::Core;
-    use web3::types::{Address, Bytes, Log};
+	use super::*;
+	use contracts;
+	use ethabi;
+	use rustc_hex::FromHex;
+	use rustc_hex::ToHex;
+	use tokio_core::reactor::Core;
+	use web3::types::{Address, Bytes, Log};
 
-    #[test]
-    fn test_side_to_main_sign_relay_future_not_relayed() {
-        let topic = contracts::side::events::relay_message::filter().topic0;
+	#[test]
+	fn test_side_to_main_sign_relay_future_not_relayed() {
+		let topic = contracts::side::events::relay_message::filter().topic0;
 
-        let log = contracts::side::logs::RelayMessage {
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
-                .parse()
-                .unwrap(),
-            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
-            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
-        };
+		let log = contracts::side::logs::RelayMessage {
+			message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+				.parse()
+				.unwrap(),
+			sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
+			recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
+		};
 
-        // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[
-            ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
-            ethabi::Token::Address(log.sender),
-            ethabi::Token::Address(log.recipient),
-        ]);
+		// TODO [snd] would be nice if ethabi derived log structs implemented `encode`
+		let log_data = ethabi::encode(&[
+			ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
+			ethabi::Token::Address(log.sender),
+			ethabi::Token::Address(log.recipient),
+		]);
 
-        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-            .parse()
-            .unwrap();
+		let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+			.parse()
+			.unwrap();
 
-        let raw_log = Log {
-            address: "0000000000000000000000000000000000000001".parse().unwrap(),
-            topics: topic.into(),
-            data: Bytes(log_data),
-            transaction_hash: Some(log_tx_hash),
-            block_hash: None,
-            block_number: None,
-            transaction_index: None,
-            log_index: None,
-            transaction_log_index: None,
-            log_type: None,
-            removed: None,
-        };
+		let raw_log = Log {
+			address: "0000000000000000000000000000000000000001".parse().unwrap(),
+			topics: topic.into(),
+			data: Bytes(log_data),
+			transaction_hash: Some(log_tx_hash),
+			block_hash: None,
+			block_number: None,
+			transaction_index: None,
+			log_index: None,
+			transaction_log_index: None,
+			log_type: None,
+			removed: None,
+		};
 
-        let authority_address: Address =
-            "0000000000000000000000000000000000000001".parse().unwrap();
+		let authority_address: Address =
+			"0000000000000000000000000000000000000001".parse().unwrap();
 
-        let tx_hash = "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
-        let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
+		let tx_hash = "1db8f385535c0d178b8f40016048f3a3cffee8f94e68978ea4b277f57b638f0b";
+		let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
 
-        let message = MessageToMain {
-            side_tx_hash: log_tx_hash,
-            message_id: log.message_id,
-            recipient: log.recipient,
-            sender: log.sender,
-        };
+		let message = MessageToMain {
+			side_tx_hash: log_tx_hash,
+			message_id: log.message_id,
+			recipient: log.recipient,
+			sender: log.sender,
+		};
 
-        let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
-            authority_address,
-            message.to_bytes(),
-        );
+		let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
+			authority_address,
+			message.to_bytes(),
+		);
 
-        let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
+		let signature = "8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677aff3454fce5edbc8cca8697c15331677e6ebccccaff3454fce5edbc8cca8697c15331677e6ebc";
 
-        let tx_data = contracts::side::functions::submit_signed_message::encode_input(
-            signature.from_hex::<Vec<u8>>().unwrap(),
-            message.to_bytes(),
-        );
+		let tx_data = contracts::side::functions::submit_signed_message::encode_input(
+			signature.from_hex::<Vec<u8>>().unwrap(),
+			message.to_bytes(),
+		);
 
-        let transport = mock_transport!(
-            "eth_call" =>
-                req => json!([{
-                    "data": format!("0x{}", call_data.to_hex::<String>()),
-                    "to": format!("0x{:x}", side_contract_address),
-                }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex::<String>()));
-            "eth_sign" =>
-                req => json!([
-                    format!("0x{:x}", authority_address),
-                    format!("0x{}", message.to_bytes().to_hex::<String>())
-                ]),
-                res => json!(format!("0x{}", signature));
-            "eth_sendTransaction" =>
-                req => json!([{
-                    "data": format!("0x{}", tx_data.to_hex::<String>()),
-                    "from": format!("0x{:x}", authority_address),
-                    "gas": "0xfd",
-                    "gasPrice": "0xa0",
-                    "to": format!("0x{:x}", side_contract_address),
-                }]),
-                res => json!(format!("0x{}", tx_hash));
-        );
+		let transport = mock_transport!(
+			"eth_call" =>
+				req => json!([{
+					"data": format!("0x{}", call_data.to_hex::<String>()),
+					"to": format!("0x{:x}", side_contract_address),
+				}, "latest"]),
+				res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(false)]).to_hex::<String>()));
+			"eth_sign" =>
+				req => json!([
+					format!("0x{:x}", authority_address),
+					format!("0x{}", message.to_bytes().to_hex::<String>())
+				]),
+				res => json!(format!("0x{}", signature));
+			"eth_sendTransaction" =>
+				req => json!([{
+					"data": format!("0x{}", tx_data.to_hex::<String>()),
+					"from": format!("0x{:x}", authority_address),
+					"gas": "0xfd",
+					"gasPrice": "0xa0",
+					"to": format!("0x{:x}", side_contract_address),
+				}]),
+				res => json!(format!("0x{}", tx_hash));
+		);
 
-        let side_contract = SideContract {
-            transport: transport.clone(),
-            contract_address: side_contract_address,
-            authority_address,
-            required_signatures: 1,
-            request_timeout: ::std::time::Duration::from_millis(0),
-            logs_poll_interval: ::std::time::Duration::from_millis(0),
-            required_log_confirmations: 0,
-            sign_main_to_side_gas: 0.into(),
-            sign_main_to_side_gas_price: 0.into(),
-            sign_side_to_main_gas: 0xfd.into(),
-            sign_side_to_main_gas_price: 0xa0.into(),
-        };
+		let side_contract = SideContract {
+			transport: transport.clone(),
+			contract_address: side_contract_address,
+			authority_address,
+			required_signatures: 1,
+			request_timeout: ::std::time::Duration::from_millis(0),
+			logs_poll_interval: ::std::time::Duration::from_millis(0),
+			required_log_confirmations: 0,
+			sign_main_to_side_gas: 0.into(),
+			sign_main_to_side_gas_price: 0.into(),
+			sign_side_to_main_gas: 0xfd.into(),
+			sign_side_to_main_gas_price: 0xa0.into(),
+		};
 
-        let future = SideToMainSign::new(&raw_log, side_contract);
+		let future = SideToMainSign::new(&raw_log, side_contract);
 
-        let mut event_loop = Core::new().unwrap();
-        let result = event_loop.run(future).unwrap();
-        assert_eq!(result, Some(tx_hash.parse().unwrap()));
+		let mut event_loop = Core::new().unwrap();
+		let result = event_loop.run(future).unwrap();
+		assert_eq!(result, Some(tx_hash.parse().unwrap()));
 
-        assert_eq!(transport.actual_requests(), transport.expected_requests());
-    }
+		assert_eq!(transport.actual_requests(), transport.expected_requests());
+	}
 
-    #[test]
-    fn test_side_to_main_sign_relay_future_already_relayed() {
-        let topic = contracts::side::events::relay_message::filter().topic0;
+	#[test]
+	fn test_side_to_main_sign_relay_future_already_relayed() {
+		let topic = contracts::side::events::relay_message::filter().topic0;
 
-        let log = contracts::side::logs::RelayMessage {
-            message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
-                .parse()
-                .unwrap(),
-            sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
-            recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
-        };
+		let log = contracts::side::logs::RelayMessage {
+			message_id: "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a94243ff"
+				.parse()
+				.unwrap(),
+			sender: "aff3454fce5edbc8cca8697c15331677e6ebccff".parse().unwrap(),
+			recipient: "aff3454fce5edbc8cca8697c15331677e6ebcccc".parse().unwrap(),
+		};
 
-        // TODO [snd] would be nice if ethabi derived log structs implemented `encode`
-        let log_data = ethabi::encode(&[
-            ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
-            ethabi::Token::Address(log.sender),
-            ethabi::Token::Address(log.recipient),
-        ]);
+		// TODO [snd] would be nice if ethabi derived log structs implemented `encode`
+		let log_data = ethabi::encode(&[
+			ethabi::Token::FixedBytes(log.message_id.as_bytes().to_vec()),
+			ethabi::Token::Address(log.sender),
+			ethabi::Token::Address(log.recipient),
+		]);
 
-        let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
-            .parse()
-            .unwrap();
+		let log_tx_hash = "884edad9ce6fa2440d8a54cc123490eb96d2768479d49ff9c7366125a9424364"
+			.parse()
+			.unwrap();
 
-        let raw_log = Log {
-            address: "0000000000000000000000000000000000000001".parse().unwrap(),
-            topics: topic.into(),
-            data: Bytes(log_data),
-            transaction_hash: Some(log_tx_hash),
-            block_hash: None,
-            block_number: None,
-            transaction_index: None,
-            log_index: None,
-            transaction_log_index: None,
-            log_type: None,
-            removed: None,
-        };
+		let raw_log = Log {
+			address: "0000000000000000000000000000000000000001".parse().unwrap(),
+			topics: topic.into(),
+			data: Bytes(log_data),
+			transaction_hash: Some(log_tx_hash),
+			block_hash: None,
+			block_number: None,
+			transaction_index: None,
+			log_index: None,
+			transaction_log_index: None,
+			log_type: None,
+			removed: None,
+		};
 
-        let authority_address: Address =
-            "0000000000000000000000000000000000000001".parse().unwrap();
+		let authority_address: Address =
+			"0000000000000000000000000000000000000001".parse().unwrap();
 
-        let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
+		let side_contract_address = "0000000000000000000000000000000000000dd1".parse().unwrap();
 
-        let message = MessageToMain {
-            side_tx_hash: log_tx_hash,
-            message_id: log.message_id,
-            recipient: log.recipient,
-            sender: log.sender,
-        };
+		let message = MessageToMain {
+			side_tx_hash: log_tx_hash,
+			message_id: log.message_id,
+			recipient: log.recipient,
+			sender: log.sender,
+		};
 
-        let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
-            authority_address,
-            message.to_bytes(),
-        );
+		let call_data = contracts::side::functions::has_authority_signed_message::encode_input(
+			authority_address,
+			message.to_bytes(),
+		);
 
-        let transport = mock_transport!(
-            "eth_call" =>
-                req => json!([{
-                    "data": format!("0x{}", call_data.to_hex::<String>()),
-                    "to": side_contract_address,
-                }, "latest"]),
-                res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex::<String>()));
-        );
+		let transport = mock_transport!(
+			"eth_call" =>
+				req => json!([{
+					"data": format!("0x{}", call_data.to_hex::<String>()),
+					"to": side_contract_address,
+				}, "latest"]),
+				res => json!(format!("0x{}", ethabi::encode(&[ethabi::Token::Bool(true)]).to_hex::<String>()));
+		);
 
-        let side_contract = SideContract {
-            transport: transport.clone(),
-            contract_address: side_contract_address,
-            authority_address,
-            required_signatures: 1,
-            request_timeout: ::std::time::Duration::from_millis(0),
-            logs_poll_interval: ::std::time::Duration::from_millis(0),
-            required_log_confirmations: 0,
-            sign_main_to_side_gas: 0.into(),
-            sign_main_to_side_gas_price: 0.into(),
-            sign_side_to_main_gas: 0xfd.into(),
-            sign_side_to_main_gas_price: 0xa0.into(),
-        };
+		let side_contract = SideContract {
+			transport: transport.clone(),
+			contract_address: side_contract_address,
+			authority_address,
+			required_signatures: 1,
+			request_timeout: ::std::time::Duration::from_millis(0),
+			logs_poll_interval: ::std::time::Duration::from_millis(0),
+			required_log_confirmations: 0,
+			sign_main_to_side_gas: 0.into(),
+			sign_main_to_side_gas_price: 0.into(),
+			sign_side_to_main_gas: 0xfd.into(),
+			sign_side_to_main_gas_price: 0xa0.into(),
+		};
 
-        let future = SideToMainSign::new(&raw_log, side_contract);
+		let future = SideToMainSign::new(&raw_log, side_contract);
 
-        let mut event_loop = Core::new().unwrap();
-        let result = event_loop.run(future).unwrap();
-        assert_eq!(result, None);
+		let mut event_loop = Core::new().unwrap();
+		let result = event_loop.run(future).unwrap();
+		assert_eq!(result, None);
 
-        assert_eq!(transport.actual_requests(), transport.expected_requests());
-    }
+		assert_eq!(transport.actual_requests(), transport.expected_requests());
+	}
 }
