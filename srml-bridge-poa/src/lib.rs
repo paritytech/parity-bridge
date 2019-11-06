@@ -71,10 +71,10 @@ pub struct ImportedHeader {
 ///
 /// Storage modification must be discarded if block import has failed.
 pub trait Storage {
-	/// Get number of initial (genesis or checkpoint) block.
-	fn initial_block(&self) -> u64;
 	/// Get best known block.
 	fn best_block(&self) -> (u64, H256, U256);
+	/// Get last finalized block.
+	fn finalized_block(&self) -> (u64, H256);
 	/// Get imported header by its hash.
 	fn header(&self, hash: &H256) -> Option<ImportedHeader>;
 	/// Get new validators that are scheduled by given header.
@@ -87,6 +87,10 @@ pub trait Storage {
 		header: ImportedHeader,
 		scheduled_change: Option<Vec<Address>>,
 	);
+	/// Prune all headers within [begin; end) range.
+	fn prune_headers(&mut self, begin: u64, end: u64);
+	/// Set last finalized block.
+	fn set_finalized_block(&mut self, number: u64, hash: H256);
 }
 
 /// The module configuration trait
@@ -110,12 +114,14 @@ decl_module! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Bridge {
-		/// Initial block (genesis or block from checkpoint).
-		InitialBlock: (u64, H256);
 		/// Best known block.
 		BestBlock: (u64, H256, U256);
+		/// Best finalized block.
+		FinalizedBlock: (u64, H256);
 		/// Map of imported headers by hash.
 		Headers: map H256 => Option<ImportedHeader>;
+		/// Map of imported header hashes by number.
+		HeadersByNumber: map u64 => Option<Vec<H256>>;
 		/// Map of validators set changes scheduled by given header.
 		ScheduledChanges: map H256 => Option<Vec<Address>>;
 	}
@@ -129,11 +135,15 @@ decl_storage! {
 			// 2) there are no scheduled validators changes from previous blocks;
 			// 3) (implied) all direct children of initial block are authred by the same validators set.
 
-			// TODO: ensure that !initial_validators.is_empty()
+			assert!(
+				!config.initial_validators.is_empty(),
+				"Initial validators set can't be empty",
+			);
 
 			let initial_hash = config.initial_header.hash();
-			InitialBlock::put((config.initial_header.number, initial_hash));
 			BestBlock::put((config.initial_header.number, initial_hash, config.initial_difficulty));
+			FinalizedBlock::put((config.initial_header.number, initial_hash));
+			HeadersByNumber::insert(config.initial_header.number, vec![initial_hash]);
 			Headers::insert(initial_hash, ImportedHeader {
 				header: config.initial_header.clone(),
 				total_difficulty: config.initial_difficulty,
@@ -158,12 +168,12 @@ impl<T: Trait> Module<T> {
 struct BridgeStorage;
 
 impl Storage for BridgeStorage {
-	fn initial_block(&self) -> u64 {
-		InitialBlock::get().0
-	}
-
 	fn best_block(&self) -> (u64, H256, U256) {
 		BestBlock::get()
+	}
+
+	fn finalized_block(&self) -> (u64, H256) {
+		FinalizedBlock::get()
 	}
 
 	fn header(&self, hash: &H256) -> Option<ImportedHeader> {
@@ -184,10 +194,24 @@ impl Storage for BridgeStorage {
 		if is_best {
 			BestBlock::put((header.header.number, hash, header.total_difficulty));
 		}
+		HeadersByNumber::append_or_insert(header.header.number, vec![hash]);
 		Headers::insert(&hash, header);
 		if let Some(scheduled_change) = scheduled_change {
 			ScheduledChanges::insert(&hash, scheduled_change);
 		}
+	}
+
+	fn prune_headers(&mut self, begin: u64, end: u64) {
+		for number in begin..end {
+			let blocks_at_number = HeadersByNumber::take(number);
+			for hash in blocks_at_number.into_iter().flat_map(|x| x) {
+				Headers::remove(&hash);
+			}
+		}
+	}
+
+	fn set_finalized_block(&mut self, number: u64, hash: H256) {
+		FinalizedBlock::put((number, hash));
 	}
 }
 
@@ -300,9 +324,10 @@ pub(crate) mod tests {
 	}
 
 	pub struct InMemoryStorage {
-		initial_block: u64,
 		best_block: (u64, H256, U256),
+		finalized_block: (u64, H256),
 		headers: HashMap<H256, ImportedHeader>,
+		headers_by_number: HashMap<u64, Vec<H256>>,
 		scheduled_changes: HashMap<H256, Vec<Address>>,
 	}
 
@@ -310,8 +335,9 @@ pub(crate) mod tests {
 		pub fn new(initial_header: Header, initial_validators: Vec<Address>) -> Self {
 			let hash = initial_header.hash();
 			InMemoryStorage {
-				initial_block: initial_header.number,
 				best_block: (initial_header.number, hash, 0.into()),
+				finalized_block: (initial_header.number, hash),
+				headers_by_number: vec![(initial_header.number, vec![hash])].into_iter().collect(),
 				headers: vec![(
 					hash,
 					ImportedHeader {
@@ -326,12 +352,12 @@ pub(crate) mod tests {
 	}
 
 	impl Storage for InMemoryStorage {
-		fn initial_block(&self) -> u64 {
-			self.initial_block
-		}
-
 		fn best_block(&self) -> (u64, H256, U256) {
 			self.best_block.clone()
+		}
+
+		fn finalized_block(&self) -> (u64, H256) {
+			self.finalized_block.clone()
 		}
 
 		fn header(&self, hash: &H256) -> Option<ImportedHeader> {
@@ -352,14 +378,24 @@ pub(crate) mod tests {
 			if is_best {
 				self.best_block = (header.header.number, hash, header.total_difficulty);
 			}
+			self.headers_by_number.entry(header.header.number).or_default().push(hash);
 			self.headers.insert(hash, header);
 			if let Some(scheduled_change) = scheduled_change {
 				self.scheduled_changes.insert(hash, scheduled_change);
 			}
+		}
 
-			/*if self.headers.len() > 2048 {
-				self.headers.pop_front();
-			}*/
+		fn prune_headers(&mut self, begin: u64, end: u64) {
+			for number in begin..end {
+				let blocks_at_number = self.headers_by_number.remove(&number);
+				for hash in blocks_at_number.into_iter().flat_map(|x| x) {
+					self.headers.remove(&hash);
+				}
+			}
+		}
+
+		fn set_finalized_block(&mut self, number: u64, hash: H256) {
+			self.finalized_block = (number, hash);
 		}
 	}
 }

@@ -54,13 +54,7 @@ pub struct Validators<'a> {
 
 impl<'a> Validators<'a> {
 	/// Creates new validators manager using given configuration.
-	pub fn new(initial_block_number: u64, config: &'a ValidatorsConfiguration) -> Self {
-		if let ValidatorsConfiguration::Multi(ref sources) = *config {
-			if sources.is_empty() || sources[0].0 > initial_block_number {
-				panic!("Validators source for initial block is not provided");
-			}
-		}
-
+	pub fn new(config: &'a ValidatorsConfiguration) -> Self {
 		Self { config }
 	}
 

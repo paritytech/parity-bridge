@@ -26,6 +26,8 @@ use crate::{Storage, ancestry};
 use crate::error::Error;
 
 /// Tries to finalize blocks when given block is imported.
+///
+/// Returns numbers and hashes of finalized blocks in ascending order.
 pub fn finalize_blocks<S: Storage>(
 	storage: &S,
 	header_validators: &(H256, Vec<Address>),

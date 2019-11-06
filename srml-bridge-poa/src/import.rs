@@ -15,20 +15,14 @@
 // along with Parity-Bridge.  If not, see <http://www.gnu.org/licenses/>.
 
 use rstd::prelude::*;
-use primitives::{H256, Header, Receipt, U256};
+use primitives::{H256, Header, Receipt};
 use crate::{AuraConfiguration, ImportedHeader, Storage};
 use crate::error::Error;
 use crate::finality::finalize_blocks;
 use crate::validators::{Validators, ValidatorsConfiguration};
 use crate::verification::verify_aura_header;
 
-/// Number of headers behind the best block that we store. We never import
-/// any headers that have block.parent.number < best_block.number - PRUNE_DEPTH.
-///
-/// I.e. if the best block is 100_000 and we try to import alternative block with
-/// number = 100_000 - 2_048 = 97_952, the import will succeed.
-/// But if we try to import alternative block with number = 100_000 - 2_048 + 1 = 97_953,
-/// the import will fail.
+/// Number of headers behind the best finalized block that we store.
 const PRUNE_DEPTH: u64 = 2048;
 
 /// Imports given header and updates blocks finality (if required).
@@ -43,19 +37,19 @@ pub fn import_header<S: Storage>(
 	receipts: Option<Vec<Receipt>>,
 ) -> Result<H256, Error> {
 	// first check that we are able to import this header at all
-	let (hash, best_total_difficulty) = is_importable_header(storage, &header)?;
+	let hash = is_importable_header(storage, &header)?;
 
 	// verify and insert header
-	let validators = Validators::new(storage.initial_block(), validators_config);
 	let parent_header = verify_aura_header(
 		storage,
 		aura_config,
-		//&validators,
 		&header,
 	)?;
 
 	// check if block schedules new validators
-	let (scheduled_validators, immediately_enacted_validators) = validators.extract_validators_change(&header, receipts)?;
+	let validators = Validators::new(validators_config);
+	let (scheduled_validators, immediately_enacted_validators) =
+		validators.extract_validators_change(&header, receipts)?;
 
 	// check if block finalizes some other blocks and corresponding scheduled validators
 	let finalized_blocks = finalize_blocks(
@@ -69,6 +63,7 @@ pub fn import_header<S: Storage>(
 		.or_else(|| validators.finalize_validators_change(storage, &finalized_blocks));
 
 	// and finally insert the block
+	let (_, _, best_total_difficulty) = storage.best_block();
 	let total_difficulty = parent_header.total_difficulty + header.difficulty;
 	let is_best = total_difficulty > best_total_difficulty;
 	let next_validators = enacted_validators
@@ -81,7 +76,17 @@ pub fn import_header<S: Storage>(
 	};
 	storage.insert_header(is_best, hash, imported_header, scheduled_validators);
 
-	// TODO: prune
+	// now prune old headers.
+	// the pruning strategy is to store all unfinalized blocks and blocks
+	// within PRUNE_DEPTH range before finalized blocks
+	let last_finalized = finalized_blocks.last().cloned();
+	if let Some((last_finalized_number, last_finalized_hash)) = last_finalized {
+		let (prev_finalized_number, _) = storage.finalized_block();
+		let first_block_to_prune = prev_finalized_number.saturating_sub(PRUNE_DEPTH);
+		let last_block_to_prune = last_finalized_number.saturating_sub(PRUNE_DEPTH);
+		storage.prune_headers(first_block_to_prune, last_block_to_prune + 1);
+		storage.set_finalized_block(last_finalized_number, last_finalized_hash);
+	}
 
 	Ok(hash)
 }
@@ -93,7 +98,7 @@ pub fn header_import_requires_receipts<S: Storage>(
 	header: &Header,
 ) -> bool {
 	is_importable_header(storage, header)
-		.map(|_| Validators::new(storage.initial_block(), validators_config))
+		.map(|_| Validators::new(validators_config))
 		.map(|validators| validators.maybe_signals_validators_change(header))
 		.unwrap_or(false)
 }
@@ -102,14 +107,10 @@ pub fn header_import_requires_receipts<S: Storage>(
 /// Checks that we are able to ***try to** import this header.
 /// Returns error if we should not try to import this block.
 /// Returns the hash of the header and total difficulty of the best known block otherwise.
-fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<(H256, U256), Error> {
-	// we never import any header that is beyound prune depth
-	let (best_block_number, _, best_total_difficulty) = storage.best_block();
-	if header.number < best_block_number.saturating_sub(PRUNE_DEPTH) {
-		return Err(Error::AncientHeader);
-	}
-	// we never import any header that competes with initial header
-	if header.number <= storage.initial_block() {
+fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256, Error> {
+	// we never import any header that competes with finalized header
+	let (finalized_block_number, _) = storage.finalized_block();
+	if header.number <= finalized_block_number {
 		return Err(Error::AncientHeader);
 	}
 	// we never import any header with known hash
@@ -118,5 +119,5 @@ fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<(H25
 		return Err(Error::KnownHeader);
 	}
 
-	Ok((hash, best_total_difficulty))
+	Ok(hash)
 }
