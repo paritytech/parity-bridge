@@ -30,6 +30,7 @@ use crate::error::Error;
 /// Returns numbers and hashes of finalized blocks in ascending order.
 pub fn finalize_blocks<S: Storage>(
 	storage: &S,
+	best_finalized_hash: &H256,
 	header_validators: &(H256, Vec<Address>),
 	hash: &H256,
 	header: &Header,
@@ -39,6 +40,7 @@ pub fn finalize_blocks<S: Storage>(
 	let validators = header_validators.1.iter().collect();
 	let (mut votes, mut headers) = prepare_votes(
 		storage,
+		best_finalized_hash,
 		&header_validators.0,
 		&validators,
 		hash,
@@ -73,6 +75,7 @@ fn is_finalized(
 /// Prepare 'votes' of header and its ancestors' signers.
 fn prepare_votes<S: Storage>(
 	storage: &S,
+	best_finalized_hash: &H256,
 	validators_begin: &H256,
 	validators: &BTreeSet<&Address>,
 	hash: &H256,
@@ -100,7 +103,7 @@ fn prepare_votes<S: Storage>(
 			parent_empty_step_signers = empty_step_signers;
 			res
 		})
-		.take_while(|&(hash, _, _)| hash != *validators_begin); // TODO: should be updated on pruning???
+		.take_while(|&(hash, _, _)| hash != *validators_begin && hash != *best_finalized_hash);
 
 	// now let's iterate built iterator and compute number of validators
 	// 'voted' for each header
@@ -189,6 +192,7 @@ mod tests {
 		assert_eq!(
 			finalize_blocks(
 				&InMemoryStorage::new(genesis(), validators_addresses(5)),
+				&Default::default(),
 				&(Default::default(), vec![]),
 				&Default::default(),
 				&Header::default(),
@@ -219,6 +223,7 @@ mod tests {
 		assert_eq!(
 			finalize_blocks(
 				&storage,
+				&Default::default(),
 				&header_to_import.next_validators,
 				&hash1,
 				&header_to_import.header,
@@ -239,6 +244,7 @@ mod tests {
 		assert_eq!(
 			finalize_blocks(
 				&storage,
+				&Default::default(),
 				&header_to_import.next_validators,
 				&hash2,
 				&header_to_import.header,
@@ -259,6 +265,7 @@ mod tests {
 		assert_eq!(
 			finalize_blocks(
 				&storage,
+				&Default::default(),
 				&header_to_import.next_validators,
 				&hash3,
 				&header_to_import.header,

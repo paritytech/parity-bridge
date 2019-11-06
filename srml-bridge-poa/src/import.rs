@@ -52,8 +52,10 @@ pub fn import_header<S: Storage>(
 		validators.extract_validators_change(&header, receipts)?;
 
 	// check if block finalizes some other blocks and corresponding scheduled validators
+	let (prev_finalized_number, prev_finalized_hash) = storage.finalized_block();
 	let finalized_blocks = finalize_blocks(
 		storage,
+		&prev_finalized_hash,
 		&parent_header.next_validators,
 		&hash,
 		&header,
@@ -81,7 +83,6 @@ pub fn import_header<S: Storage>(
 	// within PRUNE_DEPTH range before finalized blocks
 	let last_finalized = finalized_blocks.last().cloned();
 	if let Some((last_finalized_number, last_finalized_hash)) = last_finalized {
-		let (prev_finalized_number, _) = storage.finalized_block();
 		let first_block_to_prune = prev_finalized_number.saturating_sub(PRUNE_DEPTH);
 		let last_block_to_prune = last_finalized_number.saturating_sub(PRUNE_DEPTH);
 		storage.prune_headers(first_block_to_prune, last_block_to_prune + 1);
