@@ -160,29 +160,11 @@ fn verify_signature(expected_validator: &Address, signature: &H520, message: &H2
 
 #[cfg(test)]
 mod tests {
-	use parity_crypto::publickey::{KeyPair, Secret, sign};
+	use parity_crypto::publickey::{KeyPair, sign};
 	use primitives::{H520, rlp_encode};
 	use crate::kovan_aura_config;
-	use crate::tests::InMemoryStorage;
+	use crate::tests::{InMemoryStorage, genesis, validator, validators_addresses};
 	use super::*;
-
-	fn genesis() -> Header {
-		Header {
-			seal: vec![
-				vec![42].into(),
-				vec![].into(),
-			],
-			..Default::default()
-		}
-	}
-
-	fn validator(index: u8) -> KeyPair {
-		KeyPair::from_secret(Secret::from([index + 1; 32])).unwrap()
-	}
-
-	fn validators_addresses() -> Vec<Address> {
-		(0..3).map(|i| validator(i as u8).address().as_fixed_bytes().into()).collect()
-	}
 
 	fn sealed_empty_step(validators: &[KeyPair], parent_hash: &H256, step: u64) -> SealedEmptyStep {
 		let mut empty_step = SealedEmptyStep { step, signature: Default::default() };
@@ -206,7 +188,7 @@ mod tests {
 	}
 
 	fn verify_with_config(config: &AuraConfiguration, header: &Header) -> Result<ImportedHeader, Error> {
-		let storage = InMemoryStorage::new(genesis(), validators_addresses());
+		let storage = InMemoryStorage::new(genesis(), validators_addresses(3));
 		verify_aura_header(&storage, &config, header)
 	}
 

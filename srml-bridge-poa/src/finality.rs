@@ -33,96 +33,139 @@ pub fn finalize_blocks<S: Storage>(
 	header: &Header,
 	two_thirds_majority_transition: u64,
 ) -> Result<Vec<(u64, H256)>, Error> {
-	fn add_signers(
-		all_signers: &[Address],
-		add_signers: &[Address],
-		counts: &mut BTreeMap<Address, u64>,
-	) -> Result<(), Error> {
-		for signer in add_signers {
-			if !all_signers.contains(signer) {
-				return Err(Error::NotValidator);
-			}
+	// compute count of voters for every unfinalized block in ancestry
+	let validators = header_validators.1.iter().collect();
+	let (mut votes, mut headers) = prepare_votes(
+		storage,
+		&header_validators.0,
+		&validators,
+		hash,
+		header,
+		two_thirds_majority_transition,
+	)?;
 
-			*counts.entry(*signer).or_insert(0) += 1;
-		}
-
-		Ok(())
-	}
-
-	fn remove_signers(remove_signers: &[Address], counts: &mut BTreeMap<Address, u64>) {
-		for signer in remove_signers {
-			match counts.entry(*signer) {
-				Entry::Occupied(mut entry) => {
-					if *entry.get() <= 1 {
-						entry.remove();
-					} else {
-						*entry.get_mut() -= 1;
-					}
-				},
-				Entry::Vacant(_) => unreachable!("we only remove signers that have been added; qed"),
-			}
-		}
-	}
-
-	let is_finalized = |number: u64, all_signers_len: u64, signed_len: u64|
-		(number < two_thirds_majority_transition && signed_len * 2 > all_signers_len) ||
-		(number >= two_thirds_majority_transition && signed_len * 3 > all_signers_len * 2);
-
-	let mut parent_empty_step_signers = empty_steps_signers(header);
-	let ancestry = ancestry(storage, header)
-		.map(|(hash, header)| {
-			let header = header.header;
-			let mut signers = vec![header.author];
-			signers.extend(parent_empty_step_signers.drain(..));
-
-			let empty_step_signers = empty_steps_signers(&header);
-			let res = (hash, header.number, signers);
-			parent_empty_step_signers = empty_step_signers;
-			res
-		})
-		.take_while(|&(hash, _, _)| hash != header_validators.0); // TODO: should be updated on pruning???
-
-	let mut sign_count = BTreeMap::new();
-	let mut headers = VecDeque::new();
-	for (hash, number, signers) in ancestry {
-		add_signers(&header_validators.1, &signers, &mut sign_count)?;
-		if is_finalized(number, header_validators.1.len() as u64, sign_count.len() as u64) {
-			remove_signers(&signers, &mut sign_count);
-			break;
-		}
-
-		headers.push_front((hash, number, signers));
-	}
-
-	if !header_validators.1.contains(&header.author) {
-		return Err(Error::NotValidator);
-	}
-
-	*sign_count.entry(header.author).or_insert(0) += 1;
-	headers.push_back((*hash, header.number, vec![header.author]));
-
+	// now let's iterate in reverse order && find just finalized blocks
 	let mut newly_finalized = Vec::new();
 	while let Some((oldest_hash, oldest_number, signers)) = headers.pop_front() {
-		if !is_finalized(oldest_number, header_validators.1.len() as u64, sign_count.len() as u64) {
+		if !is_finalized(&validators, &votes, oldest_number >= two_thirds_majority_transition) {
 			break;
 		}
 
-		remove_signers(&signers, &mut sign_count);
+		remove_signers_votes(&signers, &mut votes);
 		newly_finalized.push((oldest_number, oldest_hash));
 	}
 
 	Ok(newly_finalized)
 }
 
+/// Returns true if there are enough votes to treat this header as finalized.
+fn is_finalized(
+	validators: &BTreeSet<&Address>,
+	votes: &BTreeMap<Address, u64>,
+	requires_two_thirds_majority: bool,
+) -> bool {
+	(!requires_two_thirds_majority && votes.len() * 2 > validators.len()) ||
+		(requires_two_thirds_majority && votes.len() * 3 > validators.len() * 2)
+}
+
+/// Prepare 'votes' of header and its ancestors' signers.
+fn prepare_votes<S: Storage>(
+	storage: &S,
+	validators_begin: &H256,
+	validators: &BTreeSet<&Address>,
+	hash: &H256,
+	header: &Header,
+	two_thirds_majority_transition: u64,
+) -> Result<(BTreeMap<Address, u64>, VecDeque<(H256, u64, BTreeSet<Address>)>), Error> {
+	// this fn can only work with single validators set
+	if !validators.contains(&header.author) {
+		return Err(Error::NotValidator);
+	}
+
+	// prepare iterator of signers of all ancestors of the header
+	// we only take ancestors that are not yet pruned and those signed by
+	// the same set of validators
+	let mut parent_empty_step_signers = empty_steps_signers(header);
+	let ancestry = ancestry(storage, header)
+		.map(|(hash, header)| {
+			let header = header.header;
+			let mut signers = BTreeSet::new();
+			std::mem::swap(&mut signers, &mut parent_empty_step_signers);
+			signers.insert(header.author);
+
+			let empty_step_signers = empty_steps_signers(&header);
+			let res = (hash, header.number, signers);
+			parent_empty_step_signers = empty_step_signers;
+			res
+		})
+		.take_while(|&(hash, _, _)| hash != *validators_begin); // TODO: should be updated on pruning???
+
+	// now let's iterate built iterator and compute number of validators
+	// 'voted' for each header
+	// we stop when finalized block is met (because we only interested in
+	// just finalized blocks)
+	let mut votes = BTreeMap::new();
+	let mut headers = VecDeque::new();
+	for (hash, number, signers) in ancestry {
+		add_signers_votes(validators, &signers, &mut votes)?;
+		if is_finalized(validators, &votes, number >= two_thirds_majority_transition) {
+			remove_signers_votes(&signers, &mut votes);
+			break;
+		}
+
+		headers.push_front((hash, number, signers));
+	}
+
+	// update votes with last header vote
+	let mut header_signers = BTreeSet::new();
+	header_signers.insert(header.author);
+	*votes.entry(header.author).or_insert(0) += 1;
+	headers.push_back((*hash, header.number, header_signers));
+
+	Ok((votes, headers))
+}
+
+/// Increase count of 'votes' for every passed signer.
+/// Fails if at least one of signers is not in the `validators` set.
+fn add_signers_votes(
+	validators: &BTreeSet<&Address>,
+	signers_to_add: &BTreeSet<Address>,
+	votes: &mut BTreeMap<Address, u64>,
+) -> Result<(), Error> {
+	for signer in signers_to_add {
+		if !validators.contains(signer) {
+			return Err(Error::NotValidator);
+		}
+
+		*votes.entry(*signer).or_insert(0) += 1;
+	}
+
+	Ok(())
+}
+
+/// Decrease 'votes' count for every passed signer.
+fn remove_signers_votes(signers_to_remove: &BTreeSet<Address>, votes: &mut BTreeMap<Address, u64>) {
+	for signer in signers_to_remove {
+		match votes.entry(*signer) {
+			Entry::Occupied(mut entry) => {
+				if *entry.get() <= 1 {
+					entry.remove();
+				} else {
+					*entry.get_mut() -= 1;
+				}
+			},
+			Entry::Vacant(_) => unreachable!("we only remove signers that have been added; qed"),
+		}
+	}
+}
+
 /// Returns unique set of empty steps signers.
-fn empty_steps_signers(header: &Header) -> Vec<Address> {
+fn empty_steps_signers(header: &Header) -> BTreeSet<Address> {
 	header.empty_steps()
 		.into_iter()
 		.flat_map(|steps| steps)
 		.filter_map(|step| empty_step_signer(&step, &header.parent_hash))
 		.collect::<BTreeSet<_>>()
-		.into_iter()
-		.collect()
 }
 
 /// Returns author of empty step signature.
@@ -131,4 +174,96 @@ fn empty_step_signer(empty_step: &SealedEmptyStep, parent_hash: &H256) -> Option
 	secp256k1_ecdsa_recover(empty_step.signature.as_fixed_bytes(), message.as_fixed_bytes())
 		.ok()
 		.map(|public| public_to_address(&public))
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::ImportedHeader;
+	use crate::tests::{InMemoryStorage, genesis, validator, validators_addresses};
+	use super::*;
+
+	#[test]
+	fn verifies_header_author() {
+		assert_eq!(
+			finalize_blocks(
+				&InMemoryStorage::new(genesis(), validators_addresses(5)),
+				&(Default::default(), vec![]),
+				&Default::default(),
+				&Header::default(),
+				0,
+			),
+			Err(Error::NotValidator),
+		);
+	}
+
+	#[test]
+	fn prepares_votes() {
+		// let's say we have 5 validators (we need 'votes' from 3 validators to achieve
+		// finality)
+		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(5));
+
+		// when header#1 is inserted, nothing is finalized (1 vote)
+		let mut header_to_import = ImportedHeader {
+			header: Header {
+				author: validator(0).address().as_fixed_bytes().into(),
+				parent_hash: genesis().hash(),
+				number: 1,
+				..Default::default()
+			},
+			total_difficulty: 0.into(),
+			next_validators: (genesis().hash(), validators_addresses(5)),
+		};
+		let hash1 = header_to_import.header.hash();
+		assert_eq!(
+			finalize_blocks(
+				&storage,
+				&header_to_import.next_validators,
+				&hash1,
+				&header_to_import.header,
+				u64::max_value(),
+			),
+			Ok(Vec::new()),
+		);
+		storage.insert_header(true, hash1, header_to_import.clone(), None);
+
+		// when header#2 is inserted, nothing is finalized (2 votes)
+		header_to_import.header = Header {
+			author: validator(1).address().as_fixed_bytes().into(),
+			parent_hash: hash1,
+			number: 2,
+			..Default::default()
+		};
+		let hash2 = header_to_import.header.hash();
+		assert_eq!(
+			finalize_blocks(
+				&storage,
+				&header_to_import.next_validators,
+				&hash2,
+				&header_to_import.header,
+				u64::max_value(),
+			),
+			Ok(Vec::new()),
+		);
+		storage.insert_header(true, hash2, header_to_import.clone(), None);
+
+		// when header#3 is inserted, header#1 is finalized (3 votes)
+		header_to_import.header = Header {
+			author: validator(2).address().as_fixed_bytes().into(),
+			parent_hash: hash2,
+			number: 3,
+			..Default::default()
+		};
+		let hash3 = header_to_import.header.hash();
+		assert_eq!(
+			finalize_blocks(
+				&storage,
+				&header_to_import.next_validators,
+				&hash3,
+				&header_to_import.header,
+				u64::max_value(),
+			),
+			Ok(vec![(1, hash1)]),
+		);
+		storage.insert_header(true, hash3, header_to_import.clone(), None);
+	}
 }

@@ -278,7 +278,26 @@ pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl 
 #[cfg(test)]
 pub(crate) mod tests {
 	use std::collections::HashMap;
+	use parity_crypto::publickey::{KeyPair, Secret};
 	use super::*;
+
+	pub fn genesis() -> Header {
+		Header {
+			seal: vec![
+				vec![42].into(),
+				vec![].into(),
+			],
+			..Default::default()
+		}
+	}
+
+	pub fn validator(index: u8) -> KeyPair {
+		KeyPair::from_secret(Secret::from([index + 1; 32])).unwrap()
+	}
+
+	pub fn validators_addresses(count: u8) -> Vec<Address> {
+		(0..count as usize).map(|i| validator(i as u8).address().as_fixed_bytes().into()).collect()
+	}
 
 	pub struct InMemoryStorage {
 		initial_block: u64,
