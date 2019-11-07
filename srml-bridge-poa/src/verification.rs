@@ -163,7 +163,7 @@ mod tests {
 	use parity_crypto::publickey::{KeyPair, sign};
 	use primitives::{H520, rlp_encode};
 	use crate::kovan_aura_config;
-	use crate::tests::{InMemoryStorage, genesis, validator, validators_addresses};
+	use crate::tests::{InMemoryStorage, genesis, signed_header, validator, validators_addresses};
 	use super::*;
 
 	fn sealed_empty_step(validators: &[KeyPair], parent_hash: &H256, step: u64) -> SealedEmptyStep {
@@ -175,16 +175,6 @@ mod tests {
 			&message.as_fixed_bytes().into(),
 		).unwrap().into();
 		empty_step
-	}
-
-	fn signed_header(validators: &[KeyPair], mut header: Header, step: u64) -> Header {
-		let message = header.seal_hash(false).unwrap();
-		let validator_index = (step % validators.len() as u64) as usize;
-		let signature = sign(validators[validator_index].secret(), &message.as_fixed_bytes().into()).unwrap();
-		let signature: [u8; 65] = signature.into();
-		let signature = H520::from(signature);
-		header.seal[1] = rlp_encode(&signature);
-		header
 	}
 
 	fn verify_with_config(config: &AuraConfiguration, header: &Header) -> Result<ImportedHeader, Error> {

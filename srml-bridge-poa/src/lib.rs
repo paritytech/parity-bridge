@@ -59,7 +59,7 @@ pub struct ImportedHeader {
 	pub header: Header,
 	/// Total difficulty of the chain.
 	pub total_difficulty: U256,
-	// only TODO store ID here
+	// TODO: only store set ID here
 	/// The set of validators that is expected to produce direct descendants of
 	/// this block. If header enacts new set, this would be the new set. Otherwise
 	/// this is the set that has produced the block itself.
@@ -302,7 +302,8 @@ pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl 
 #[cfg(test)]
 pub(crate) mod tests {
 	use std::collections::HashMap;
-	use parity_crypto::publickey::{KeyPair, Secret};
+	use parity_crypto::publickey::{KeyPair, Secret, sign};
+	use primitives::{H520, rlp_encode};
 	use super::*;
 
 	pub fn genesis() -> Header {
@@ -313,6 +314,30 @@ pub(crate) mod tests {
 			],
 			..Default::default()
 		}
+	}
+
+	pub fn block1(validators: &[KeyPair]) -> Header {
+		signed_header(validators, Header {
+			number: 1,
+			parent_hash: genesis().hash(),
+			gas_limit: 0x2000.into(),
+			author: validator(1).address().to_fixed_bytes().into(),
+			seal: vec![
+				vec![43].into(),
+				vec![].into(),
+			],
+			..Default::default()
+		}, 43)
+	}
+
+	pub fn signed_header(validators: &[KeyPair], mut header: Header, step: u64) -> Header {
+		let message = header.seal_hash(false).unwrap();
+		let validator_index = (step % validators.len() as u64) as usize;
+		let signature = sign(validators[validator_index].secret(), &message.as_fixed_bytes().into()).unwrap();
+		let signature: [u8; 65] = signature.into();
+		let signature = H520::from(signature);
+		header.seal[1] = rlp_encode(&signature);
+		header
 	}
 
 	pub fn validator(index: u8) -> KeyPair {

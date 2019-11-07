@@ -87,7 +87,7 @@ impl<'a> Validators<'a> {
 
 	/// Extracts validators change signal from the header.
 	///
-	/// Returns tuple where first element is the change scheduled by this header 
+	/// Returns tuple where first element is the change scheduled by this header
 	/// (i.e. this change is only applied starting from the block that has finalized
 	/// current block). The second element is the immediately applied change.
 	pub fn extract_validators_change(
@@ -95,7 +95,7 @@ impl<'a> Validators<'a> {
 		header: &Header,
 		receipts: Option<Vec<Receipt>>,
 	) -> Result<(Option<Vec<Address>>, Option<Vec<Address>>), Error> {
-		// TODO: verify receipts root!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		// TODO: verify receipts root
 
 		// let's first check if new source is starting from this header
 		let (starts_at, source) = self.source_at(header.number + 1);
@@ -210,4 +210,109 @@ impl ValidatorsSource {
 /// Get validator that should author the block at given step.
 pub fn step_validator(header_validators: &[Address], header_step: u64) -> Address {
 	header_validators[(header_step % header_validators.len() as u64) as usize]
+}
+
+#[cfg(test)]
+mod tests {
+	use primitives::TransactionOutcome;
+	use crate::kovan_validators_config;
+	use super::*;
+
+	#[test]
+	fn maybe_signals_validators_change_works() {
+		// when contract is active, but bloom has no required bits set
+		let config = kovan_validators_config();
+		let validators = Validators::new(&config);
+		let mut header = Header::default();
+		header.number = u64::max_value();
+		assert!(!validators.maybe_signals_validators_change(&header));
+
+		// when contract is active and bloom has required bits set
+		header.log_bloom = (&[0xff; 256]).into();
+		assert!(validators.maybe_signals_validators_change(&header));
+
+		// when list is active and bloom has required bits set
+		let config = ValidatorsConfiguration::Single(ValidatorsSource::List(vec![[42; 20].into()]));
+		let validators = Validators::new(&config);
+		assert!(!validators.maybe_signals_validators_change(&header));
+	}
+
+	#[test]
+	fn extract_validators_change_works() {
+		let config = ValidatorsConfiguration::Multi(vec![
+			(0, ValidatorsSource::List(vec![[1; 20].into()])),
+			(100, ValidatorsSource::List(vec![[2; 20].into()])),
+			(200, ValidatorsSource::Contract([3; 20].into(), vec![[3; 20].into()])),
+		]);
+		let validators = Validators::new(&config);
+		let mut header = Header::default();
+
+		// when we're at the block that switches to list source
+		header.number = 100;
+		assert_eq!(
+			validators.extract_validators_change(&header, None),
+			Ok((None, Some(vec![[2; 20].into()]))),
+		);
+
+		// when we're inside list range
+		header.number = 150;
+		assert_eq!(
+			validators.extract_validators_change(&header, None),
+			Ok((None, None)),
+		);
+
+		// when we're at the block that switches to contract source
+		header.number = 200;
+		assert_eq!(
+			validators.extract_validators_change(&header, None),
+			Ok((Some(vec![[3; 20].into()]), None)),
+		);
+
+		// when we're inside contract range and logs bloom signals change
+		// but we have no receipts
+		header.number = 250;
+		header.log_bloom = (&[0xff; 256]).into();
+		assert_eq!(
+			validators.extract_validators_change(&header, None),
+			Err(Error::MissingTransactionsReceipts),
+		);
+
+		// when we're inside contract range and logs bloom signals change
+		// but there's no change in receipts
+		assert_eq!(
+			validators.extract_validators_change(&header, Some(Vec::new())),
+			Ok((None, None)),
+		);
+
+		// when we're inside contract range and logs bloom signals change
+		// and there's change in receipts
+		let receipts = vec![
+			Receipt {
+				gas_used: 0.into(),
+				log_bloom: (&[0xff; 256]).into(),
+				outcome: TransactionOutcome::Unknown,
+				logs: vec![
+					LogEntry {
+						address: [3; 20].into(),
+						topics: vec![
+							CHANGE_EVENT_HASH.into(),
+							H256::default(),
+						],
+						data: vec![
+							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+							7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+								7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+						],
+					},
+				],
+			},
+		];
+		assert_eq!(
+			validators.extract_validators_change(&header, Some(receipts)),
+			Ok((Some(vec![[7; 20].into()]), None)),
+		);
+	}
 }

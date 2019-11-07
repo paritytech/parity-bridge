@@ -122,3 +122,60 @@ fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256
 
 	Ok(hash)
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::{kovan_aura_config, kovan_validators_config};
+	use crate::tests::{InMemoryStorage, block1, genesis, validator, validators_addresses};
+	use crate::validators::ValidatorsSource;
+	use super::*;
+
+	#[test]
+	fn rejects_finalized_block_competitors() {
+		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
+		storage.set_finalized_block(100, Default::default());
+		assert_eq!(
+			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), Default::default(), None),
+			Err(Error::AncientHeader),
+		);
+	}
+
+	#[test]
+	fn rejects_known_header() {
+		let validators = (0..3).map(|i| validator(i as u8)).collect::<Vec<_>>();
+		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
+		assert_eq!(
+			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), block1(&validators), None)
+				.map(|_| ()),
+			Ok(()),
+		);
+		assert_eq!(
+			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), block1(&validators), None),
+			Err(Error::KnownHeader),
+		);
+	}
+
+	#[test]
+	fn import_header_works() {
+		let validators_config = ValidatorsConfiguration::Multi(vec![
+			(0, ValidatorsSource::List(validators_addresses(3))),
+			(1, ValidatorsSource::List(validators_addresses(2))),
+		]);
+		let validators = (0..3).map(|i| validator(i as u8)).collect::<Vec<_>>();
+		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
+		let header = block1(&validators);
+		let hash = header.hash();
+		assert_eq!(
+			import_header(&mut storage, &kovan_aura_config(), &validators_config, header, None)
+				.map(|_| ()),
+			Ok(()),
+		);
+
+		// check that new validators will be used for next header
+		let imported_header = storage.header(&hash).unwrap();
+		assert_eq!(
+			imported_header.next_validators,
+			(hash, validators_addresses(2)),
+		);
+	}
+}
