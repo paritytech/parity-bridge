@@ -1,3 +1,6 @@
 [submodule "arbitrary"]
 	path = arbitrary
 	url = https://github.com/parity-contracts/bridge
+[submodule "substrate"]
+	path = substrate
+	url = https://github.com/paritytech/substrate.git

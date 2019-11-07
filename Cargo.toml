@@ -1,4 +1,5 @@
 [workspace]
+exclude = [ "./substrate" ]
 members = [
     "bridge",
     "cli",

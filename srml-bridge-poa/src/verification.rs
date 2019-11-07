@@ -170,10 +170,11 @@ mod tests {
 		let mut empty_step = SealedEmptyStep { step, signature: Default::default() };
 		let message = empty_step.message(parent_hash);
 		let validator_index = (step % validators.len() as u64) as usize;
-		empty_step.signature = sign(
+		let signature: [u8; 65] = sign(
 			validators[validator_index].secret(),
 			&message.as_fixed_bytes().into(),
 		).unwrap().into();
+		empty_step.signature = signature.into();
 		empty_step
 	}
 

@@ -16,7 +16,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use ethereum_types::H520;
 pub use primitive_types::{H160, H256, H512, U128, U256};
 pub use tiny_keccak::keccak256;
 
@@ -25,15 +24,23 @@ pub use rlp::encode as rlp_encode;
 
 use rstd::prelude::*;
 use codec::{Decode, Encode};
-use ethereum_types::{Bloom as EthBloom, BloomInput};
+use ethbloom::{Bloom as EthBloom, Input as BloomInput};
 use parity_bytes::Bytes;
 use rlp::{Decodable, DecoderError, Rlp, RlpStream};
 use sr_primitives::RuntimeDebug;
+use fixed_hash::construct_fixed_hash;
 
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 #[cfg(feature = "std")]
 use serde_big_array::big_array;
+use impl_rlp::impl_fixed_hash_rlp;
+use impl_serde::impl_fixed_hash_serde;
+
+construct_fixed_hash! { pub struct H520(65); }
+impl_fixed_hash_rlp!(H520, 65);
+#[cfg(feature = "std")]
+impl_fixed_hash_serde!(H520, 65);
 
 /// An ethereum address.
 pub type Address = H160;
