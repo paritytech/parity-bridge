@@ -8,12 +8,12 @@ edition = "2018"
 [dependencies]
 serde = { version = "1.0", optional = true }
 serde-big-array = { version = "0.2", optional = true }
-ethbloom = { version = "0.8.1", default-features = false }
+ethbloom = { version = "0.8", default-features = false }
 parity-bytes = { version = "0.1", default-features = false }
 primitive-types = { version = "0.5", default-features = false, features = ["codec", "rlp", "serde"] }
-fixed-hash = "0.5.1"
-impl-rlp = "0.2.1"
-impl-serde = "0.2.3"
+fixed-hash = "0.5"
+impl-rlp = "0.2"
+impl-serde = "0.2"
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
 rlp = { version = "0.4", default-features = false }
 tiny-keccak = "1.5"

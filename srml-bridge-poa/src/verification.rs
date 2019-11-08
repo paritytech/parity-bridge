@@ -75,7 +75,7 @@ pub fn verify_aura_header<S: Storage>(
 
 	// Validate chain score.
 	if header.number >= params.validate_score_transition {
-		let expected_difficulty = calculate_score(parent_step.into(), header_step.into(), empty_steps_len.into());
+		let expected_difficulty = calculate_score(parent_step, header_step, empty_steps_len as _);
 		if header.difficulty != expected_difficulty {
 			return Err(Error::InvalidDifficulty);
 		}
