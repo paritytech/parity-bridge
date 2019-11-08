@@ -7,10 +7,10 @@ we'll update this disclaimer once that changes*
 [![Build Status][travis-image]][travis-url]
 [![Solidity Coverage Status][coveralls-image]][coveralls-url] (contracts only)
 
-[travis-image]: https://travis-ci.org/tomusdrw/parity-bridge.svg?branch=master
-[travis-url]: https://travis-ci.org/tomusdrw/parity-bridge
-[coveralls-image]: https://coveralls.io/repos/github/tomusdrw/parity-bridge/badge.svg?branch=master
-[coveralls-url]: https://coveralls.io/github/tomusdrw/parity-bridge?branch=master
+[travis-image]: https://travis-ci.org/paritytech/parity-bridge.svg?branch=master
+[travis-url]: https://travis-ci.org/paritytech/parity-bridge
+[coveralls-image]: https://coveralls.io/repos/github/paritytech/parity-bridge/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/github/paritytech/parity-bridge?branch=master
 
 Bridge is able to pass arbitrary messages between an Ethereum Proof of Authority chain and
 a Substrate Chain - either Standalone or Polkadot Parachain.
