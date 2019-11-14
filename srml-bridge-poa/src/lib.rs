@@ -52,19 +52,84 @@ pub struct AuraConfiguration {
 	pub maximum_extra_data_size: u64,
 }
 
-/// Imported block header.
+/// Block header as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
-pub struct ImportedHeader {
+pub(crate) struct StoredHeader {
 	/// The block header itself.
 	pub header: Header,
 	/// Total difficulty of the chain.
 	pub total_difficulty: U256,
-	// TODO: only store set ID here
-	/// The set of validators that is expected to produce direct descendants of
+	/// The ID of set of validators that is expected to produce direct descendants of
 	/// this block. If header enacts new set, this would be the new set. Otherwise
 	/// this is the set that has produced the block itself.
 	/// The hash is the hash of block where validators set has been enacted.
-	pub next_validators: (H256, Vec<Address>),
+	pub next_validators_set_id: u64,
+}
+
+/// Header that we're importing.
+#[derive(RuntimeDebug)]
+#[cfg_attr(test, derive(Clone, PartialEq))]
+pub struct HeaderToImport {
+	pub(crate) context: ImportContext,
+	pub(crate) is_best: bool,
+	pub(crate) hash: H256,
+	pub(crate) header: Header,
+	pub(crate) total_difficulty: U256,
+	pub(crate) enacted_change: Option<Vec<Address>>,
+	pub(crate) scheduled_change: Option<Vec<Address>>,
+}
+
+/// Header import context.
+#[derive(RuntimeDebug)]
+#[cfg_attr(test, derive(Clone, PartialEq))]
+pub struct ImportContext {
+	parent_header: Header,
+	parent_total_difficulty: U256,
+	next_validators_set_id: u64,
+	next_validators_set: (H256, Vec<Address>),
+}
+
+impl ImportContext {
+	/// Returns reference to parent header.
+	pub fn parent_header(&self) -> &Header {
+		&self.parent_header
+	}
+
+	/// Returns total chain difficulty at parent block.
+	pub fn total_difficulty(&self) -> &U256 {
+		&self.parent_total_difficulty
+	}
+
+	/// Returns block whenre validators set has been enacted.
+	pub fn validators_start(&self) -> &H256 {
+		&self.next_validators_set.0
+	}
+
+	/// Returns reference to the set of validators of the block we're going to import.
+	pub fn validators(&self) -> &[Address] {
+		&self.next_validators_set.1
+	}
+
+	/// Converts import context into header we're going to import.
+	pub fn into_import_header(
+		self,
+		is_best: bool,
+		hash: H256,
+		header: Header,
+		total_difficulty: U256,
+		enacted_change: Option<Vec<Address>>,
+		scheduled_change: Option<Vec<Address>>,
+	) -> HeaderToImport {
+		HeaderToImport {
+			context: self,
+			is_best,
+			hash,
+			header,
+			total_difficulty,
+			enacted_change,
+			scheduled_change,
+		}
+	}
 }
 
 /// The storage that is used by the client.
@@ -76,17 +141,13 @@ pub trait Storage {
 	/// Get last finalized block.
 	fn finalized_block(&self) -> (u64, H256);
 	/// Get imported header by its hash.
-	fn header(&self, hash: &H256) -> Option<ImportedHeader>;
+	fn header(&self, hash: &H256) -> Option<Header>;
+	/// Get header import context by parent header hash.
+	fn import_context(&self, parent_hash: &H256) -> Option<ImportContext>;
 	/// Get new validators that are scheduled by given header.
 	fn scheduled_change(&self, hash: &H256) -> Option<Vec<Address>>;
 	/// Insert imported header.
-	fn insert_header(
-		&mut self,
-		is_best: bool,
-		hash: H256,
-		header: ImportedHeader,
-		scheduled_change: Option<Vec<Address>>,
-	);
+	fn insert_header(&mut self, header: HeaderToImport);
 	/// Prune all headers within [begin; end) range.
 	fn prune_headers(&mut self, begin: u64, end: u64);
 	/// Set last finalized block.
@@ -119,9 +180,17 @@ decl_storage! {
 		/// Best finalized block.
 		FinalizedBlock: (u64, H256);
 		/// Map of imported headers by hash.
-		Headers: map H256 => Option<ImportedHeader>;
+		Headers: map H256 => Option<StoredHeader>;
 		/// Map of imported header hashes by number.
 		HeadersByNumber: map u64 => Option<Vec<H256>>;
+		/// The ID of next validator set.
+		NextValidatorsSetId: u64;
+		/// Map of validators sets by their id.
+		ValidatorsSets: map u64 => Option<(H256, Vec<Address>)>;
+		/// Validators sets reference count. Each header that is authored by this set increases
+		/// the reference count. When we prune this header, we decrease the reference count.
+		/// When it reaches zero, we are free to prune validator set as well.
+		ValidatorsSetsRc: map u64 => Option<u64>;
 		/// Map of validators set changes scheduled by given header.
 		ScheduledChanges: map H256 => Option<Vec<Address>>;
 	}
@@ -144,11 +213,14 @@ decl_storage! {
 			BestBlock::put((config.initial_header.number, initial_hash, config.initial_difficulty));
 			FinalizedBlock::put((config.initial_header.number, initial_hash));
 			HeadersByNumber::insert(config.initial_header.number, vec![initial_hash]);
-			Headers::insert(initial_hash, ImportedHeader {
+			Headers::insert(initial_hash, StoredHeader {
 				header: config.initial_header.clone(),
 				total_difficulty: config.initial_difficulty,
-				next_validators: (initial_hash, config.initial_validators.clone()),
+				next_validators_set_id: 0,
 			});
+			NextValidatorsSetId::put(1);
+			ValidatorsSets::insert(0, (initial_hash, config.initial_validators.clone()));
+			ValidatorsSetsRc::insert(0, 1);
 		})
 	}
 }
@@ -176,36 +248,81 @@ impl Storage for BridgeStorage {
 		FinalizedBlock::get()
 	}
 
-	fn header(&self, hash: &H256) -> Option<ImportedHeader> {
-		Headers::get(hash)
+	fn header(&self, hash: &H256) -> Option<Header> {
+		Headers::get(hash).map(|header| header.header)
+	}
+
+	fn import_context(&self, parent_hash: &H256) -> Option<ImportContext> {
+		Headers::get(parent_hash)
+			.map(|parent_header| {
+				let (next_validators_set_start, next_validators) =
+					ValidatorsSets::get(parent_header.next_validators_set_id)
+					.expect("validators set is only pruned when last ref is pruned; there is a ref; qed");
+				ImportContext {
+					parent_header: parent_header.header,
+					parent_total_difficulty: parent_header.total_difficulty,
+					next_validators_set_id: parent_header.next_validators_set_id,
+					next_validators_set: (next_validators_set_start, next_validators),
+				}
+			})
 	}
 
 	fn scheduled_change(&self, hash: &H256) -> Option<Vec<Address>> {
 		ScheduledChanges::get(hash)
 	}
 
-	fn insert_header(
-		&mut self,
-		is_best: bool,
-		hash: H256,
-		header: ImportedHeader,
-		scheduled_change: Option<Vec<Address>>,
-	) {
-		if is_best {
-			BestBlock::put((header.header.number, hash, header.total_difficulty));
+	fn insert_header(&mut self, header: HeaderToImport) {
+		if header.is_best {
+			BestBlock::put((header.header.number, header.hash, header.total_difficulty));
 		}
-		HeadersByNumber::append_or_insert(header.header.number, vec![hash]);
-		Headers::insert(&hash, header);
-		if let Some(scheduled_change) = scheduled_change {
-			ScheduledChanges::insert(&hash, scheduled_change);
+		if let Some(scheduled_change) = header.scheduled_change {
+			ScheduledChanges::insert(&header.hash, scheduled_change);
 		}
+		let next_validators_set_id = match header.enacted_change {
+			Some(enacted_change) => {
+				let next_validators_set_id = NextValidatorsSetId::mutate(|set_id| {
+					let next_set_id = *set_id;
+					*set_id += 1;
+					next_set_id
+				});
+				ValidatorsSets::insert(next_validators_set_id, (header.hash, enacted_change));
+				ValidatorsSetsRc::insert(next_validators_set_id, 1);
+				next_validators_set_id
+			},
+			None => {
+				ValidatorsSetsRc::mutate(
+					header.context.next_validators_set_id,
+					|rc| {
+						*rc = Some(rc.map(|rc| rc + 1).unwrap_or(1));
+						*rc
+					},
+				);
+				header.context.next_validators_set_id
+			},
+		};
+
+		HeadersByNumber::append_or_insert(header.header.number, vec![header.hash]);
+		Headers::insert(&header.hash, StoredHeader {
+			header: header.header,
+			total_difficulty: header.total_difficulty,
+			next_validators_set_id,
+		});
 	}
 
 	fn prune_headers(&mut self, begin: u64, end: u64) {
 		for number in begin..end {
 			let blocks_at_number = HeadersByNumber::take(number);
 			for hash in blocks_at_number.into_iter().flat_map(|x| x) {
-				Headers::remove(&hash);
+				let header = Headers::take(&hash);
+				if let Some(header) = header {
+					ValidatorsSetsRc::mutate(
+						header.next_validators_set_id,
+						|rc| match *rc {
+							Some(rc) if rc > 1 => Some(rc - 1),
+							_ => None,
+						},
+					);
+				}
 			}
 		}
 	}
@@ -280,18 +397,18 @@ pub fn kovan_validators_config() -> ValidatorsConfiguration {
 }
 
 /// Return iterator of given header ancestors.
-pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl Iterator<Item = (H256, ImportedHeader)> + 'a {
+pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl Iterator<Item = (H256, Header)> + 'a {
 	let mut parent_hash = header.parent_hash.clone();
 	from_fn(move || {
 		let header = storage.header(&parent_hash);
 		match header {
 			Some(header) => {
-				if header.header.number == 0 {
+				if header.number == 0 {
 					return None;
 				}
 
 				let hash = parent_hash.clone();
-				parent_hash = header.header.parent_hash.clone();
+				parent_hash = header.parent_hash.clone();
 				Some((hash, header))
 			},
 			None => None
@@ -351,8 +468,11 @@ pub(crate) mod tests {
 	pub struct InMemoryStorage {
 		best_block: (u64, H256, U256),
 		finalized_block: (u64, H256),
-		headers: HashMap<H256, ImportedHeader>,
+		headers: HashMap<H256, StoredHeader>,
 		headers_by_number: HashMap<u64, Vec<H256>>,
+		next_validators_set_id: u64,
+		validators_sets: HashMap<u64, (H256, Vec<Address>)>,
+		validators_sets_rc: HashMap<u64, u64>,
 		scheduled_changes: HashMap<H256, Vec<Address>>,
 	}
 
@@ -365,14 +485,21 @@ pub(crate) mod tests {
 				headers_by_number: vec![(initial_header.number, vec![hash])].into_iter().collect(),
 				headers: vec![(
 					hash,
-					ImportedHeader {
+					StoredHeader {
 						header: initial_header,
 						total_difficulty: 0.into(),
-						next_validators: (hash, initial_validators),
+						next_validators_set_id: 0,
 					},
 				)].into_iter().collect(),
+				next_validators_set_id: 1,
+				validators_sets: vec![(0, (hash, initial_validators))].into_iter().collect(),
+				validators_sets_rc: vec![(0, 1)].into_iter().collect(),
 				scheduled_changes: HashMap::new(),
 			}
+		}
+
+		pub(crate) fn stored_header(&self, hash: &H256) -> Option<&StoredHeader> {
+			self.headers.get(hash)
 		}
 	}
 
@@ -385,29 +512,55 @@ pub(crate) mod tests {
 			self.finalized_block.clone()
 		}
 
-		fn header(&self, hash: &H256) -> Option<ImportedHeader> {
-			self.headers.get(hash).cloned()
+		fn header(&self, hash: &H256) -> Option<Header> {
+			self.headers.get(hash).map(|header| header.header.clone())
+		}
+
+		fn import_context(&self, parent_hash: &H256) -> Option<ImportContext> {
+			self.headers.get(parent_hash)
+				.map(|parent_header| {
+					let (next_validators_set_start, next_validators) =
+						self.validators_sets.get(&parent_header.next_validators_set_id).unwrap();
+					ImportContext {
+						parent_header: parent_header.header.clone(),
+						parent_total_difficulty: parent_header.total_difficulty,
+						next_validators_set_id: parent_header.next_validators_set_id,
+						next_validators_set: (*next_validators_set_start, next_validators.clone()),
+					}
+				})
 		}
 
 		fn scheduled_change(&self, hash: &H256) -> Option<Vec<Address>> {
 			self.scheduled_changes.get(hash).cloned()
 		}
 
-		fn insert_header(
-			&mut self,
-			is_best: bool,
-			hash: H256,
-			header: ImportedHeader,
-			scheduled_change: Option<Vec<Address>>,
-		) {
-			if is_best {
-				self.best_block = (header.header.number, hash, header.total_difficulty);
+		fn insert_header(&mut self, header: HeaderToImport) {
+			if header.is_best {
+				self.best_block = (header.header.number, header.hash, header.total_difficulty);
 			}
-			self.headers_by_number.entry(header.header.number).or_default().push(hash);
-			self.headers.insert(hash, header);
-			if let Some(scheduled_change) = scheduled_change {
-				self.scheduled_changes.insert(hash, scheduled_change);
+			if let Some(scheduled_change) = header.scheduled_change {
+				self.scheduled_changes.insert(header.hash, scheduled_change);
 			}
+			let next_validators_set_id = match header.enacted_change {
+				Some(enacted_change) => {
+					let next_validators_set_id = self.next_validators_set_id;
+					self.next_validators_set_id += 1;
+					self.validators_sets.insert(next_validators_set_id, (header.hash, enacted_change));
+					self.validators_sets_rc.insert(next_validators_set_id, 1);
+					next_validators_set_id
+				},
+				None => {
+					*self.validators_sets_rc.entry(header.context.next_validators_set_id).or_default() += 1;
+					header.context.next_validators_set_id
+				},
+			};
+
+			self.headers_by_number.entry(header.header.number).or_default().push(header.hash);
+			self.headers.insert(header.hash, StoredHeader {
+				header: header.header,
+				total_difficulty: header.total_difficulty,
+				next_validators_set_id,
+			});
 		}
 
 		fn prune_headers(&mut self, begin: u64, end: u64) {

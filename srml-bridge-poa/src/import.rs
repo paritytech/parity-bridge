@@ -16,7 +16,7 @@
 
 use rstd::prelude::*;
 use primitives::{H256, Header, Receipt};
-use crate::{AuraConfiguration, ImportedHeader, Storage};
+use crate::{AuraConfiguration, Storage};
 use crate::error::Error;
 use crate::finality::finalize_blocks;
 use crate::validators::{Validators, ValidatorsConfiguration};
@@ -39,8 +39,8 @@ pub fn import_header<S: Storage>(
 	// first check that we are able to import this header at all
 	let hash = is_importable_header(storage, &header)?;
 
-	// verify and insert header
-	let parent_header = verify_aura_header(
+	// verify header
+	let import_context = verify_aura_header(
 		storage,
 		aura_config,
 		&header,
@@ -48,7 +48,7 @@ pub fn import_header<S: Storage>(
 
 	// check if block schedules new validators
 	let validators = Validators::new(validators_config);
-	let (scheduled_validators, immediately_enacted_validators) =
+	let (scheduled_change, enacted_change) =
 		validators.extract_validators_change(&header, receipts)?;
 
 	// check if block finalizes some other blocks and corresponding scheduled validators
@@ -56,27 +56,26 @@ pub fn import_header<S: Storage>(
 	let finalized_blocks = finalize_blocks(
 		storage,
 		&prev_finalized_hash,
-		&parent_header.next_validators,
+		(import_context.validators_start(), import_context.validators()),
 		&hash,
 		&header,
 		aura_config.two_thirds_majority_transition,
 	)?;
-	let enacted_validators = immediately_enacted_validators
+	let enacted_change = enacted_change
 		.or_else(|| validators.finalize_validators_change(storage, &finalized_blocks));
 
 	// and finally insert the block
 	let (_, _, best_total_difficulty) = storage.best_block();
-	let total_difficulty = parent_header.total_difficulty + header.difficulty;
+	let total_difficulty = import_context.total_difficulty() + header.difficulty;
 	let is_best = total_difficulty > best_total_difficulty;
-	let next_validators = enacted_validators
-		.map(|enacted_validators| (hash, enacted_validators))
-		.unwrap_or_else(|| parent_header.next_validators.clone());
-	let imported_header = ImportedHeader {
+	storage.insert_header(import_context.into_import_header(
+		is_best,
+		hash,
 		header,
 		total_difficulty,
-		next_validators,
-	};
-	storage.insert_header(is_best, hash, imported_header, scheduled_validators);
+		enacted_change,
+		scheduled_change,
+	));
 
 	// now prune old headers.
 	// the pruning strategy is to store all unfinalized blocks and blocks
@@ -172,10 +171,10 @@ mod tests {
 		);
 
 		// check that new validators will be used for next header
-		let imported_header = storage.header(&hash).unwrap();
+		let imported_header = storage.stored_header(&hash).unwrap();
 		assert_eq!(
-			imported_header.next_validators,
-			(hash, validators_addresses(2)),
+			imported_header.next_validators_set_id,
+			1, // new set is enacted from config
 		);
 	}
 }

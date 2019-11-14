@@ -16,7 +16,7 @@
 
 use runtime_io::secp256k1_ecdsa_recover;
 use primitives::{Address, Header, H256, H520, SealedEmptyStep, U128, U256, public_to_address};
-use crate::{AuraConfiguration, ImportedHeader, Storage};
+use crate::{AuraConfiguration, ImportContext, Storage};
 use crate::error::Error;
 use crate::validators::step_validator;
 
@@ -25,17 +25,17 @@ pub fn verify_aura_header<S: Storage>(
 	storage: &S,
 	params: &AuraConfiguration,
 	header: &Header,
-) -> Result<ImportedHeader, Error> {
+) -> Result<ImportContext, Error> {
 	// let's do the lightest check first
 	contextless_checks(params, header)?;
 
 	// the rest of checks requires parent
-	let parent = storage.header(&header.parent_hash).ok_or(Error::MissingParentBlock)?;
-	let epoch_validators = &parent.next_validators.1;
+	let context = storage.import_context(&header.parent_hash).ok_or(Error::MissingParentBlock)?;
+	let validators = context.validators();
 	let header_step = header.step().ok_or(Error::MissingStep)?;
-	let parent_step = parent.header.step().ok_or(Error::MissingStep)?;
+	let parent_step = context.parent_header().step().ok_or(Error::MissingStep)?;
 
-	// Ensure header is from the step after parent.
+	// Ensure header is from the step after context.
 	if header_step == parent_step
 		|| (header.number >= params.validate_step_transition && header_step <= parent_step) {
 		return Err(Error::DoubleVote);
@@ -55,7 +55,7 @@ pub fn verify_aura_header<S: Storage>(
 					return Err(Error::InsufficientProof);
 				}
 
-				if !verify_empty_step(&header.parent_hash, &empty_step, &epoch_validators) {
+				if !verify_empty_step(&header.parent_hash, &empty_step, validators) {
 					return Err(Error::InsufficientProof);
 				}
 
@@ -81,7 +81,7 @@ pub fn verify_aura_header<S: Storage>(
 		}
 	}
 
-	let expected_validator = step_validator(&epoch_validators, header_step);
+	let expected_validator = step_validator(validators, header_step);
 	if header.author != expected_validator {
 		return Err(Error::NotValidator);
 	}
@@ -95,7 +95,7 @@ pub fn verify_aura_header<S: Storage>(
 		return Err(Error::NotValidator);
 	}
 
-	Ok(parent)
+	Ok(context)
 }
 
 /// Perform basic checks that only require header iteself.
@@ -178,12 +178,12 @@ mod tests {
 		empty_step
 	}
 
-	fn verify_with_config(config: &AuraConfiguration, header: &Header) -> Result<ImportedHeader, Error> {
+	fn verify_with_config(config: &AuraConfiguration, header: &Header) -> Result<ImportContext, Error> {
 		let storage = InMemoryStorage::new(genesis(), validators_addresses(3));
 		verify_aura_header(&storage, &config, header)
 	}
 
-	fn default_verify(header: &Header) -> Result<ImportedHeader, Error> {
+	fn default_verify(header: &Header) -> Result<ImportContext, Error> {
 		verify_with_config(&kovan_aura_config(), header)
 	}
 

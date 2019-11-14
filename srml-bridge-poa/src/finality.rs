@@ -31,7 +31,7 @@ use crate::error::Error;
 pub fn finalize_blocks<S: Storage>(
 	storage: &S,
 	best_finalized_hash: &H256,
-	header_validators: &(H256, Vec<Address>),
+	header_validators: (&H256, &[Address]),
 	hash: &H256,
 	header: &Header,
 	two_thirds_majority_transition: u64,
@@ -93,7 +93,6 @@ fn prepare_votes<S: Storage>(
 	let mut parent_empty_step_signers = empty_steps_signers(header);
 	let ancestry = ancestry(storage, header)
 		.map(|(hash, header)| {
-			let header = header.header;
 			let mut signers = BTreeSet::new();
 			std::mem::swap(&mut signers, &mut parent_empty_step_signers);
 			signers.insert(header.author);
@@ -183,7 +182,7 @@ fn empty_step_signer(empty_step: &SealedEmptyStep, parent_hash: &H256) -> Option
 
 #[cfg(test)]
 mod tests {
-	use crate::ImportedHeader;
+	use crate::HeaderToImport;
 	use crate::tests::{InMemoryStorage, genesis, validator, validators_addresses};
 	use super::*;
 
@@ -193,7 +192,7 @@ mod tests {
 			finalize_blocks(
 				&InMemoryStorage::new(genesis(), validators_addresses(5)),
 				&Default::default(),
-				&(Default::default(), vec![]),
+				(&Default::default(), &[]),
 				&Default::default(),
 				&Header::default(),
 				0,
@@ -209,29 +208,34 @@ mod tests {
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(5));
 
 		// when header#1 is inserted, nothing is finalized (1 vote)
-		let mut header_to_import = ImportedHeader {
-			header: Header {
-				author: validator(0).address().as_fixed_bytes().into(),
-				parent_hash: genesis().hash(),
-				number: 1,
-				..Default::default()
-			},
-			total_difficulty: 0.into(),
-			next_validators: (genesis().hash(), validators_addresses(5)),
+		let header1 = Header {
+			author: validator(0).address().as_fixed_bytes().into(),
+			parent_hash: genesis().hash(),
+			number: 1,
+			..Default::default()
 		};
-		let hash1 = header_to_import.header.hash();
+		let hash1 = header1.hash();
+		let mut header_to_import = HeaderToImport {
+			context: storage.import_context(&genesis().hash()).unwrap(),
+			is_best: true,
+			hash: hash1,
+			header: header1,
+			total_difficulty: 0.into(),
+			enacted_change: None,
+			scheduled_change: None,
+		};
 		assert_eq!(
 			finalize_blocks(
 				&storage,
 				&Default::default(),
-				&header_to_import.next_validators,
+				(&Default::default(), &validators_addresses(5)),
 				&hash1,
 				&header_to_import.header,
 				u64::max_value(),
 			),
 			Ok(Vec::new()),
 		);
-		storage.insert_header(true, hash1, header_to_import.clone(), None);
+		storage.insert_header(header_to_import.clone());
 
 		// when header#2 is inserted, nothing is finalized (2 votes)
 		header_to_import.header = Header {
@@ -240,19 +244,20 @@ mod tests {
 			number: 2,
 			..Default::default()
 		};
+		header_to_import.hash = header_to_import.header.hash();
 		let hash2 = header_to_import.header.hash();
 		assert_eq!(
 			finalize_blocks(
 				&storage,
 				&Default::default(),
-				&header_to_import.next_validators,
+				(&Default::default(), &validators_addresses(5)),
 				&hash2,
 				&header_to_import.header,
 				u64::max_value(),
 			),
 			Ok(Vec::new()),
 		);
-		storage.insert_header(true, hash2, header_to_import.clone(), None);
+		storage.insert_header(header_to_import.clone());
 
 		// when header#3 is inserted, header#1 is finalized (3 votes)
 		header_to_import.header = Header {
@@ -261,18 +266,19 @@ mod tests {
 			number: 3,
 			..Default::default()
 		};
+		header_to_import.hash = header_to_import.header.hash();
 		let hash3 = header_to_import.header.hash();
 		assert_eq!(
 			finalize_blocks(
 				&storage,
 				&Default::default(),
-				&header_to_import.next_validators,
+				(&Default::default(), &validators_addresses(5)),
 				&hash3,
 				&header_to_import.header,
 				u64::max_value(),
 			),
 			Ok(vec![(1, hash1)]),
 		);
-		storage.insert_header(true, hash3, header_to_import.clone(), None);
+		storage.insert_header(header_to_import);
 	}
 }
