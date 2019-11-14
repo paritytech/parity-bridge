@@ -193,6 +193,7 @@ decl_module! {
 				&mut BridgeStorage,
 				&kovan_aura_config(),
 				&kovan_validators_config(),
+				crate::import::PRUNE_DEPTH,
 				header,
 				receipts,
 			).map_err(|e| e.msg())?;
@@ -460,18 +461,19 @@ pub(crate) mod tests {
 		}
 	}
 
-	pub fn block1(validators: &[KeyPair]) -> Header {
+	pub fn block_i(storage: &InMemoryStorage, number: u64, validators: &[KeyPair]) -> Header {
+		let validator_index: u8 = (number % (validators.len() as u64)) as _;
 		signed_header(validators, Header {
-			number: 1,
-			parent_hash: genesis().hash(),
+			number,
+			parent_hash: storage.headers_by_number[&(number - 1)][0].clone(),
 			gas_limit: 0x2000.into(),
-			author: validator(1).address().to_fixed_bytes().into(),
+			author: validator(validator_index).address().to_fixed_bytes().into(),
 			seal: vec![
-				vec![43].into(),
+				vec![number as u8 + 42].into(),
 				vec![].into(),
 			],
 			..Default::default()
-		}, 43)
+		}, number + 42)
 	}
 
 	pub fn signed_header(validators: &[KeyPair], mut header: Header, step: u64) -> Header {

@@ -23,7 +23,7 @@ use crate::validators::{Validators, ValidatorsConfiguration};
 use crate::verification::verify_aura_header;
 
 /// Number of headers behind the best finalized block that we store.
-const PRUNE_DEPTH: u64 = 2048;
+pub(crate) const PRUNE_DEPTH: u64 = 2048;
 
 /// Imports given header and updates blocks finality (if required).
 ///
@@ -33,6 +33,7 @@ pub fn import_header<S: Storage>(
 	storage: &mut S,
 	aura_config: &AuraConfiguration,
 	validators_config: &ValidatorsConfiguration,
+	prune_depth: u64,
 	header: Header,
 	receipts: Option<Vec<Receipt>>,
 ) -> Result<H256, Error> {
@@ -79,13 +80,16 @@ pub fn import_header<S: Storage>(
 
 	// now prune old headers.
 	// the pruning strategy is to store all unfinalized blocks and blocks
-	// within PRUNE_DEPTH range before finalized blocks
+	// within prune_depth range before finalized blocks
 	let last_finalized = finalized_blocks.last().cloned();
 	if let Some((last_finalized_number, last_finalized_hash)) = last_finalized {
-		let first_block_to_prune = prev_finalized_number.saturating_sub(PRUNE_DEPTH);
-		let last_block_to_prune = last_finalized_number.saturating_sub(PRUNE_DEPTH);
-		storage.prune_headers(first_block_to_prune, last_block_to_prune + 1);
-		storage.set_finalized_block(last_finalized_number, last_finalized_hash);
+		let first_block_to_prune = prev_finalized_number.saturating_sub(prune_depth);
+		let last_block_to_prune = last_finalized_number.saturating_sub(prune_depth);
+		if first_block_to_prune != last_block_to_prune ||
+			first_block_to_prune + prune_depth == last_finalized_number {
+			storage.prune_headers(first_block_to_prune, last_block_to_prune + 1);
+			storage.set_finalized_block(last_finalized_number, last_finalized_hash);
+		}
 	}
 
 	Ok(hash)
@@ -125,7 +129,7 @@ fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256
 #[cfg(test)]
 mod tests {
 	use crate::{kovan_aura_config, kovan_validators_config};
-	use crate::tests::{InMemoryStorage, block1, genesis, validator, validators_addresses};
+	use crate::tests::{InMemoryStorage, block_i, genesis, validator, validators_addresses};
 	use crate::validators::ValidatorsSource;
 	use super::*;
 
@@ -134,7 +138,14 @@ mod tests {
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
 		storage.set_finalized_block(100, Default::default());
 		assert_eq!(
-			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), Default::default(), None),
+			import_header(
+				&mut storage,
+				&kovan_aura_config(),
+				&kovan_validators_config(),
+				PRUNE_DEPTH,
+				Default::default(),
+				None,
+			),
 			Err(Error::AncientHeader),
 		);
 	}
@@ -143,13 +154,27 @@ mod tests {
 	fn rejects_known_header() {
 		let validators = (0..3).map(|i| validator(i as u8)).collect::<Vec<_>>();
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
+		let block = block_i(&storage, 1, &validators);
 		assert_eq!(
-			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), block1(&validators), None)
-				.map(|_| ()),
+			import_header(
+				&mut storage,
+				&kovan_aura_config(),
+				&kovan_validators_config(),
+				PRUNE_DEPTH,
+				block.clone(),
+				None,
+			).map(|_| ()),
 			Ok(()),
 		);
 		assert_eq!(
-			import_header(&mut storage, &kovan_aura_config(), &kovan_validators_config(), block1(&validators), None),
+			import_header(
+				&mut storage,
+				&kovan_aura_config(),
+				&kovan_validators_config(),
+				PRUNE_DEPTH,
+				block,
+				None,
+			).map(|_| ()),
 			Err(Error::KnownHeader),
 		);
 	}
@@ -162,10 +187,10 @@ mod tests {
 		]);
 		let validators = (0..3).map(|i| validator(i as u8)).collect::<Vec<_>>();
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
-		let header = block1(&validators);
+		let header = block_i(&storage, 1, &validators);
 		let hash = header.hash();
 		assert_eq!(
-			import_header(&mut storage, &kovan_aura_config(), &validators_config, header, None)
+			import_header(&mut storage, &kovan_aura_config(), &validators_config, PRUNE_DEPTH, header, None)
 				.map(|_| ()),
 			Ok(()),
 		);
@@ -176,5 +201,42 @@ mod tests {
 			imported_header.next_validators_set_id,
 			1, // new set is enacted from config
 		);
+	}
+
+	#[test]
+	fn headers_are_pruned() {
+		let validators_config = ValidatorsConfiguration::Single(
+			ValidatorsSource::List(validators_addresses(3)),
+		);
+		let validators = vec![validator(0), validator(1), validator(2)];
+		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
+
+		// header [0..11] are finalizing blocks [0; 9]
+		// => since we want to keep 10 finalized blocks, we aren't pruning anything
+		for i in 1..11 {
+			let header = block_i(&storage, i, &validators);
+			import_header(
+				&mut storage,
+				&kovan_aura_config(),
+				&validators_config,
+				10,
+				header,
+				None,
+			).unwrap();
+		}
+		assert!(storage.header(&genesis().hash()).is_some());
+
+		// header 11 finalizes headers [10]
+		// => we prune header#0
+		let header = block_i(&storage, 11, &validators);
+		import_header(
+			&mut storage,
+			&kovan_aura_config(),
+			&validators_config,
+			10,
+			header,
+			None,
+		).unwrap();
+		assert!(storage.header(&genesis().hash()).is_none());
 	}
 }
