@@ -54,7 +54,7 @@ pub struct AuraConfiguration {
 
 /// Block header as it is stored in the runtime storage.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
-pub(crate) struct StoredHeader {
+pub struct StoredHeader {
 	/// The block header itself.
 	pub header: Header,
 	/// Total difficulty of the chain.
@@ -70,13 +70,20 @@ pub(crate) struct StoredHeader {
 #[derive(RuntimeDebug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct HeaderToImport {
-	pub(crate) context: ImportContext,
-	pub(crate) is_best: bool,
-	pub(crate) hash: H256,
-	pub(crate) header: Header,
-	pub(crate) total_difficulty: U256,
-	pub(crate) enacted_change: Option<Vec<Address>>,
-	pub(crate) scheduled_change: Option<Vec<Address>>,
+	/// Header import context,
+	pub context: ImportContext,
+	/// Should we consider this header as best?
+	pub is_best: bool,
+	/// The hash of the header.
+	pub hash: H256,
+	/// The header itself.
+	pub header: Header,
+	/// Total chain difficulty at the header.
+	pub total_difficulty: U256,
+	/// Validators set enacted change, if happened at the header.
+	pub enacted_change: Option<Vec<Address>>,
+	/// Validators set scheduled change, if happened at the header.
+	pub scheduled_change: Option<Vec<Address>>,
 }
 
 /// Header import context.
@@ -90,6 +97,21 @@ pub struct ImportContext {
 }
 
 impl ImportContext {
+	/// Create import context using passing parameters;
+	pub fn new(
+		parent_header: Header,
+		parent_total_difficulty: U256,
+		next_validators_set_id: u64,
+		next_validators_set: (H256, Vec<Address>),
+	) -> Self {
+		ImportContext {
+			parent_header,
+			parent_total_difficulty,
+			next_validators_set_id,
+			next_validators_set,
+		}
+	}
+
 	/// Returns reference to parent header.
 	pub fn parent_header(&self) -> &Header {
 		&self.parent_header
@@ -98,6 +120,11 @@ impl ImportContext {
 	/// Returns total chain difficulty at parent block.
 	pub fn total_difficulty(&self) -> &U256 {
 		&self.parent_total_difficulty
+	}
+
+	/// Returns id of the set of validators.
+	pub fn validators_set_id(&self) -> u64 {
+		self.next_validators_set_id
 	}
 
 	/// Returns block whenre validators set has been enacted.
@@ -418,7 +445,7 @@ pub(crate) fn ancestry<'a, S: Storage>(storage: &'a S, header: &Header) -> impl 
 
 #[cfg(test)]
 pub(crate) mod tests {
-	use std::collections::HashMap;
+	use std::collections::{HashMap, hash_map::Entry};
 	use parity_crypto::publickey::{KeyPair, Secret, sign};
 	use primitives::{H520, rlp_encode};
 	use super::*;
@@ -567,7 +594,16 @@ pub(crate) mod tests {
 			for number in begin..end {
 				let blocks_at_number = self.headers_by_number.remove(&number);
 				for hash in blocks_at_number.into_iter().flat_map(|x| x) {
-					self.headers.remove(&hash);
+					if let Some(header) = self.headers.remove(&hash) {
+						match self.validators_sets_rc.entry(header.next_validators_set_id) {
+							Entry::Occupied(mut entry) => if *entry.get() == 1 {
+								entry.remove();
+							} else {
+								*entry.get_mut() -= 1;
+							},
+							Entry::Vacant(_) => unreachable!("there's entry for each header")
+						};
+					}
 				}
 			}
 		}
