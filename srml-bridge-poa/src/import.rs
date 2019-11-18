@@ -22,8 +22,14 @@ use crate::finality::finalize_blocks;
 use crate::validators::{Validators, ValidatorsConfiguration};
 use crate::verification::verify_aura_header;
 
-/// Number of headers behind the best finalized block that we store.
-pub(crate) const PRUNE_DEPTH: u64 = 2048;
+/// Maximal number of headers behind best blocks that we are aiming to store. When there
+/// are too many unfinalized headers, it slows down finalization tracking significantly.
+/// That's why we won't consider imports/reorganizations to blocks of PRUNE_DEPTH age.
+/// If there's more headers than that, we prune the oldest. The only exception is
+/// when unfinalized header schedules validators set change. We can't compute finality
+/// for pruned headers => we won't know when to enact validators set change. That's
+/// why we never prune headers with scheduled changes.
+pub(crate) const PRUNE_DEPTH: u64 = 4096;
 
 /// Imports given header and updates blocks finality (if required).
 ///
@@ -53,7 +59,7 @@ pub fn import_header<S: Storage>(
 		validators.extract_validators_change(&header, receipts)?;
 
 	// check if block finalizes some other blocks and corresponding scheduled validators
-	let (prev_finalized_number, prev_finalized_hash) = storage.finalized_block();
+	let (_, prev_finalized_hash) = storage.finalized_block();
 	let finalized_blocks = finalize_blocks(
 		storage,
 		&prev_finalized_hash,
@@ -69,6 +75,7 @@ pub fn import_header<S: Storage>(
 	let (_, _, best_total_difficulty) = storage.best_block();
 	let total_difficulty = import_context.total_difficulty() + header.difficulty;
 	let is_best = total_difficulty > best_total_difficulty;
+	let header_number = header.number;
 	storage.insert_header(import_context.into_import_header(
 		is_best,
 		hash,
@@ -78,19 +85,14 @@ pub fn import_header<S: Storage>(
 		scheduled_change,
 	));
 
-	// now prune old headers.
-	// the pruning strategy is to store all unfinalized blocks and blocks
-	// within prune_depth range before finalized blocks
-	let last_finalized = finalized_blocks.last().cloned();
-	if let Some((last_finalized_number, last_finalized_hash)) = last_finalized {
-		let first_block_to_prune = prev_finalized_number.saturating_sub(prune_depth);
-		let last_block_to_prune = last_finalized_number.saturating_sub(prune_depth);
-		if first_block_to_prune != last_block_to_prune ||
-			first_block_to_prune + prune_depth == last_finalized_number {
-			storage.prune_headers(first_block_to_prune, last_block_to_prune + 1);
-			storage.set_finalized_block(last_finalized_number, last_finalized_hash);
-		}
-	}
+	// now mark finalized headers && prune old headers
+	storage.finalize_headers(
+		finalized_blocks.last().cloned(),
+		match is_best {
+			true => header_number.checked_sub(prune_depth),
+			false => None,
+		},
+	);
 
 	Ok(hash)
 }
@@ -129,14 +131,18 @@ fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256
 #[cfg(test)]
 mod tests {
 	use crate::{kovan_aura_config, kovan_validators_config};
-	use crate::tests::{InMemoryStorage, block_i, genesis, validator, validators_addresses};
+	use crate::tests::{
+		InMemoryStorage,
+		block_i, custom_block_i, signed_header, genesis,
+		validator, validators_addresses,
+	};
 	use crate::validators::ValidatorsSource;
 	use super::*;
 
 	#[test]
 	fn rejects_finalized_block_competitors() {
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
-		storage.set_finalized_block(100, Default::default());
+		storage.finalize_headers(Some((100, Default::default())), None);
 		assert_eq!(
 			import_header(
 				&mut storage,
@@ -206,16 +212,17 @@ mod tests {
 	#[test]
 	fn headers_are_pruned() {
 		let validators_config = ValidatorsConfiguration::Single(
-			ValidatorsSource::List(validators_addresses(3)),
+			ValidatorsSource::Contract([3; 20].into(), validators_addresses(3)),
 		);
 		let validators = vec![validator(0), validator(1), validator(2)];
 		let mut storage = InMemoryStorage::new(genesis(), validators_addresses(3));
 
 		// header [0..11] are finalizing blocks [0; 9]
 		// => since we want to keep 10 finalized blocks, we aren't pruning anything
+		let mut last_block_hash = Default::default();
 		for i in 1..11 {
 			let header = block_i(&storage, i, &validators);
-			import_header(
+			last_block_hash = import_header(
 				&mut storage,
 				&kovan_aura_config(),
 				&validators_config,
@@ -226,9 +233,65 @@ mod tests {
 		}
 		assert!(storage.header(&genesis().hash()).is_some());
 
-		// header 11 finalizes headers [10]
+		// header 11 finalizes headers [10] AND schedules change
 		// => we prune header#0
-		let header = block_i(&storage, 11, &validators);
+		let header = custom_block_i(&storage, 11, &validators, |header| header.log_bloom = (&[0xff; 256]).into());
+		last_block_hash = import_header(
+			&mut storage,
+			&kovan_aura_config(),
+			&validators_config,
+			10,
+			header,
+			Some(vec![crate::validators::tests::validators_change_recept(last_block_hash)]),
+		).unwrap();
+		assert!(storage.header(&genesis().hash()).is_none());
+
+		// and now let's say validators 1 && 2 went offline
+		// => in the range 12-25 no blocks are finalized, but we still continue to prune old headers
+		// until header#11 is met. we can't prune #11, because it schedules change
+		let mut step = 56;
+		for i in 12..25 {
+			let header = Header {
+				number: i as _,
+				parent_hash: last_block_hash,
+				gas_limit: 0x2000.into(),
+				author: validator(2).address().to_fixed_bytes().into(),
+				seal: vec![
+					vec![step].into(),
+					vec![].into(),
+				],
+				difficulty: i.into(),
+				..Default::default()
+			};
+			let header = signed_header(&validators, header, step as _);
+			last_block_hash = import_header(
+				&mut storage,
+				&kovan_aura_config(),
+				&validators_config,
+				10,
+				header,
+				None,
+			).unwrap();
+			step += 3;
+		}
+		assert_eq!(storage.oldest_unpruned_block(), 11);
+
+		// now let's insert block signed by validator 1
+		// => blocks 11..24 are finalized and blocks 11..14 are pruned
+		step -= 2;
+		let header = Header {
+			number: 25,
+			parent_hash: last_block_hash,
+			gas_limit: 0x2000.into(),
+			author: validator(0).address().to_fixed_bytes().into(),
+			seal: vec![
+				vec![step].into(),
+				vec![].into(),
+			],
+			difficulty: 25.into(),
+			..Default::default()
+		};
+		let header = signed_header(&validators, header, step as _);
 		import_header(
 			&mut storage,
 			&kovan_aura_config(),
@@ -237,6 +300,6 @@ mod tests {
 			header,
 			None,
 		).unwrap();
-		assert!(storage.header(&genesis().hash()).is_none());
+		assert_eq!(storage.oldest_unpruned_block(), 15);
 	}
 }

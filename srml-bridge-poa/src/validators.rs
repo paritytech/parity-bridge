@@ -213,10 +213,35 @@ pub fn step_validator(header_validators: &[Address], header_step: u64) -> Addres
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
 	use primitives::TransactionOutcome;
 	use crate::kovan_validators_config;
 	use super::*;
+
+	pub(crate) fn validators_change_recept(parent_hash: H256) -> Receipt {
+		Receipt {
+			gas_used: 0.into(),
+			log_bloom: (&[0xff; 256]).into(),
+			outcome: TransactionOutcome::Unknown,
+			logs: vec![
+				LogEntry {
+					address: [3; 20].into(),
+					topics: vec![
+						CHANGE_EVENT_HASH.into(),
+						parent_hash,
+					],
+					data: vec![
+						0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+						0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+						7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+							7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+					],
+				},
+			],
+		}
+	}
 
 	#[test]
 	fn maybe_signals_validators_change_works() {
@@ -286,30 +311,7 @@ mod tests {
 
 		// when we're inside contract range and logs bloom signals change
 		// and there's change in receipts
-		let receipts = vec![
-			Receipt {
-				gas_used: 0.into(),
-				log_bloom: (&[0xff; 256]).into(),
-				outcome: TransactionOutcome::Unknown,
-				logs: vec![
-					LogEntry {
-						address: [3; 20].into(),
-						topics: vec![
-							CHANGE_EVENT_HASH.into(),
-							H256::default(),
-						],
-						data: vec![
-							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-							0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-								0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-							7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-								7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-						],
-					},
-				],
-			},
-		];
+		let receipts = vec![validators_change_recept(Default::default())];
 		assert_eq!(
 			validators.extract_validators_change(&header, Some(receipts)),
 			Ok((Some(vec![[7; 20].into()]), None)),

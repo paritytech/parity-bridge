@@ -175,10 +175,16 @@ pub trait Storage {
 	fn scheduled_change(&self, hash: &H256) -> Option<Vec<Address>>;
 	/// Insert imported header.
 	fn insert_header(&mut self, header: HeaderToImport);
-	/// Prune all headers within [begin; end) range.
-	fn prune_headers(&mut self, begin: u64, end: u64);
-	/// Set last finalized block.
-	fn set_finalized_block(&mut self, number: u64, hash: H256);
+	/// Finalize given block and prune all headers with number < prune_end.
+	/// The headers in the pruning range could be either finalized, or not.
+	/// It is the storage duty to ensure that unfinalized headers that have
+	/// scheduled changes won't be pruned until they or their competitors
+	/// are finalized.
+	fn finalize_headers(
+		&mut self,
+		finalized: Option<(u64, H256)>,
+		prune_end: Option<u64>,
+	);
 }
 
 /// The module configuration trait
@@ -207,6 +213,8 @@ decl_storage! {
 		BestBlock: (u64, H256, U256);
 		/// Best finalized block.
 		FinalizedBlock: (u64, H256);
+		/// Oldest unpruned block(s) number.
+		OldestUnprunedBlock: u64;
 		/// Map of imported headers by hash.
 		Headers: map H256 => Option<StoredHeader>;
 		/// Map of imported header hashes by number.
@@ -240,6 +248,7 @@ decl_storage! {
 			let initial_hash = config.initial_header.hash();
 			BestBlock::put((config.initial_header.number, initial_hash, config.initial_difficulty));
 			FinalizedBlock::put((config.initial_header.number, initial_hash));
+			OldestUnprunedBlock::put(config.initial_header.number);
 			HeadersByNumber::insert(config.initial_header.number, vec![initial_hash]);
 			Headers::insert(initial_hash, StoredHeader {
 				header: config.initial_header.clone(),
@@ -337,26 +346,52 @@ impl Storage for BridgeStorage {
 		});
 	}
 
-	fn prune_headers(&mut self, begin: u64, end: u64) {
-		for number in begin..end {
-			let blocks_at_number = HeadersByNumber::take(number);
-			for hash in blocks_at_number.into_iter().flat_map(|x| x) {
-				let header = Headers::take(&hash);
-				if let Some(header) = header {
-					ValidatorsSetsRc::mutate(
-						header.next_validators_set_id,
-						|rc| match *rc {
-							Some(rc) if rc > 1 => Some(rc - 1),
-							_ => None,
-						},
-					);
+	fn finalize_headers(
+		&mut self,
+		finalized: Option<(u64, H256)>,
+		prune_end: Option<u64>,
+	) {
+		// remember just finalized block
+		let finalized_number = finalized.as_ref().map(|f| f.0).unwrap_or_else(|| FinalizedBlock::get().0);
+		if let Some(finalized) = finalized {
+			FinalizedBlock::put(finalized);
+		}
+
+		if let Some(prune_end) = prune_end {
+			let prune_begin = OldestUnprunedBlock::get();
+
+			for number in prune_begin..prune_end {
+				let blocks_at_number = HeadersByNumber::take(number);
+
+				// ensure that unfinalized headers we want to prune do not have scheduled changes
+				if number > finalized_number {
+					if let Some(ref blocks_at_number) = blocks_at_number {
+						if blocks_at_number.iter().any(|block| ScheduledChanges::exists(block)) {
+							HeadersByNumber::insert(number, blocks_at_number);
+							OldestUnprunedBlock::put(number);
+							return;
+						}
+					}
+				}
+
+				// physically remove headers and (probably) obsolete validators sets
+				for hash in blocks_at_number.into_iter().flat_map(|x| x) {
+					let header = Headers::take(&hash);
+					ScheduledChanges::remove(hash);
+					if let Some(header) = header {
+						ValidatorsSetsRc::mutate(
+							header.next_validators_set_id,
+							|rc| match *rc {
+								Some(rc) if rc > 1 => Some(rc - 1),
+								_ => None,
+							},
+						);
+					}
 				}
 			}
-		}
-	}
 
-	fn set_finalized_block(&mut self, number: u64, hash: H256) {
-		FinalizedBlock::put((number, hash));
+			OldestUnprunedBlock::put(prune_end);
+		}
 	}
 }
 
@@ -462,8 +497,17 @@ pub(crate) mod tests {
 	}
 
 	pub fn block_i(storage: &InMemoryStorage, number: u64, validators: &[KeyPair]) -> Header {
+		custom_block_i(storage, number, validators, |_| {})
+	}
+
+	pub fn custom_block_i(
+		storage: &InMemoryStorage,
+		number: u64,
+		validators: &[KeyPair],
+		customize: impl FnOnce(&mut Header),
+	) -> Header {
 		let validator_index: u8 = (number % (validators.len() as u64)) as _;
-		signed_header(validators, Header {
+		let mut header = Header {
 			number,
 			parent_hash: storage.headers_by_number[&(number - 1)][0].clone(),
 			gas_limit: 0x2000.into(),
@@ -472,8 +516,11 @@ pub(crate) mod tests {
 				vec![number as u8 + 42].into(),
 				vec![].into(),
 			],
+			difficulty: number.into(),
 			..Default::default()
-		}, number + 42)
+		};
+		customize(&mut header);
+		signed_header(validators, header, number + 42)
 	}
 
 	pub fn signed_header(validators: &[KeyPair], mut header: Header, step: u64) -> Header {
@@ -497,6 +544,7 @@ pub(crate) mod tests {
 	pub struct InMemoryStorage {
 		best_block: (u64, H256, U256),
 		finalized_block: (u64, H256),
+		oldest_unpruned_block: u64,
 		headers: HashMap<H256, StoredHeader>,
 		headers_by_number: HashMap<u64, Vec<H256>>,
 		next_validators_set_id: u64,
@@ -511,6 +559,7 @@ pub(crate) mod tests {
 			InMemoryStorage {
 				best_block: (initial_header.number, hash, 0.into()),
 				finalized_block: (initial_header.number, hash),
+				oldest_unpruned_block: initial_header.number,
 				headers_by_number: vec![(initial_header.number, vec![hash])].into_iter().collect(),
 				headers: vec![(
 					hash,
@@ -525,6 +574,10 @@ pub(crate) mod tests {
 				validators_sets_rc: vec![(0, 1)].into_iter().collect(),
 				scheduled_changes: HashMap::new(),
 			}
+		}
+
+		pub(crate) fn oldest_unpruned_block(&self) -> u64 {
+			self.oldest_unpruned_block
 		}
 
 		pub(crate) fn stored_header(&self, hash: &H256) -> Option<&StoredHeader> {
@@ -592,26 +645,52 @@ pub(crate) mod tests {
 			});
 		}
 
-		fn prune_headers(&mut self, begin: u64, end: u64) {
-			for number in begin..end {
-				let blocks_at_number = self.headers_by_number.remove(&number);
-				for hash in blocks_at_number.into_iter().flat_map(|x| x) {
-					if let Some(header) = self.headers.remove(&hash) {
-						match self.validators_sets_rc.entry(header.next_validators_set_id) {
-							Entry::Occupied(mut entry) => if *entry.get() == 1 {
-								entry.remove();
-							} else {
-								*entry.get_mut() -= 1;
-							},
-							Entry::Vacant(_) => unreachable!("there's entry for each header")
-						};
+		fn finalize_headers(
+			&mut self,
+			finalized: Option<(u64, H256)>,
+			prune_end: Option<u64>,
+		) {
+			let finalized_number = finalized.as_ref().map(|f| f.0).unwrap_or_else(|| self.finalized_block.0);
+			if let Some(finalized) = finalized {
+				self.finalized_block = finalized;
+			}
+
+			if let Some(prune_end) = prune_end {
+				let prune_begin = self.oldest_unpruned_block;
+
+				for number in prune_begin..prune_end {
+					let blocks_at_number = self.headers_by_number.remove(&number);
+
+					// ensure that unfinalized headers we want to prune do not have scheduled changes
+					if number > finalized_number {
+						if let Some(ref blocks_at_number) = blocks_at_number {
+							if blocks_at_number.iter().any(|block| self.scheduled_changes.contains_key(block)) {
+								self.headers_by_number.insert(number, blocks_at_number.clone());
+								self.oldest_unpruned_block = number;
+								return;
+							}
+						}
+					}
+
+					// physically remove headers and (probably) obsolete validators sets
+					for hash in blocks_at_number.into_iter().flat_map(|x| x) {
+						let header = self.headers.remove(&hash);
+						self.scheduled_changes.remove(&hash);
+						if let Some(header) = header {
+							match self.validators_sets_rc.entry(header.next_validators_set_id) {
+								Entry::Occupied(mut entry) => if *entry.get() == 1 {
+									entry.remove();
+								} else {
+									*entry.get_mut() -= 1;
+								},
+								Entry::Vacant(_) => unreachable!("there's entry for each header")
+							};
+						}
 					}
 				}
-			}
-		}
 
-		fn set_finalized_block(&mut self, number: u64, hash: H256) {
-			self.finalized_block = (number, hash);
+				self.oldest_unpruned_block = prune_end;
+			}
 		}
 	}
 }
