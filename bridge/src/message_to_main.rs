@@ -19,7 +19,7 @@ use error::Error;
 use ethabi;
 use ethereum_types::{Address, H256};
 use helpers;
-use tiny_keccak;
+use tiny_keccak::{self, Hasher};
 use web3::types::Log;
 
 /// the message that is relayed from `side` to  `main`.
@@ -53,7 +53,11 @@ impl MessageToMain {
 	}
 
 	pub fn keccak256(&self) -> H256 {
-		H256::from_slice(&tiny_keccak::keccak256(&self.to_bytes()))
+		let mut output = [0u8; 32];
+		let mut keccak = tiny_keccak::Keccak::v256();
+		keccak.update(&self.to_bytes());
+		keccak.finalize(&mut output);
+		H256::from_slice(&output)
 	}
 
 	/// construct a message from a `Withdraw` event that was logged on `side`
