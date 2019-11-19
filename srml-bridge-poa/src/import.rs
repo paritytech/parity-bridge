@@ -44,7 +44,7 @@ pub fn import_header<S: Storage>(
 	receipts: Option<Vec<Receipt>>,
 ) -> Result<H256, Error> {
 	// first check that we are able to import this header at all
-	let hash = is_importable_header(storage, &header)?;
+	let (hash, prev_finalized_hash) = is_importable_header(storage, &header)?;
 
 	// verify header
 	let import_context = verify_aura_header(
@@ -59,7 +59,6 @@ pub fn import_header<S: Storage>(
 		validators.extract_validators_change(&header, receipts)?;
 
 	// check if block finalizes some other blocks and corresponding scheduled validators
-	let (_, prev_finalized_hash) = storage.finalized_block();
 	let finalized_blocks = finalize_blocks(
 		storage,
 		&prev_finalized_hash,
@@ -112,10 +111,10 @@ pub fn header_import_requires_receipts<S: Storage>(
 
 /// Checks that we are able to ***try to** import this header.
 /// Returns error if we should not try to import this block.
-/// Returns the hash of the header and total difficulty of the best known block otherwise.
-fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256, Error> {
+/// Returns hash of the header and number of the last finalized block.
+fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<(H256, H256), Error> {
 	// we never import any header that competes with finalized header
-	let (finalized_block_number, _) = storage.finalized_block();
+	let (finalized_block_number, finalized_block_hash) = storage.finalized_block();
 	if header.number <= finalized_block_number {
 		return Err(Error::AncientHeader);
 	}
@@ -125,7 +124,7 @@ fn is_importable_header<S: Storage>(storage: &S, header: &Header) -> Result<H256
 		return Err(Error::KnownHeader);
 	}
 
-	Ok(hash)
+	Ok((hash, finalized_block_hash))
 }
 
 #[cfg(test)]
