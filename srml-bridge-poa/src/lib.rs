@@ -263,6 +263,14 @@ decl_storage! {
 }
 
 impl<T: Trait> Module<T> {
+	/// Returns number and hash of the best block known to the bridge module.
+	/// The caller should only submit `import_header` transaction that makes
+	/// (or leads to making) other header the best one.
+	pub fn best_block() -> (u64, H256) {
+		let (number, hash, _) = BridgeStorage.best_block();
+		(number, hash)
+	}
+
 	/// Returns true if the import of given block requires transactions receipts.
 	pub fn is_import_requires_receipts(header: Header) -> bool {
 		import::header_import_requires_receipts(
