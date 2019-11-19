@@ -38,6 +38,7 @@ pub enum ValidatorsConfiguration {
 /// This source is valid within some blocks range. The blocks range could
 /// cover multiple epochs - i.e. the validators that are authoring blocks
 /// within this range could change, but the source itself can not.
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub enum ValidatorsSource {
 	/// The validators addresses are hardcoded and never change.
 	List(Vec<Address>),
@@ -61,7 +62,7 @@ impl<'a> Validators<'a> {
 	/// Returns true if header (probabilistically) signals validators change and
 	/// the caller needs to provide transactions receipts to import the header.
 	pub fn maybe_signals_validators_change(&self, header: &Header) -> bool {
-		let (_, source) = self.source_at(header.number);
+		let (_, _, source) = self.source_at(header.number);
 
 		// if we are taking validators set from the fixed list, there's always
 		// single epoch
@@ -98,17 +99,17 @@ impl<'a> Validators<'a> {
 		// TODO: verify receipts root
 
 		// let's first check if new source is starting from this header
-		let (starts_at, source) = self.source_at(header.number + 1);
-		if starts_at == header.number {
-			match *source {
+		let (source_index, _, source) = self.source_at(header.number);
+		let (next_starts_at, next_source) = self.source_at_next_header(source_index, header.number);
+		if next_starts_at == header.number {
+			match *next_source {
 				ValidatorsSource::List(ref new_list) => return Ok((None, Some(new_list.clone()))),
 				ValidatorsSource::Contract(_, ref new_list) => return Ok((Some(new_list.clone()), None)),
 			}
 		}
 
 		// else deal with previous source
-		let (_, source) = self.source_at(header.number);
-
+		//
 		// if we are taking validators set from the fixed list, there's always
 		// single epoch
 		// => we never require transactions receipts
@@ -174,7 +175,11 @@ impl<'a> Validators<'a> {
 	}
 
 	/// Finalize changes when blocks are finalized.
-	pub fn finalize_validators_change<S: Storage>(&self, storage: &mut S, finalized_blocks: &[(u64, H256)]) -> Option<Vec<Address>> {
+	pub fn finalize_validators_change<S: Storage>(
+		&self,
+		storage: &mut S,
+		finalized_blocks: &[(u64, H256)],
+	) -> Option<Vec<Address>> {
 		for (_, finalized_hash) in finalized_blocks.iter().rev() {
 			if let Some(changes) = storage.scheduled_change(finalized_hash) {
 				return Some(changes);
@@ -184,15 +189,38 @@ impl<'a> Validators<'a> {
 	}
 
 	/// Returns source of validators that should author the header.
-	fn source_at<'b>(&'b self, header_number: u64) -> (u64, &'b ValidatorsSource) {
+	fn source_at<'b>(&'b self, header_number: u64) -> (usize, u64, &'b ValidatorsSource) {
+		match self.config {
+			ValidatorsConfiguration::Single(ref source) => (0, 0, source),
+			ValidatorsConfiguration::Multi(ref sources) => sources.iter().rev()
+				.enumerate()
+				.find(|(_, &(begin, _))| begin < header_number)
+				.map(|(i, (begin, source))| (sources.len() - 1 - i, *begin, source))
+				.expect("there's always entry for the initial block;\
+					we do not touch any headers with number < initial block number; qed"),
+		}
+	}
+
+	/// Returns source of validators that should author the next header.
+	fn source_at_next_header<'b>(
+		&'b self,
+		header_source_index: usize,
+		header_number: u64,
+	) -> (u64, &'b ValidatorsSource) {
 		match self.config {
 			ValidatorsConfiguration::Single(ref source) => (0, source),
-			ValidatorsConfiguration::Multi(ref sources) =>
-				sources.iter().rev()
-					.find(|&(begin, _)| *begin < header_number)
-					.map(|(begin, source)| (*begin, source))
-					.expect("there's always entry for the initial block;\
-						we do not touch any headers with number < initial block number; qed"),
+			ValidatorsConfiguration::Multi(ref sources) => {
+				let next_source_index = header_source_index + 1;
+				if next_source_index < sources.len() {
+					let next_source = &sources[next_source_index];
+					if next_source.0 < header_number + 1 {
+						return (next_source.0, &next_source.1);
+					}
+				}
+
+				let source = &sources[header_source_index];
+				(source.0, &source.1)
+			},
 		}
 	}
 }
@@ -241,6 +269,43 @@ pub(crate) mod tests {
 				},
 			],
 		}
+	}
+
+	#[test]
+	fn source_at_works() {
+		let config = ValidatorsConfiguration::Multi(vec![
+			(0, ValidatorsSource::List(vec![[1; 20].into()])),
+			(100, ValidatorsSource::List(vec![[2; 20].into()])),
+			(200, ValidatorsSource::Contract([3; 20].into(), vec![[3; 20].into()])),
+		]);
+		let validators = Validators::new(&config);
+
+		assert_eq!(
+			validators.source_at(99),
+			(0, 0, &ValidatorsSource::List(vec![[1; 20].into()])),
+		);
+		assert_eq!(
+			validators.source_at_next_header(0, 99),
+			(0, &ValidatorsSource::List(vec![[1; 20].into()])),
+		);
+
+		assert_eq!(
+			validators.source_at(100),
+			(0, 0, &ValidatorsSource::List(vec![[1; 20].into()])),
+		);
+		assert_eq!(
+			validators.source_at_next_header(0, 100),
+			(100, &ValidatorsSource::List(vec![[2; 20].into()])),
+		);
+
+		assert_eq!(
+			validators.source_at(200),
+			(1, 100, &ValidatorsSource::List(vec![[2; 20].into()])),
+		);
+		assert_eq!(
+			validators.source_at_next_header(1, 200),
+			(200, &ValidatorsSource::Contract([3; 20].into(), vec![[3; 20].into()])),
+		);
 	}
 
 	#[test]
