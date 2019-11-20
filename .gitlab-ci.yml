@@ -19,7 +19,7 @@ variables:
   script:
     - rustup default ${RUST_DEFAULT}
     - cargo fmt --verbose --all -- --check
-    - time cargo test --verbose -all --color=always -- --nocapture
+    - time cargo test --verbose --all --color=always -- --nocapture
     - sccache --show-stats
   retry:
     max: 2
