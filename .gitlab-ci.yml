@@ -15,7 +15,7 @@ variables:
     - rustup show
     - cargo --version
     - parity --version
-    - solc --verson
+    - solc --version
   script:
     - rustup default ${RUST_DEFAULT}
     - cargo fmt --verbose --all -- --check
