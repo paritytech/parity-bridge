@@ -61,14 +61,12 @@ fn parity_main_command() -> Command {
 		.arg("all")
 		.arg("--port")
 		.arg("30310")
-		.arg("--gasprice")
+		.arg("--min-gas-price")
 		.arg("0")
 		.arg("--reseal-min-period")
 		.arg("0")
 		.arg("--no-ws")
-		.arg("--no-dapps")
-		.arg("--no-warp")
-		.arg("--no-ui");
+		.arg("--no-warp");
 	command
 }
 
@@ -88,18 +86,17 @@ fn parity_side_command() -> Command {
 		.arg("all")
 		.arg("--port")
 		.arg("30311")
-		.arg("--gasprice")
+		.arg("--min-gas-price")
 		.arg("0")
 		.arg("--reseal-min-period")
 		.arg("0")
 		.arg("--no-ws")
-		.arg("--no-dapps")
-		.arg("--no-warp")
-		.arg("--no-ui");
+		.arg("--no-warp");
 	command
 }
 
 #[test]
+#[ignore]
 fn test_basic_deposit_then_withdraw() {
 	if Path::new(TMP_PATH).exists() {
 		std::fs::remove_dir_all(TMP_PATH).expect("failed to remove tmp dir");
