@@ -175,7 +175,7 @@ version = "0.5.0"
 dependencies = [
  "bridge-contracts 0.5.0",
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ethabi 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethabi 10.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -198,7 +198,7 @@ dependencies = [
 name = "bridge-contracts"
 version = "0.5.0"
 dependencies = [
- "ethabi 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethabi 10.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethabi-contract 9.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethabi-derive 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "solc 0.1.0 (git+https://github.com/paritytech/rust_solc)",
@@ -413,6 +413,20 @@ dependencies = [
 [[package]]
 name = "ethabi"
 version = "9.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethereum-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 1.0.103 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.44 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tiny-keccak 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "ethabi"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -768,7 +782,7 @@ version = "0.1.0"
 dependencies = [
  "bridge 0.5.0",
  "bridge-contracts 0.5.0",
- "ethabi 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethabi 10.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethereum-types 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2250,6 +2264,7 @@ dependencies = [
 "checksum env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "aafcde04e90a5226a6443b7aabdb016ba2f8307c847d524724bd9b346dd1a2d3"
 "checksum env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 "checksum error-chain 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3ab49e9dcb602294bc42f9a7dfc9bc6e936fca4418ea300dbfb84fe16de0b7d9"
+"checksum ethabi 10.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aafca66556d91290b75eef4254a21157635b5e6c378f684a904742238d0a601c"
 "checksum ethabi 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "965126c64662832991f5a748893577630b558e47fa94e7f35aefcd20d737cef7"
 "checksum ethabi-contract 9.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cf407dce0290374bfbb1528493bc14320e663f75856b73a5b76262d8e2cec3c9"
 "checksum ethabi-derive 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "bd0753d4f9e1dba99450da5f2400b20527702ae8ce0309a5f7c239d305539884"
