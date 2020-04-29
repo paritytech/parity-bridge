@@ -1,0 +1,55 @@
+name:                           Check
+
+on:
+  push:
+
+jobs:
+  check:
+    name:                       Check
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+    runs-on:                    ubuntu-latest
+    steps:
+      - name:                   Checkout sources
+        uses:                   actions/checkout@master
+        with:
+          submodules:           true
+      - name:                   Install solc v0.5.0
+        shell: bash
+        run: |  
+          export SOLC_HASH="c1bb15b520f5076aebd7aa9ef4ce5fa245b6f210a91cbd2064b9e383e6510e08";
+          export SOLC_VERSION="v0.5.0";
+          curl -LO https://github.com/ethereum/solidity/releases/download/$SOLC_VERSION/solc-static-linux;
+          echo "$SOLC_HASH solc-static-linux" | sha256sum -c;
+          sha256sum solc-static-linux;
+          chmod +x solc-static-linux;
+          sudo mv solc-static-linux /usr/bin/solc;
+          solc --version
+      - name: Install rust-${{ matrix.toolchain }}
+        uses: actions-rs/toolchain@v1.0.6
+        with: 
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+          components: rustfmt
+      - name:                   Cargo check ${{ matrix.toolchain }}
+        uses:                   actions-rs/cargo@v1
+        with:
+          command:              check
+          toolchain:            ${{ matrix.toolchain }}
+          args:                 --verbose --all
+      - name:                   Cargo fmt ${{ matrix.toolchain }}
+        uses:                   actions-rs/cargo@v1
+        with:
+          command:              fmt
+          args:                 --verbose --all -- --check
+      - name:                   Cargo test ${{ matrix.toolchain }}
+        uses:                   actions-rs/cargo@v1
+        with:
+          command:              test
+          args:                 --verbose --all --color=always -- --nocapture
+
+
