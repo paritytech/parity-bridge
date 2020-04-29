@@ -31,7 +31,10 @@ jobs:
           solc --version
       - name: Install rust-${{ matrix.toolchain }}
         uses: actions-rs/toolchain@v1.0.6
-        with: ${{ matrix.toolchain }}
+        with: 
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+          components: rustfmt
       - name:                   Cargo check ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
