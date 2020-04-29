@@ -21,13 +21,13 @@ jobs:
       - name:                   Install solc v0.5.0
         shell: bash
         run: |  
-          export SOLC_HASH=c9b268750506b88fe71371100050e9dd1e7edcf8f69da34d1cd09557ecb24580;
+          export SOLC_HASH="c1bb15b520f5076aebd7aa9ef4ce5fa245b6f210a91cbd2064b9e383e6510e08";
           export SOLC_VERSION="v0.5.0";
           curl -sO https://github.com/ethereum/solidity/releases/download/$SOLC_VERSION/solc-static-linux;
           echo "$SOLC_HASH solc-static-linux" | sha256sum -c;
           chmod +x solc-static-linux;
           sudo mv solc-static-linux /usr/bin/solc;
-          solc--version
+          solc --version
       - name:                   cargo check ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
