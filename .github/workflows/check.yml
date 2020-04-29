@@ -45,7 +45,7 @@ jobs:
         uses:                   actions-rs/cargo@v1
         with:
           command:              fmt
-          args:                 fmt --verbose --all -- --check
+          args:                 --verbose --all -- --check
       - name:                   Cargo test ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
