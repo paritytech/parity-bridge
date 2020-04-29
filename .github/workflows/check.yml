@@ -29,18 +29,21 @@ jobs:
           chmod +x solc-static-linux;
           sudo mv solc-static-linux /usr/bin/solc;
           solc --version
-      - name:                   cargo check ${{ matrix.toolchain }}
+      - name: Install rust-${{ matrix.toolchain }}
+        uses: actions-rs/toolchain@v1.0.6
+        with: ${{ matrix.toolchain }}
+      - name:                   Cargo check ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
           command:              check
           toolchain:            ${{ matrix.toolchain }}
           args:                 --verbose --all
-      - name:                   cargo fmt ${{ matrix.toolchain }}
+      - name:                   Cargo fmt ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
           command:              fmt
           args:                 fmt --verbose --all -- --check
-      - name:                   cargo test ${{ matrix.toolchain }}
+      - name:                   Cargo test ${{ matrix.toolchain }}
         uses:                   actions-rs/cargo@v1
         with:
           command:              test
