@@ -20,7 +20,7 @@ jobs:
           submodules:           true
       - name:                   Install solc v0.5.0
         shell: bash
-        run: -|  
+        run: |  
           export SOLC_HASH=c9b268750506b88fe71371100050e9dd1e7edcf8f69da34d1cd09557ecb24580;
           export SOLC_VERSION="v0.5.0";
           curl -sLo https://github.com/ethereum/solidity/releases/download/$SOLC_VERSION/solc-static-linux;
