@@ -1,4 +1,7 @@
-# PoA <> Substrate Bridge
+# Deprecated Bridges
+
+### This repo is **deprecated**. Originally it contained the ETH <> ETH-PoA bridge (see `tumski` tag). Later it was repurposed for ETH-PoA <> Substrate bridge development, however we've decided to work on the bridge from scratch, and you can find the latest version in:
+https://github.com/paritytech/parity-bridges-common
 
 **DISCLAIMER:** *we recommend not using the bridge in "production" (to bridge significant amounts) just yet.
 it's missing a code audit and should still be considered alpha. we can't rule out that there are bugs that might result in loss of the bridged amounts.
